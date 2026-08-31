@@ -1,0 +1,20 @@
+{
+  "source_csv": "ohlc_synthetic_10bar.csv",
+  "field": "close",
+  "window": 3,
+  "warm_up_policy": "first (window - 1) bars are null; no partial-window average is emitted",
+  "sma_method": "arithmetic mean of the trailing `window` closes",
+  "ema_method": "seed EMA[window-1] with SMA of the first `window` closes; then EMA[i] = close[i] * k + EMA[i-1] * (1-k), k = 2 / (window + 1)",
+  "values": [
+    {"index": 0, "date": "2024-01-01", "close": 100.0, "sma3": null, "ema3": null},
+    {"index": 1, "date": "2024-01-02", "close": 102.0, "sma3": null, "ema3": null},
+    {"index": 2, "date": "2024-01-03", "close": 104.0, "sma3": 102.0, "ema3": 102.0},
+    {"index": 3, "date": "2024-01-04", "close": 103.0, "sma3": 103.0, "ema3": 102.5},
+    {"index": 4, "date": "2024-01-05", "close": 105.0, "sma3": 104.0, "ema3": 103.75},
+    {"index": 5, "date": "2024-01-06", "close": 107.0, "sma3": 105.0, "ema3": 105.375},
+    {"index": 6, "date": "2024-01-07", "close": 106.0, "sma3": 106.0, "ema3": 105.6875},
+    {"index": 7, "date": "2024-01-08", "close": 108.0, "sma3": 107.0, "ema3": 106.84375},
+    {"index": 8, "date": "2024-01-09", "close": 110.0, "sma3": 108.0, "ema3": 108.421875},
+    {"index": 9, "date": "2024-01-10", "close": 109.0, "sma3": 109.0, "ema3": 108.7109375}
+  ]
+}

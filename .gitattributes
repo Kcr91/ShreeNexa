@@ -1,0 +1,5 @@
+# Fixture files under build/fixtures/ are pinned by SHA-256 in
+# build/fixtures/manifest.json (see M0.6). Force LF checkout so the recorded
+# hashes are stable across Windows/Linux clones regardless of local
+# core.autocrlf settings.
+build/fixtures/* text eol=lf

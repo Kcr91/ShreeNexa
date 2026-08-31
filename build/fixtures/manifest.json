@@ -1,0 +1,14 @@
+{
+  "files": [
+    {
+      "path": "ohlc_synthetic_10bar.csv",
+      "sha256": "eb4d2966cc6c02f54bece797cfd06e79e93958f6b1071d4b6d38110c18bb562d",
+      "bytes": 469
+    },
+    {
+      "path": "sma_ema_reference.json",
+      "sha256": "0e0ac0ac93ef4090e2ca21c23cefbf110d55d138621a8602f13ce673908a4243",
+      "bytes": 1283
+    }
+  ]
+}
