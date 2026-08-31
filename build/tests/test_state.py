@@ -96,7 +96,9 @@ def test_update_state_writes_atomically_and_round_trips(tmp_path: Path) -> None:
 
 def test_update_state_preserves_unset_fields_across_calls(tmp_path: Path) -> None:
     state_path = tmp_path / "state.json"
-    update_state(state_path, feature="M0.5", status="in_progress", branch="feature/M0.5-feature-manifest")
+    update_state(
+        state_path, feature="M0.5", status="in_progress", branch="feature/M0.5-feature-manifest"
+    )
     doc = update_state(state_path, feature="M0.5", status="review")
 
     assert doc["status"] == "review"

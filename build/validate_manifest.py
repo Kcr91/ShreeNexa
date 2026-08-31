@@ -67,7 +67,8 @@ def validate(items: list[dict]) -> ManifestReport:
         if not isinstance(item_id, str) or not ID_PATTERN.match(item_id):
             errors.append(f"{where}: id {item_id!r} does not match {ID_PATTERN.pattern}")
         if item_id in ids_seen:
-            errors.append(f"{where}: duplicate id {item_id!r} (first at items[{ids_seen[item_id]}])")
+            first = ids_seen[item_id]
+            errors.append(f"{where}: duplicate id {item_id!r} (first at items[{first}])")
         else:
             ids_seen[item_id] = i
 
@@ -81,7 +82,8 @@ def validate(items: list[dict]) -> ManifestReport:
             errors.append(f"{where} ({item_id}): model must be a non-empty string")
 
     if errors:
-        raise ManifestError("manifest schema violations:\n" + "\n".join(f"  - {e}" for e in errors))
+        bullets = "\n".join(f"  - {e}" for e in errors)
+        raise ManifestError(f"manifest schema violations:\n{bullets}")
 
     known_ids = set(ids_seen)
     dep_errors: list[str] = []
@@ -90,7 +92,8 @@ def validate(items: list[dict]) -> ManifestReport:
             if dep not in known_ids:
                 dep_errors.append(f"{entry['id']} depends on undeclared id {dep!r}")
     if dep_errors:
-        raise ManifestError("unresolved dependency reference(s):\n" + "\n".join(f"  - {e}" for e in dep_errors))
+        bullets = "\n".join(f"  - {e}" for e in dep_errors)
+        raise ManifestError(f"unresolved dependency reference(s):\n{bullets}")
 
     order = _topological_sort(items)
 
@@ -98,7 +101,9 @@ def validate(items: list[dict]) -> ManifestReport:
     m0_count = sum(1 for e in items if e["id"].startswith("M0."))
     product_count = total - m0_count
 
-    return ManifestReport(total=total, m0_count=m0_count, product_count=product_count, topological_order=order)
+    return ManifestReport(
+        total=total, m0_count=m0_count, product_count=product_count, topological_order=order
+    )
 
 
 def _topological_sort(items: list[dict]) -> list[str]:
@@ -111,11 +116,11 @@ def _topological_sort(items: list[dict]) -> list[str]:
         if node in permanent:
             return
         if node in temporary:
-            cycle = " -> ".join(stack[stack.index(node):] + [node])
+            cycle = " -> ".join([*stack[stack.index(node) :], node])
             raise ManifestError(f"dependency cycle detected: {cycle}")
         temporary.add(node)
         for dep in depends_on[node]:
-            visit(dep, stack + [node])
+            visit(dep, [*stack, node])
         temporary.discard(node)
         permanent.add(node)
         order.append(node)
