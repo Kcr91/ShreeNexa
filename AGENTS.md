@@ -11,7 +11,7 @@ Read before editing:
 3. `SHREENEXA_TECHNICAL_SPEC.md` for product behavior and invariants.
 4. `docs/architecture/README.md` and only the directly relevant linked decisions.
 5. `docs/qa/README.md` and the current feature acceptance contract.
-6. `build/manifest.yaml` after M0.5 makes it available.
+6. `build/manifest.yaml` for feature IDs, dependencies, and proof.
 
 If these sources disagree, stop and report the conflict. The approved specification and build plan may not be silently rewritten during implementation.
 
@@ -42,29 +42,29 @@ Stop at a feature boundary when required evidence is missing or a decision chang
 ## Canonical environment and commands
 
 - Windows working tree: `F:\ShreeNexa` (do not run this checkout through WSL paths).
-- Python target: CPython 3.14.
-- Node target: Node.js 24.
+- Python target: CPython 3.14, managed by `uv` (one shared `.venv` at the repository root; `uv sync` installs from `uv.lock`).
+- Node target: Node.js 24, managed by `npm` (`frontend/package-lock.json`).
 - Use `npm.cmd` in PowerShell because `npm.ps1` is blocked on the audited machine.
 
-Checks available now:
+Checks available now (mandatory as of F0.1):
 
 ```powershell
 git status --short --branch
 git diff --check
-```
-
-For documentation/configuration changes, also parse the affected format, resolve local links, verify referenced paths, and scan the changed files for secret-shaped values.
-
-These commands become mandatory after F0.1 creates their configuration and lockfiles:
-
-```powershell
-python -m ruff check .
-python -m mypy backend --strict
-python -m pytest
+uv run ruff check .
+uv run mypy backend --strict
+uv run pytest
 npm.cmd --prefix frontend run typecheck
 npm.cmd --prefix frontend run test
 npm.cmd --prefix frontend run build
+uv run python build/validate_manifest.py
+uv run python build/validate_fixtures.py
+uv run pre-commit run --all-files
 ```
+
+`uv run pytest` discovers both `backend/tests` and `build/tests` in one invocation. `pre-commit` never auto-fixes `SHREENEXA_TECHNICAL_SPEC.md` or `SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md` — its `ruff`/`ruff-format` hooks are scoped to Python files only; do not widen that scope without re-checking this exclusion holds.
+
+For documentation/configuration changes, also parse the affected format, resolve local links, verify referenced paths, and scan the changed files for secret-shaped values.
 
 Run UI features in a real application with Playwright and inspect changed screens. Validate numerical work against an independent implementation or hand fixture. Reconcile migrations/data changes using counts, hashes, ranges, gaps, duplicates, and samples before/after.
 
