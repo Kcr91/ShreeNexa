@@ -1,10 +1,10 @@
 {
-  "feature": "M0.6",
-  "status": "done",
-  "branch": "feature/M0.6-green-baseline",
-  "commit": "236be61",
+  "feature": "F0.1",
+  "status": "review",
+  "branch": "feature/F0.1-repo-standardization",
+  "commit": "6ed790b",
   "tests": {},
   "started_at": "2026-08-31",
-  "finished_at": "2026-08-31",
+  "finished_at": null,
   "blockers": []
 }

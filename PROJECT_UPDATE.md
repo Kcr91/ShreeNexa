@@ -6,9 +6,9 @@ This file is the human-readable project progress log. It is updated after each m
 
 | Item | Status |
 |---|---|
-| Current release wave | W0 — Greenfield baseline |
-| Current feature | M0.6 — Review passed; merge authorization requested |
-| Current branch | `feature/M0.6-green-baseline` |
+| Current release wave | W1 — Stable backend foundation (in progress) |
+| Current feature | F0.1 — Review passed; merge authorization requested |
+| Current branch | `feature/F0.1-repo-standardization` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -22,8 +22,9 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.3 | Done | Review finding fixed; full data-root and build-ignore regression probes pass. |
 | M0.4 | Done | Repository guidance and Codex/QA configuration passed independent review; fast-forwarded into `main` at `0c86d5e` after user merge authorization. |
 | M0.5 | Done | Manifest, validator, and state helper pass all tests; F2.6 dependency fix applied (C11). Fast-forwarded into `main` at `22334e8` after user merge authorization. |
-| M0.6 | Done | First green baseline proven via real fresh-clone bootstrap; fixtures frozen by hash. Not yet merged — awaiting user merge authorization. |
-| F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
+| M0.6 | Done | First green baseline proven via real fresh-clone bootstrap; fixtures frozen by hash. Fast-forwarded into `main` at `fef0814` after user merge authorization. **W0 (M0.1–M0.6) complete.** |
+| F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Not yet merged — awaiting user merge authorization. |
+| F0.2–F13.5 | Pending | F0.2 (Postgres/Redis via Docker Compose) is next; blocked on Docker Desktop installation. |
 
 ## Major-task log
 
@@ -206,6 +207,44 @@ This file is the human-readable project progress log. It is updated after each m
 - Found and fixed a real gap: `docs/qa/README.md` never linked the M0.5 or M0.6 acceptance contracts, defeating its own "fresh session finds it without repo-wide exploration" bar.
 - Re-ran the full suite: `pytest build/tests -q` → 27 passed; `validate_manifest.py` → 108 items, no cycles; `validate_fixtures.py` → 2 verified; `ruff check build/` clean; `git diff --check` clean; no secret-shaped content.
 - M0.6 is approved for fast-forward merge; no schema, runtime, or data impact.
+
+### 2026-08-31 — M0.6 merged; F0.1 started
+
+- User authorized the merge. Fast-forwarded `feature/M0.6-green-baseline` into `main` at `fef0814`. Re-verified directly on `main`: 27 passed, manifest/fixtures clean, ruff clean. **W0 (M0.1–M0.6) is complete.**
+- User chose `uv` as the Python dependency/lockfile manager for F0.1 (the choice `docs/decisions/0004-packages-and-windows-topology.md` explicitly deferred to this feature).
+- Created `feature/F0.1-repo-standardization` from the merged `main`. Recorded the F0.1 acceptance contract, including the uv/npm/GitHub-Actions scope decisions, before implementation.
+- Installed `uv` via `pip install uv` (official PyPI wheel) rather than the shell/PowerShell installer script.
+
+### 2026-08-31 — F0.1 task 1: Python tooling standardized
+
+- Added root `pyproject.toml` (project `shreenexa-backend`, `backend/app` as the wheel target), `uv.lock`, and ruff/mypy/pytest configuration; pinned `.python-version` to `3.14`.
+- `uv sync` resolved and installed 23 packages, every one a `cp314`/pure-Python wheel — no source build required (the F0.1 binary-wheel proof).
+- Added a minimal `backend/app` package (version stub only) and a smoke test proving the test layer works end to end.
+- Explicit ruff rule selection (`E`, `F`, `I`, `UP`, `B`, `RUF`) surfaced real `E501`/`RUF005` findings in the M0.5/M0.6 `build/*.py` scripts that ruff's bare defaults hadn't caught (`E501` isn't in ruff's default rule set); fixed all of them, re-verified 28 tests pass.
+
+### 2026-08-31 — F0.1 task 2: frontend workspace skeleton
+
+- Added `@shreenexa/frontend`: Vite + React + TypeScript + Vitest, with `typecheck`/`test`/`build` npm scripts and one placeholder component/test. Tooling only — F4.1 builds the real shell.
+- `npm install` resolved 185 packages; typecheck, test, and build all pass. `npm audit` reports pre-existing transitive dev-dependency advisories (3 moderate, 1 high, 1 critical) in the toolchain, not investigated in this task since no production dependency is affected (the frontend has no runtime deps beyond `react`/`react-dom`) — flagged for follow-up before any frontend feature depends on the affected packages.
+
+### 2026-08-31 — F0.1 task 3: pre-commit config, with a caught hazard
+
+- Wired hygiene hooks (trailing-whitespace, end-of-file, yaml/json/toml, large-file, merge-conflict), ruff lint+format, and local hooks running `build/validate_manifest.py`/`build/validate_fixtures.py`.
+- **Found and fixed a real hazard before committing it**: an unscoped `pre-commit run --all-files` let `ruff-format` reformat a Python code fence embedded inside the approved `SHREENEXA_TECHNICAL_SPEC.md`, and a `mixed-line-ending` hook rewrote nearly every already-tracked file's line endings against local `core.autocrlf=true`. Both changes were reverted before any commit was made. Fixed by excluding the two approved documents at the top level of `.pre-commit-config.yaml` and scoping the ruff hooks to `types_or: [python, pyi]` explicitly; dropped the mixed-line-ending hook entirely rather than fight local autocrlf on every pre-existing file.
+- Proved the hooks catch real problems, not just pass vacuously: a deliberate ruff violation and a deliberately corrupted `build/manifest.yaml` dependency were each caught by `pre-commit run --all-files`, then reverted.
+
+### 2026-08-31 — F0.1 task 4: CI skeleton and completion
+
+- Added `.github/workflows/ci.yml` (backend: `uv sync`, ruff, mypy strict, pytest, manifest/fixture validators; frontend: `npm ci`, typecheck, test, build). No remote exists yet, so this workflow is inert until one is added.
+- Moved the "become mandatory after F0.1" commands in `AGENTS.md` into "checks available now" with `uv run` prefixes, and documented the pre-commit exclusion for the approved documents.
+- Performed a real `git clone` of the F0.1 branch into an isolated directory and ran every gate there with no manual setup beyond the clone: `uv sync` (23/23 wheels, no source build), ruff, mypy strict, `uv run pytest` (28 passed), manifest/fixture validators, `npm ci`, typecheck, test, build — all green. Deleted the temporary clone after verification.
+
+### 2026-08-31 — F0.1 independent review passed
+
+- Reviewed the complete branch against `main`: `pyproject.toml`, `uv.lock`, `.python-version`, `backend/`, `frontend/`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml`, `AGENTS.md`, `docs/qa/acceptance/F0.1.md` — no protected path, no database, no Dhan client, nothing beyond tooling.
+- Re-ran the full backend and frontend gate set directly on the branch (not just in the temporary clone): all green.
+- No product code, live-trading path, or credential was introduced. `git diff --check` clean; no secret-shaped content.
+- F0.1 is approved for fast-forward merge; no schema or runtime-data impact.
 
 ## Known prerequisites and blockers
 

@@ -116,3 +116,27 @@ def test_update_state_rejects_invalid_status(tmp_path: Path) -> None:
     with pytest.raises(StateError):
         update_state(state_path, feature="M0.5", status="almost_done")
     assert not state_path.exists()
+
+
+def test_update_state_does_not_leak_fields_across_features(tmp_path: Path) -> None:
+    """Regression: switching features must not inherit the prior feature's
+    finished_at/blockers/branch/commit/tests -- only continuing the *same*
+    feature's lifecycle should carry those forward."""
+    state_path = tmp_path / "state.json"
+    update_state(
+        state_path,
+        feature="M0.5",
+        status="done",
+        branch="feature/M0.5-feature-manifest",
+        commit="abc1234",
+        finished_at="2026-08-31",
+        blockers=["some prior blocker"],
+    )
+
+    doc = update_state(state_path, feature="M0.6", status="in_progress")
+
+    assert doc["feature"] == "M0.6"
+    assert doc["branch"] is None
+    assert doc["commit"] is None
+    assert doc["finished_at"] is None
+    assert doc["blockers"] == []

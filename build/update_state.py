@@ -48,11 +48,15 @@ def update_state(
 ) -> dict:
     """Validate the proposed fields and atomically write build/state.json.
 
-    Fields not supplied fall back to the existing document's value (if any)
-    rather than being silently cleared, except feature/status which are
-    always the caller's explicit values.
+    Fields not supplied fall back to the existing document's value only when
+    updating the *same* feature (the usual case: recording branch, then
+    later commit, then status, for one feature's lifecycle). Switching to a
+    different `feature` starts from a clean slate instead, so a new
+    feature's record can never inherit a stale `finished_at`, `blockers`, or
+    other leftover field from whatever was previously tracked.
     """
-    existing = read_state(path) or {}
+    on_disk = read_state(path)
+    existing = on_disk if on_disk is not None and on_disk.get("feature") == feature else {}
 
     doc = {
         "feature": feature,
