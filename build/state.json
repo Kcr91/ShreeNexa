@@ -1,8 +1,8 @@
 {
-  "feature": "M0.5",
+  "feature": "M0.6",
   "status": "in_progress",
-  "branch": "feature/M0.5-feature-manifest",
-  "commit": null,
+  "branch": "feature/M0.6-green-baseline",
+  "commit": "22334e8",
   "tests": {},
   "started_at": "2026-08-31",
   "finished_at": null,

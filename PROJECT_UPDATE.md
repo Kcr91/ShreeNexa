@@ -1,14 +1,14 @@
 # ShreeNexa Project Update
 
-This file is the human-readable project progress log. It is updated after each major task. The machine-readable `build/state.json` remains deferred until M0.5 introduces its validated update helper.
+This file is the human-readable project progress log. It is updated after each major task. The machine-readable `build/state.json` is maintained through the validated helper introduced in M0.5 (`build/update_state.py`).
 
 ## Current snapshot
 
 | Item | Status |
 |---|---|
 | Current release wave | W0 — Greenfield baseline |
-| Current feature | M0.5 — Review passed; merge authorized (stacked behind unmerged M0.4) |
-| Current branch | `feature/M0.5-feature-manifest` |
+| Current feature | M0.6 — started |
+| Current branch | `feature/M0.6-green-baseline` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -20,9 +20,9 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.1 | Done | Fast-forwarded into `main` at `951ed5b` after the approved re-review. |
 | M0.2 | Done | Reviewed and fast-forwarded into `main` at `74d5656`. |
 | M0.3 | Done | Review finding fixed; full data-root and build-ignore regression probes pass. |
-| M0.4 | Done | Repository guidance and Codex/QA configuration passed independent review with no findings. Independently re-verified in a later session; not yet merged into `main` — awaiting user merge authorization. |
-| M0.5 | Done | Manifest, validator, and state helper pass all tests; one build-plan inconsistency found and flagged (see below). Not yet merged; stacked on unmerged M0.4. |
-| M0.6 | Pending | Blocked on M0.4/M0.5 being merged into `main`. |
+| M0.4 | Done | Repository guidance and Codex/QA configuration passed independent review; fast-forwarded into `main` at `0c86d5e` after user merge authorization. |
+| M0.5 | Done | Manifest, validator, and state helper pass all tests; F2.6 dependency fix applied (C11). Fast-forwarded into `main` at `22334e8` after user merge authorization. |
+| M0.6 | In progress | First green baseline plus hashed synthetic/reference fixtures; acceptance contract not yet recorded. |
 | F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
 
 ## Major-task log
@@ -172,6 +172,17 @@ This file is the human-readable project progress log. It is updated after each m
 - Updated `build/manifest.yaml`: F2.6 now depends on `[F2.2, F2.3, F2.5]` (F2.4 dropped), with `notes` explaining the correction.
 - Added a regression test proving no wave-3 feature (F2.1–F2.3, F2.5–F2.7, F3.1–F3.4, F3.7, F3.10, F3.12) transitively depends on a deferred UI feature (F2.4, F3.11, F3.13, F3.14).
 - Re-ran the full suite: `python -m pytest build/tests -q` → 19 passed; `python build/validate_manifest.py` → 108 items, no cycles; `python -m ruff check build/` clean; `git diff --check` clean; no secret-shaped content.
+
+### 2026-08-31 — M0.4 and M0.5 merged
+
+- User authorized both merges. Fast-forwarded `feature/M0.4-repository-guidance` into `main` at `0c86d5e`, then `feature/M0.5-feature-manifest` into `main` at `22334e8`.
+- Re-ran the full verification suite directly on `main`: `python -m pytest build/tests -q` → 19 passed; `python build/validate_manifest.py` → 108 items (6 M0, 102 product), no cycles; `python -m ruff check build/` clean.
+- `main` is clean; no stray artifacts. M0.6 is the next dependency-ready feature.
+
+### 2026-08-31 — M0.6 started
+
+- Created `feature/M0.6-green-baseline` from the merged `main` at `22334e8`.
+- M0.6 scope per the build plan: establish the first green baseline and freeze small synthetic/reference fixtures by hash.
 
 ## Known prerequisites and blockers
 
