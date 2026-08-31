@@ -17,3 +17,4 @@ Architecture decision records are immutable decision history. Accepted decisions
 | [ADR-0002](0002-four-process-runtime.md) | Accepted | Four-process runtime and supervision boundaries |
 | [ADR-0003](0003-storage-ownership.md) | Accepted | Storage roles, authority, and write ownership |
 | [ADR-0004](0004-packages-and-windows-topology.md) | Accepted | Package names, dependency direction, and Windows development topology |
+| [ADR-0005](0005-data-root-and-lifecycle.md) | Accepted | Data-root containment, immutable ingestion, version publication, and capacity safety |

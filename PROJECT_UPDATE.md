@@ -7,8 +7,8 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W0 — Greenfield baseline |
-| Current feature | M0.2 — Review passed; merge authorized |
-| Current branch | `feature/M0.2-architecture-adrs` |
+| Current feature | M0.3 — Ready for review |
+| Current branch | `feature/M0.3-data-lifecycle` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -18,8 +18,9 @@ This file is the human-readable project progress log. It is updated after each m
 | Feature | Status | Evidence / next action |
 |---|---|---|
 | M0.1 | Done | Fast-forwarded into `main` at `951ed5b` after the approved re-review. |
-| M0.2 | Done | Architecture implementation and independent branch review passed; authorized for fast-forward into `main`. |
-| M0.3–M0.6 | Pending | Blocked on preceding M0 dependencies. |
+| M0.2 | Done | Reviewed and fast-forwarded into `main` at `74d5656`. |
+| M0.3 | Review | Data-root, immutable-ingest, warehouse-version, backup, rollback, and capacity contracts are complete and locally verified. |
+| M0.4–M0.6 | Pending | Blocked on preceding M0 dependencies. |
 | F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
 
 ## Major-task log
@@ -62,6 +63,30 @@ This file is the human-readable project progress log. It is updated after each m
 - Rechecked scope, specification stability, the declared dependency DAG, diff hygiene, and secret-shaped values.
 - Found no architecture or correctness defects. Corrected this status file so it no longer reported M0.1 as unmerged.
 - Authorized M0.2 for fast-forward merge; no product code or schema was changed.
+
+### 2026-08-31 — M0.3 started
+
+- Fast-forwarded the reviewed M0.2 branch into `main` at `74d5656`.
+- Created `feature/M0.3-data-lifecycle` from the clean updated `main`.
+- Recorded the M0.3 acceptance contract before writing the data-lifecycle decision.
+- Kept runtime storage, dependencies, and data creation out of scope.
+
+### 2026-08-31 — M0.3 lifecycle baseline completed
+
+- Selected ignored `<repository>\data` as the default and defined strict validation for an optional dedicated override.
+- Defined byte-for-byte immutable raw ingests with SHA-256 provenance and secret redaction.
+- Defined immutable warehouse versions, canonical manifests, atomic publication, pinned readers, and pointer-only rollback.
+- Classified backup inclusions/exclusions and required restore validation before a copy counts as healthy.
+- Added ordered warning, critical, and hard write-stop reserves based on both GiB and filesystem percentage.
+- Verified the threshold formulas remain ordered across representative filesystem capacities.
+
+### 2026-08-31 — M0.3 implementation verification completed
+
+- Confirmed all local documentation links resolve and the staged diff passes `git diff --check`.
+- Confirmed threshold ordering at 10, 50, 100, 200, 1,000, and 10,000 GiB capacities.
+- Confirmed the build plan and technical specification are unchanged.
+- Confirmed no runtime `data/` directory, dependency, database, or secret-shaped value was introduced.
+- M0.3 is ready for independent branch review; M0.4 has not been started.
 
 ## Known prerequisites and blockers
 
