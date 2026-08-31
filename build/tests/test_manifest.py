@@ -116,8 +116,19 @@ def test_wave_3_features_do_not_depend_on_deferred_ui_features(real_items: list[
     """
     deferred_ui_features = {"F2.4", "F3.11", "F3.13", "F3.14"}
     wave_3_features = {
-        "F2.1", "F2.2", "F2.3", "F2.5", "F2.6", "F2.7",
-        "F3.1", "F3.2", "F3.3", "F3.4", "F3.7", "F3.10", "F3.12",
+        "F2.1",
+        "F2.2",
+        "F2.3",
+        "F2.5",
+        "F2.6",
+        "F2.7",
+        "F3.1",
+        "F3.2",
+        "F3.3",
+        "F3.4",
+        "F3.7",
+        "F3.10",
+        "F3.12",
     }
     by_id = {e["id"]: e for e in real_items}
 

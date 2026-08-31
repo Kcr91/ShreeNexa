@@ -77,9 +77,18 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--path", type=Path, default=DEFAULT_STATE_PATH)
     parser.add_argument("--feature", required=True)
-    parser.add_argument("--status", required=True, choices=[
-        "pending", "in_progress", "review", "done", "blocked", "parked",
-    ])
+    parser.add_argument(
+        "--status",
+        required=True,
+        choices=[
+            "pending",
+            "in_progress",
+            "review",
+            "done",
+            "blocked",
+            "parked",
+        ],
+    )
     parser.add_argument("--branch")
     parser.add_argument("--commit")
     parser.add_argument("--started-at")

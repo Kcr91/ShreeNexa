@@ -32,30 +32,34 @@ def tmp_path() -> Path:
 
 
 def test_valid_document_passes() -> None:
-    validate_state({
-        "feature": "M0.5",
-        "status": "in_progress",
-        "branch": "feature/M0.5-feature-manifest",
-        "commit": None,
-        "tests": {},
-        "started_at": "2026-08-31",
-        "finished_at": None,
-        "blockers": [],
-    })
+    validate_state(
+        {
+            "feature": "M0.5",
+            "status": "in_progress",
+            "branch": "feature/M0.5-feature-manifest",
+            "commit": None,
+            "tests": {},
+            "started_at": "2026-08-31",
+            "finished_at": None,
+            "blockers": [],
+        }
+    )
 
 
 def test_invalid_status_is_rejected() -> None:
     with pytest.raises(StateError, match="status"):
-        validate_state({
-            "feature": "M0.5",
-            "status": "almost_done",
-            "branch": None,
-            "commit": None,
-            "tests": {},
-            "started_at": None,
-            "finished_at": None,
-            "blockers": [],
-        })
+        validate_state(
+            {
+                "feature": "M0.5",
+                "status": "almost_done",
+                "branch": None,
+                "commit": None,
+                "tests": {},
+                "started_at": None,
+                "finished_at": None,
+                "blockers": [],
+            }
+        )
 
 
 def test_missing_field_is_rejected() -> None:
@@ -65,17 +69,19 @@ def test_missing_field_is_rejected() -> None:
 
 def test_unexpected_field_is_rejected() -> None:
     with pytest.raises(StateError, match="unexpected field"):
-        validate_state({
-            "feature": "M0.5",
-            "status": "pending",
-            "branch": None,
-            "commit": None,
-            "tests": {},
-            "started_at": None,
-            "finished_at": None,
-            "blockers": [],
-            "notes": "not allowed here",
-        })
+        validate_state(
+            {
+                "feature": "M0.5",
+                "status": "pending",
+                "branch": None,
+                "commit": None,
+                "tests": {},
+                "started_at": None,
+                "finished_at": None,
+                "blockers": [],
+                "notes": "not allowed here",
+            }
+        )
 
 
 def test_update_state_writes_atomically_and_round_trips(tmp_path: Path) -> None:

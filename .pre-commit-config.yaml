@@ -1,0 +1,52 @@
+# No mixed-line-ending / repo-wide LF-normalization hook here on purpose:
+# local core.autocrlf=true checks these files out as CRLF, so any hook that
+# force-fixes them to LF would perpetually "fail" on every already-tracked
+# file that has nothing to do with the change being committed. Normalizing
+# the whole repo to LF via .gitattributes is a deliberate, separately
+# reviewed decision (build/fixtures/ already does this, scoped, because its
+# hashes require it) -- not an incidental addition here.
+#
+# The approved specification and build plan are never auto-modified by any
+# hook, full stop -- discovered the hard way when `ruff format` reformatted a
+# Python code fence embedded inside SHREENEXA_TECHNICAL_SPEC.md. AGENTS.md is
+# explicit that these documents "may not be silently rewritten during
+# implementation," and that applies to tooling, not just to hand edits.
+exclude: '^(SHREENEXA_TECHNICAL_SPEC\.md|SHREENEXA_CODEX_VSCODE_BUILD_PLAN\.md)$'
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-merge-conflict
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.5
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+        types_or: [python, pyi]
+      - id: ruff-format
+        types_or: [python, pyi]
+
+  - repo: local
+    hooks:
+      - id: validate-manifest
+        name: validate build/manifest.yaml
+        entry: python build/validate_manifest.py
+        language: system
+        files: ^build/manifest\.yaml$
+        pass_filenames: false
+
+      - id: validate-fixtures
+        name: validate build/fixtures/ against their recorded hashes
+        entry: python build/validate_fixtures.py
+        language: system
+        files: ^build/fixtures/
+        pass_filenames: false
