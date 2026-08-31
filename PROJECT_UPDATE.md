@@ -7,8 +7,8 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W0 — Greenfield baseline |
-| Current feature | M0.4 — Review passed; merge authorized |
-| Current branch | `feature/M0.4-repository-guidance` |
+| Current feature | M0.5 — Review passed; merge authorized (stacked behind unmerged M0.4) |
+| Current branch | `feature/M0.5-feature-manifest` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -20,9 +20,14 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.1 | Done | Fast-forwarded into `main` at `951ed5b` after the approved re-review. |
 | M0.2 | Done | Reviewed and fast-forwarded into `main` at `74d5656`. |
 | M0.3 | Done | Review finding fixed; full data-root and build-ignore regression probes pass. |
-| M0.4 | Done | Repository guidance and Codex/QA configuration passed independent review with no findings. |
-| M0.5–M0.6 | Pending | Blocked on preceding M0 dependencies. |
+| M0.4 | Done | Repository guidance and Codex/QA configuration passed independent review with no findings. Independently re-verified in a later session; not yet merged into `main` — awaiting user merge authorization. |
+| M0.5 | Done | Manifest, validator, and state helper pass all tests; one build-plan inconsistency found and flagged (see below). Not yet merged; stacked on unmerged M0.4. |
+| M0.6 | Pending | Blocked on M0.4/M0.5 being merged into `main`. |
 | F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
+
+## Open item requiring a user decision
+
+- **F2.6 dependency ambiguity.** The build plan's feature ledger lists F2.6's dependency as the literal range `F2.2-F2.5`, which includes F2.4 (indicator-builder UI, explicitly deferred to after F4.1-F4.3 by correction C4). Wave W3 places F2.6 *before* the frontend shell exists and explicitly excludes F2.4 from that wave. Taken literally, F2.6 would transitively require the frontend, contradicting its own wave placement. `build/manifest.yaml` transcribes the dependency literally (per AGENTS.md — the approved plan is not silently rewritten) and flags it in a `notes` field on the `F2.6` entry. This needs a decision before F2.6 is implemented: most likely the intended dependency was `F2.1-F2.3, F2.5` (the compiler/parser/schema prerequisites, without F2.4), but that correction should come from the user, not be assumed.
 
 ## Major-task log
 
@@ -136,6 +141,34 @@ This file is the human-readable project progress log. It is updated after each m
 - Confirmed every required root-guidance section is present exactly once.
 - Confirmed specification, protected-path, product-code, secret-pattern, and diff-hygiene checks are clean.
 - M0.4 is approved for fast-forward merge with no schema, runtime, or data impact.
+
+### 2026-08-31 — M0.4 independently re-verified; M0.5 started
+
+- Found `main` still at the M0.3 tip (`eaeab65`) and `feature/M0.4-repository-guidance` already implemented and self-reviewed but not yet merged; treated this as a fresh, separate review rather than trusting the branch's own report.
+- Re-parsed `.codex/config.toml` with Python 3.14 `tomllib`, confirmed workspace-write sandboxing with network access disabled and no provider/model/MCP/credential configuration.
+- Re-ran link resolution, `git diff --check`, and a secret-shaped-content scan across the full M0.4 diff; found no issues.
+- Removed a stray untracked working-tree copy of `.codex/` (byte-identical to the committed M0.4 version) that blocked branching; confirmed identity before deleting.
+- Created `feature/M0.5-feature-manifest` from the reviewed M0.4 tip because M0.4 is not yet merged, matching the precedent set when M0.2 branched from an unmerged M0.1.
+- Recorded the M0.5 acceptance contract before writing the manifest.
+
+### 2026-08-31 — M0.5 manifest and state helper completed
+
+- Transcribed all 6 M0 tasks and all 102 product features from the build plan's feature ledger into `build/manifest.yaml`, expanding every dependency range to explicit IDs without silently correcting the source text.
+- Built `build/validate_manifest.py`: schema/required-field checks, dependency-existence checks, a topological sort proving the graph is acyclic, and generated (not handwritten) item counts.
+- Added `build/tests/test_manifest.py` (11 cases) covering a valid pass, an unresolved dependency, an introduced cycle, a missing field, a duplicate ID, a malformed ID, and the generated 102/6/108 counts against the approved manifest.
+- Introduced the `build/state.json` validated update helper promised in this file's header: `build/state_schema.py` (schema) and `build/update_state.py` (atomic, schema-validated writer), with 7 tests in `build/tests/test_state.py`.
+- `python -m ruff check build/` is clean; `python -m mypy` is not yet installed (unavailable evidence, not reported as passing — mypy becomes mandatory at F0.1).
+- Discovered and flagged the F2.6 dependency inconsistency described above rather than resolving it unilaterally.
+- Initialized `build/state.json` through the new helper (`feature: M0.5, status: in_progress`) rather than hand-editing it.
+
+### 2026-08-31 — M0.5 independent review passed
+
+- Ran `python build/validate_manifest.py`: 108 items (6 M0, 102 product), topological sort succeeded.
+- Ran `python -m pytest build/tests/ -q`: 18 passed.
+- Spot-checked name/depends_on/proof/model transcription fidelity for a representative sample across every epic (F0, F1, F3, F4, F7, F8, F9, F10, F11, F12, F13) against the build plan source text; no mismatches found beyond the already-flagged F2.6 item.
+- Confirmed the diff touches only `build/` and `docs/qa/acceptance/M0.5.md` — no product code, backend/frontend scaffolding, or protected path.
+- Confirmed no secret-shaped content, `git diff --check` is clean, and no stray test artifacts (temp dirs, `__pycache__`) remain in the working tree.
+- M0.5 is approved for fast-forward merge once M0.4 merges ahead of it; no schema, runtime, or data impact.
 
 ## Known prerequisites and blockers
 
