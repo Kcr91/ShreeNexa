@@ -7,7 +7,7 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W0 — Greenfield baseline |
-| Current feature | M0.4 — Ready for review |
+| Current feature | M0.4 — Review passed; merge authorized |
 | Current branch | `feature/M0.4-repository-guidance` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
@@ -20,7 +20,7 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.1 | Done | Fast-forwarded into `main` at `951ed5b` after the approved re-review. |
 | M0.2 | Done | Reviewed and fast-forwarded into `main` at `74d5656`. |
 | M0.3 | Done | Review finding fixed; full data-root and build-ignore regression probes pass. |
-| M0.4 | Review | Repository instructions, narrow Codex defaults, QA rules, protected paths, and report template are complete and locally verified. |
+| M0.4 | Done | Repository guidance and Codex/QA configuration passed independent review with no findings. |
 | M0.5–M0.6 | Pending | Blocked on preceding M0 dependencies. |
 | F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
 
@@ -128,6 +128,14 @@ This file is the human-readable project progress log. It is updated after each m
 - Resolved all local Markdown links and found no secret-shaped content or product scaffolding.
 - Confirmed the protected-path diff is empty and the staged change passes `git diff --check`.
 - M0.4 is ready for independent branch review; M0.5 has not been started.
+
+### 2026-08-31 — M0.4 independent review passed
+
+- Reviewed the complete feature against `main` and confirmed the eleven intended guidance/configuration paths only.
+- Re-parsed the TOML and confirmed it adds no external writable root, provider, model, MCP server, credential, or broad sandbox mode.
+- Confirmed every required root-guidance section is present exactly once.
+- Confirmed specification, protected-path, product-code, secret-pattern, and diff-hygiene checks are clean.
+- M0.4 is approved for fast-forward merge with no schema, runtime, or data impact.
 
 ## Known prerequisites and blockers
 
