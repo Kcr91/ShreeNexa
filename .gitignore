@@ -1,0 +1,112 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+virtualenv/
+
+# Python caches, tooling, and package output
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Node dependencies, caches, and build output
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.parcel-cache/
+.turbo/
+.next/
+.nuxt/
+.svelte-kit/
+coverage/
+out/
+storybook-static/
+*.tsbuildinfo
+
+# Environment files, credentials, and private keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+credentials.json
+secrets.json
+secrets/
+
+# Databases and local persistence
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.duckdb
+*.rdb
+*.aof
+postgres-data/
+redis-data/
+
+# Parquet and downloaded market data
+*.parquet
+*.parquet.*
+data/downloads/
+data/market/
+data/raw/
+market-data/
+downloads/
+
+# Logs, reports, and temporary files
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.pid
+*.pid.lock
+*.stackdump
+
+# IDE and editor output
+.idea/
+.vscode/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local runtime state
+.local/
+.runtime/
+runtime/
+run/
+var/
+local-state/
+sessions/
