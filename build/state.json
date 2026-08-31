@@ -1,10 +1,10 @@
 {
   "feature": "F0.1",
-  "status": "review",
+  "status": "done",
   "branch": "feature/F0.1-repo-standardization",
   "commit": "6ed790b",
   "tests": {},
   "started_at": "2026-08-31",
-  "finished_at": null,
+  "finished_at": "2026-08-31",
   "blockers": []
 }
