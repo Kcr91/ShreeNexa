@@ -2,6 +2,8 @@
 
 The approved technical specification is the product source of truth. This directory provides concise implementation boundaries derived from it.
 
+Repository workflow, gates, protected paths, and completion evidence are indexed in [`docs/qa/README.md`](../qa/README.md).
+
 ## M0.2 baseline
 
 - [Module and dependency map](module-dependency-map.md)

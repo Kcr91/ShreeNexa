@@ -7,8 +7,8 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W0 — Greenfield baseline |
-| Current feature | M0.3 — Review passed; merge authorized |
-| Current branch | `feature/M0.3-data-lifecycle` |
+| Current feature | M0.4 — Ready for review |
+| Current branch | `feature/M0.4-repository-guidance` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -20,7 +20,8 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.1 | Done | Fast-forwarded into `main` at `951ed5b` after the approved re-review. |
 | M0.2 | Done | Reviewed and fast-forwarded into `main` at `74d5656`. |
 | M0.3 | Done | Review finding fixed; full data-root and build-ignore regression probes pass. |
-| M0.4–M0.6 | Pending | Blocked on preceding M0 dependencies. |
+| M0.4 | Review | Repository instructions, narrow Codex defaults, QA rules, protected paths, and report template are complete and locally verified. |
+| M0.5–M0.6 | Pending | Blocked on preceding M0 dependencies. |
 | F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
 
 ## Major-task log
@@ -103,6 +104,30 @@ This file is the human-readable project progress log. It is updated after each m
 - Re-ran the M0.1 build-rule regression: root `build/manifest.yaml` remains trackable and nested generated `build/` output remains ignored.
 - Re-ran link, threshold-order, scope, specification-stability, secret-pattern, and diff-hygiene checks.
 - M0.3 is approved for fast-forward merge; no runtime data or schema exists yet.
+
+### 2026-08-31 — M0.4 started
+
+- Fast-forwarded reviewed M0.3 into `main` at `eaeab65`.
+- Created `feature/M0.4-repository-guidance` from the clean updated `main`.
+- Checked current official OpenAI documentation for `AGENTS.md` discovery and trusted project configuration.
+- Recorded the M0.4 acceptance contract before adding repository instructions or Codex settings.
+
+### 2026-08-31 — M0.4 guidance baseline completed
+
+- Added concise root `AGENTS.md` covering source-of-truth documents, hard boundaries, workflow, commands, invariants, protected paths, review rules, stop conditions, and completion reporting.
+- Added trusted-project `.codex/config.toml` with interactive approvals, workspace-write sandboxing, disabled sandbox network, and no external writable roots or model/provider integration.
+- Added QA indexes and detailed feature-workflow, gate, protected-path, and completion-report documents.
+- Parsed the TOML with Python 3.14 and confirmed `AGENTS.md` is 7,367 bytes, below the 32 KiB instruction limit.
+- Confirmed Codex CLI `0.148.0-alpha.9` is on PATH; the IDE session remains the supervised workflow.
+
+### 2026-08-31 — M0.4 implementation verification completed
+
+- Parsed the exact `.codex/config.toml` structure and allowlisted its four top-level settings.
+- Confirmed every protected path appears in both root guidance and the detailed protected-path policy.
+- Confirmed all eight completion-report subjects are present exactly once.
+- Resolved all local Markdown links and found no secret-shaped content or product scaffolding.
+- Confirmed the protected-path diff is empty and the staged change passes `git diff --check`.
+- M0.4 is ready for independent branch review; M0.5 has not been started.
 
 ## Known prerequisites and blockers
 

@@ -1,0 +1,9 @@
+# Trusted-project defaults for ShreeNexa. This layer is intentionally narrow.
+# Codex loads project .codex configuration only when the user trusts the repo.
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+project_doc_max_bytes = 32768
+
+[sandbox_workspace_write]
+network_access = false
