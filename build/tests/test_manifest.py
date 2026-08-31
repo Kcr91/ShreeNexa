@@ -103,3 +103,32 @@ def test_malformed_id_is_rejected(real_items: list[dict]) -> None:
     broken[0]["id"] = "not-a-valid-id"
     with pytest.raises(ManifestError, match="does not match"):
         validate(broken)
+
+
+def test_wave_3_features_do_not_depend_on_deferred_ui_features(real_items: list[dict]) -> None:
+    """Regression for build plan correction C11.
+
+    F2.6 (wave W3, before the frontend shell exists) previously transitively
+    required F2.4 (an indicator-builder UI feature deferred to after
+    F4.1-F4.3) through the literal dependency range "F2.2-F2.5". Any wave-W3
+    feature depending, even transitively, on a deferred UI feature would
+    reintroduce the same contradiction.
+    """
+    deferred_ui_features = {"F2.4", "F3.11", "F3.13", "F3.14"}
+    wave_3_features = {
+        "F2.1", "F2.2", "F2.3", "F2.5", "F2.6", "F2.7",
+        "F3.1", "F3.2", "F3.3", "F3.4", "F3.7", "F3.10", "F3.12",
+    }
+    by_id = {e["id"]: e for e in real_items}
+
+    def transitive_deps(item_id: str, seen: set[str]) -> set[str]:
+        for dep in by_id[item_id]["depends_on"]:
+            if dep not in seen:
+                seen.add(dep)
+                transitive_deps(dep, seen)
+        return seen
+
+    for feature_id in wave_3_features:
+        deps = transitive_deps(feature_id, set())
+        overlap = deps & deferred_ui_features
+        assert not overlap, f"{feature_id} transitively depends on deferred UI feature(s) {overlap}"

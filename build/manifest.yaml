@@ -180,16 +180,14 @@ items:
 
   - id: F2.6
     name: 'Vectorized StrategyIR compiler/evaluator.'
-    depends_on: [F2.2, F2.3, F2.4, F2.5]
+    depends_on: [F2.2, F2.3, F2.5]
     proof: 'Hand-verified strategies plus G2 truncated-data audit; deterministic signals.'
     model: SOL-XH
     notes: >-
-      Build plan lists this dependency as the literal range "F2.2-F2.5", which spans
-      F2.4 (indicator-builder UI, explicitly deferred to after F4.1-F4.3 per correction
-      C4 and excluded from wave W3). W3 places F2.6 before the frontend shell exists.
-      Transcribed literally per AGENTS.md ("may not be silently rewritten"); flagged in
-      the M0.5 completion report as a build-plan inconsistency needing a user decision
-      before F2.6 is implemented.
+      Corrected per build plan correction C11 (2026-08-31, user-approved): the original
+      dependency cell "F2.2-F2.5" transitively required F2.4 (deferred UI feature),
+      contradicting F2.6's own wave-W3 placement before the frontend shell exists.
+      F2.4 is dropped from this dependency; F2.2, F2.3, and F2.5 remain.
 
   - id: F2.7
     name: 'Incremental compiler/evaluator with state recovery.'

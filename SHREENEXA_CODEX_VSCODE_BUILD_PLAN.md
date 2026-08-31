@@ -53,6 +53,7 @@ These ambiguities in the original draft are resolved in the updated specificatio
 | C8 | The product AI provider and the development coding agent are conflated. | Codex builds the system. The product's NL-to-StrategyIR provider remains a separate pluggable decision; do not assume a ChatGPT subscription is an API credential. |
 | C9 | The specification assumes Docker is the simplest choice, but the Windows laptop has 8 GB RAM. | Use Docker Desktop with explicit CPU/RAM limits and only Postgres/Redis running locally; benchmark before adding more containers. |
 | C10 | Several Dhan facts are explicitly unverified or may change. | Each affected feature begins with a dated documentation/cassette verification task and stores limits in configuration rather than code. |
+| C11 | F2.6's dependency cell reads `F2.2–F2.5`, transitively requiring F2.4 (deferred to after F4.1–F4.3 per C4) even though wave W3 places F2.6 before the frontend shell exists and explicitly excludes F2.4. Found during M0.5 manifest transcription, 2026-08-31. | F2.6 depends on `F2.2–F2.3, F2.5` — the compiler/parser/schema prerequisites, without the indicator-builder UI. `build/manifest.yaml` encodes this resolution; the F2.6 ledger row below is left in its original wording. |
 
 ---
 
