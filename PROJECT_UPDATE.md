@@ -7,7 +7,7 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W0 — Greenfield baseline |
-| Current feature | M0.2 — Ready for review |
+| Current feature | M0.2 — Review passed; merge authorized |
 | Current branch | `feature/M0.2-architecture-adrs` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
@@ -17,8 +17,8 @@ This file is the human-readable project progress log. It is updated after each m
 
 | Feature | Status | Evidence / next action |
 |---|---|---|
-| M0.1 | Approved, pending user-controlled merge | Re-review declared `951ed5b` safe to merge; `main` has not been changed. |
-| M0.2 | Review | Four ADRs, the acceptance contract, and dependency proof are complete; all documentation checks pass. |
+| M0.1 | Done | Fast-forwarded into `main` at `951ed5b` after the approved re-review. |
+| M0.2 | Done | Architecture implementation and independent branch review passed; authorized for fast-forward into `main`. |
 | M0.3–M0.6 | Pending | Blocked on preceding M0 dependencies. |
 | F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
 
@@ -55,7 +55,14 @@ This file is the human-readable project progress log. It is updated after each m
 - Confirmed `git diff --check` passes and no secret-shaped value is present in the M0.2 files.
 - M0.2 is ready for a separate review after M0.1 is merged; M0.3 has not been started.
 
+### 2026-08-31 — M0.1 merged and M0.2 review passed
+
+- Fast-forwarded M0.1 into `main` at `951ed5b` after explicit user authorization.
+- Reviewed M0.2 as an isolated nine-file diff against the updated `main`.
+- Rechecked scope, specification stability, the declared dependency DAG, diff hygiene, and secret-shaped values.
+- Found no architecture or correctness defects. Corrected this status file so it no longer reported M0.1 as unmerged.
+- Authorized M0.2 for fast-forward merge; no product code or schema was changed.
+
 ## Known prerequisites and blockers
 
-- Docker Desktop is not installed and WSL has no registered distribution. One local-services path must be selected before F0.2.
-- M0.2 must be reviewed after M0.1 is merged so its diff is evaluated independently against `main`.
+- Docker Desktop is selected but not installed; its installation remains a separately approved prerequisite before F0.2. WSL has no registered distribution and remains only the documented fallback.
