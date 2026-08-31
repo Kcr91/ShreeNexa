@@ -25,10 +25,6 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.6 | Pending | Blocked on M0.4/M0.5 being merged into `main`. |
 | F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
 
-## Open item requiring a user decision
-
-- **F2.6 dependency ambiguity.** The build plan's feature ledger lists F2.6's dependency as the literal range `F2.2-F2.5`, which includes F2.4 (indicator-builder UI, explicitly deferred to after F4.1-F4.3 by correction C4). Wave W3 places F2.6 *before* the frontend shell exists and explicitly excludes F2.4 from that wave. Taken literally, F2.6 would transitively require the frontend, contradicting its own wave placement. `build/manifest.yaml` transcribes the dependency literally (per AGENTS.md — the approved plan is not silently rewritten) and flags it in a `notes` field on the `F2.6` entry. This needs a decision before F2.6 is implemented: most likely the intended dependency was `F2.1-F2.3, F2.5` (the compiler/parser/schema prerequisites, without F2.4), but that correction should come from the user, not be assumed.
-
 ## Major-task log
 
 ### 2026-08-31 — M0.1 review accepted
@@ -169,6 +165,13 @@ This file is the human-readable project progress log. It is updated after each m
 - Confirmed the diff touches only `build/` and `docs/qa/acceptance/M0.5.md` — no product code, backend/frontend scaffolding, or protected path.
 - Confirmed no secret-shaped content, `git diff --check` is clean, and no stray test artifacts (temp dirs, `__pycache__`) remain in the working tree.
 - M0.5 is approved for fast-forward merge once M0.4 merges ahead of it; no schema, runtime, or data impact.
+
+### 2026-08-31 — F2.6 dependency finding resolved
+
+- User decision: add a correction row (`C11`) to the build plan's corrections table recording the F2.6/F2.4 wave-ordering conflict and its resolution, but leave the F2.6 ledger row itself in its original wording — only the corrections table is authoritative for this override.
+- Updated `build/manifest.yaml`: F2.6 now depends on `[F2.2, F2.3, F2.5]` (F2.4 dropped), with `notes` explaining the correction.
+- Added a regression test proving no wave-3 feature (F2.1–F2.3, F2.5–F2.7, F3.1–F3.4, F3.7, F3.10, F3.12) transitively depends on a deferred UI feature (F2.4, F3.11, F3.13, F3.14).
+- Re-ran the full suite: `python -m pytest build/tests -q` → 19 passed; `python build/validate_manifest.py` → 108 items, no cycles; `python -m ruff check build/` clean; `git diff --check` clean; no secret-shaped content.
 
 ## Known prerequisites and blockers
 
