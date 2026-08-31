@@ -70,9 +70,8 @@ redis-data/
 # Parquet and downloaded market data
 *.parquet
 *.parquet.*
-data/downloads/
-data/market/
-data/raw/
+# The complete default ShreeNexa runtime data root is local-only.
+/data/
 market-data/
 downloads/
 

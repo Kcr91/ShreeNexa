@@ -12,7 +12,7 @@ Historical inputs must remain reproducible after corrections, backfills, and rol
 
 1. The default data root is `<repository>\data`, currently `F:\ShreeNexa\data`. It is ignored by Git and is created only by an owning implementation feature.
 2. `SHREENEXA_DATA_ROOT` may override the default only with an absolute, dedicated, local ShreeNexa path that passes containment checks and carries a `.shreenexa-data-root.json` ownership marker.
-3. A custom root may not be a drive root, the source-repository root, a temporary directory, the legacy project, an ancestor of any of those paths, or a path owned by another application.
+3. A custom root may not be a drive root, a temporary directory, the legacy project, the source repository or any of its descendants/ancestors, or a path owned by another application. The canonical `<repository>\data` default is the sole in-repository exception.
 4. Raw upstream response bytes are immutable and content-hashed. Retrying or correcting a request creates another ingest artifact with new provenance; it never overwrites the earlier payload.
 5. Warehouse versions are immutable sets of partitions plus a content-hashed manifest. A small atomic pointer identifies the current version. Backtests store both version ID and manifest digest.
 6. Only `worker` may commit raw artifacts or publish warehouse versions. Readers use published versions and never write through their read path.

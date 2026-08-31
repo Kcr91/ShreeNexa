@@ -10,9 +10,10 @@ An optional `SHREENEXA_DATA_ROOT` override is valid only when all checks pass:
 
 1. Expand environment syntax and resolve symlinks/junctions to a canonical absolute Windows path.
 2. Reject a relative path, drive root, UNC/network share unless separately approved, Windows temporary directory, repository source root, or any ancestor of the repository.
-3. Reject the legacy-project path, its ancestors, and its descendants.
-4. Require every derived write target to remain a descendant of the canonical data root after resolution.
-5. On first initialization, create an ownership marker only after explicit confirmation by the owning feature. On later use, require the existing marker to match this project.
+3. Except for the canonical default `<repository>\data`, reject every descendant of the source repository so an override cannot place runtime files under source or documentation directories.
+4. Reject the legacy-project path, its ancestors, and its descendants.
+5. Require every derived write target to remain a descendant of the canonical data root after resolution.
+6. On first initialization, create an ownership marker only after explicit confirmation by the owning feature. On later use, require the existing marker to match this project.
 
 Marker contract:
 
@@ -145,7 +146,7 @@ Readers open `current.json` once, pin its version ID and manifest digest for the
 |---|---:|---|
 | Postgres logical/base backup, including audit records | Yes | Schema/version check plus record-count and sample reconciliation |
 | Raw payloads and metadata | Yes | SHA-256 verification and provenance link check |
-| Warehouse manifests, published partitions, and current pointer history | Yes | All manifest/partition hashes and ranges reconcile |
+| Warehouse manifests, published partitions, current pointer, and Postgres pointer-change audit history | Yes | All manifest/partition hashes and ranges reconcile; audit generations are consistent |
 | Data-root ownership marker | Yes | Project/root identity matches restore target procedure |
 | Reviewed `config/`, migrations, and operational runbooks | Yes, secret-free | Match the restored application version |
 | Redis data | No | Rebuild/resubscribe/requeue from authoritative state |

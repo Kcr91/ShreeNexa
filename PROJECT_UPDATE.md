@@ -7,7 +7,7 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W0 — Greenfield baseline |
-| Current feature | M0.3 — Ready for review |
+| Current feature | M0.3 — Review passed; merge authorized |
 | Current branch | `feature/M0.3-data-lifecycle` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
@@ -19,7 +19,7 @@ This file is the human-readable project progress log. It is updated after each m
 |---|---|---|
 | M0.1 | Done | Fast-forwarded into `main` at `951ed5b` after the approved re-review. |
 | M0.2 | Done | Reviewed and fast-forwarded into `main` at `74d5656`. |
-| M0.3 | Review | Data-root, immutable-ingest, warehouse-version, backup, rollback, and capacity contracts are complete and locally verified. |
+| M0.3 | Done | Review finding fixed; full data-root and build-ignore regression probes pass. |
 | M0.4–M0.6 | Pending | Blocked on preceding M0 dependencies. |
 | F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
 
@@ -87,6 +87,22 @@ This file is the human-readable project progress log. It is updated after each m
 - Confirmed the build plan and technical specification are unchanged.
 - Confirmed no runtime `data/` directory, dependency, database, or secret-shaped value was introduced.
 - M0.3 is ready for independent branch review; M0.4 has not been started.
+
+### 2026-08-31 — M0.3 review finding and fix
+
+- Review probes showed `data/warehouse`, `data/staging`, `data/services`, and `data/cache` were not covered by the existing partial data ignores.
+- Replaced the partial rules with a root-only `/data/` ignore so every default runtime-data category stays out of Git.
+- Tightened override validation: the canonical default is the only permitted data root inside the repository source tree.
+- Clarified that pointer-change history is backed up through the Postgres audit record alongside the current pointer.
+- Added representative ignore probes to the review rerun before merge.
+
+### 2026-08-31 — M0.3 review rerun passed
+
+- Confirmed raw, warehouse, current-pointer, staging, Postgres-service, and cache examples under root `data/` are ignored.
+- Confirmed similarly named nested `data/` and `dataset/` paths outside the root are not over-ignored.
+- Re-ran the M0.1 build-rule regression: root `build/manifest.yaml` remains trackable and nested generated `build/` output remains ignored.
+- Re-ran link, threshold-order, scope, specification-stability, secret-pattern, and diff-hygiene checks.
+- M0.3 is approved for fast-forward merge; no runtime data or schema exists yet.
 
 ## Known prerequisites and blockers
 
