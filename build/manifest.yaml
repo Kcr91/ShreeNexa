@@ -1,0 +1,683 @@
+# ShreeNexa feature manifest
+#
+# Source of truth: SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md section 6 (feature-by-feature
+# Codex work ledger). Each entry's name/depends_on/proof/model is transcribed from that
+# document. Do not hand-edit totals or counts here — build/validate_manifest.py generates
+# them from this list. If this manifest and the build plan ever disagree, the build plan
+# governs and this file must be corrected to match it, per AGENTS.md.
+#
+# depends_on ranges in the build plan (e.g. "F0.5-F0.7") are expanded here to their
+# explicit member IDs.
+
+schema_version: 1
+
+items:
+  # --- M0: greenfield bootstrap -------------------------------------------------
+  - id: M0.1
+    name: 'Create F:\ShreeNexa, initialize git, verify Python/Node/git/Docker prerequisites, record versions, and create only the minimal README/bootstrap files.'
+    depends_on: []
+    proof: 'New independent repo exists; F:\Algotrading was not touched; environment audit names every blocker.'
+    model: SOL-H
+
+  - id: M0.2
+    name: 'Freeze the greenfield architecture, process boundaries, storage ownership, package names, and Windows development topology as ADRs.'
+    depends_on: [M0.1]
+    proof: 'Module/dependency map has no circular process ownership and no dependency on the old project.'
+    model: SOL-XH
+
+  - id: M0.3
+    name: "Define the new terminal's own data-root, immutable raw-download policy, warehouse versioning, backup boundary, and disk-capacity alarms."
+    depends_on: [M0.1, M0.2]
+    proof: 'Data lifecycle/rollback design; all data paths are under the new project or an explicitly configured new data root.'
+    model: SOL-XH
+
+  - id: M0.4
+    name: 'Add AGENTS.md, scoped .codex/config.toml, architecture index, QA rules, protected paths, and completion-report template.'
+    depends_on: [M0.1, M0.2, M0.3]
+    proof: 'A fresh Codex chat can identify commands, boundaries, and done criteria without repo-wide exploration.'
+    model: SOL-H
+
+  - id: M0.5
+    name: 'Convert the 102 listed features plus M0 into build/manifest.yaml; validate IDs, dependencies, cycles, and counts.'
+    depends_on: [M0.4]
+    proof: 'Manifest schema test; topological sort succeeds; count is generated, not handwritten.'
+    model: TER-H
+
+  - id: M0.6
+    name: 'Establish the first green baseline and freeze small synthetic/reference fixtures by hash.'
+    depends_on: [M0.1, M0.2, M0.3, M0.4, M0.5]
+    proof: 'Clean clone bootstrap and empty test suite gates are green; no unexplained warnings.'
+    model: TER-M
+
+  # --- Epic 0: Foundations --------------------------------------------------------
+  - id: F0.1
+    name: 'Standardize the new repo, Python 3.14 venv, Node workspace, lockfiles, ruff, mypy, pytest, frontend test/build, pre-commit, and CI skeleton.'
+    depends_on: [M0.6]
+    proof: 'Clean checkout installs from locks; CPython 3.14 binary-wheel check; every baseline command passes.'
+    model: SOL-H
+
+  - id: F0.2
+    name: 'Add resource-limited local Postgres and Redis using Docker Compose; document the WSL2 fallback, but implement only one active path.'
+    depends_on: [F0.1]
+    proof: '`up` makes both healthy; migrations/connectivity smoke tests pass on the 8 GB laptop.'
+    model: TER-H
+
+  - id: F0.3
+    name: 'Create api, engine, feedd, and worker process skeletons plus supervisor contracts; no trading behavior yet.'
+    depends_on: [F0.1, F0.2]
+    proof: 'Kill/restart api; an engine heartbeat and persisted state continue.'
+    model: SOL-XH
+
+  - id: F0.4
+    name: 'Central settings, .env.example, secret loading, redaction, and Dhan token-expiry health state/banner API.'
+    depends_on: [F0.1, F0.2, F0.3]
+    proof: 'Secrets never appear in frontend payloads, logs, exceptions, fixtures, or git; expired-token acceptance test.'
+    model: SOL-H
+
+  - id: F0.5
+    name: 'Typed Dhan REST wrapper with injectable transport and recorded cassettes.'
+    depends_on: [F0.4]
+    proof: 'Offline cassette tests cover success, auth failure, malformed response, timeout, and retryable error.'
+    model: SOL-H
+
+  - id: F0.6
+    name: 'Verify current Dhan limits, store dated limits in YAML, and implement a Redis token bucket with jittered backoff. Route all Dhan REST calls through it.'
+    depends_on: [F0.2, F0.5]
+    proof: 'Hypothesis/concurrency test never exceeds configured limits; architecture test finds no bypassing call site.'
+    model: SOL-XH
+
+  - id: F0.7
+    name: 'Ingest the detailed Dhan instrument master and expose typed search across every segment actually present in the source. Do not hardcode "7" if the master disagrees.'
+    depends_on: [F0.5, F0.6]
+    proof: 'Known symbols/options resolve correctly; inactive/duplicate IDs and schema drift are tested.'
+    model: SOL-H
+
+  - id: F0.8
+    name: 'Build current and historical index-constituent ingestion from scratch using effective intervals, official source snapshots, committed fallback, and manual override.'
+    depends_on: [M0.3, F0.7]
+    proof: 'Date-aware membership tests; NSE failure uses a stale fallback with visible provenance; unavailable constituents remain non-fatal.'
+    model: SOL-XH
+
+  - id: F0.9
+    name: 'Central connection-budget manager for market-feed and depth sockets, conservative shared pool of five until proven otherwise.'
+    depends_on: [F0.3, F0.4, F0.5]
+    proof: 'Property tests never open socket six; exhaustion is explicit; configuration can switch to independent pools.'
+    model: SOL-XH
+
+  # --- Epic 1: Historical warehouse ------------------------------------------------
+  - id: F1.1
+    name: 'Implement immutable DuckDB/Parquet bar store with typed schema, partition manifest, atomic writes, correction workflow, and read API.'
+    depends_on: [F0.1, M0.3]
+    proof: 'Round-trip and partition-pruning tests; interrupted write cannot expose a partial partition.'
+    model: SOL-XH
+
+  - id: F1.2
+    name: 'Dhan daily backfill since inception with resumable windows, provenance, and corporate-action-adjustment investigation.'
+    depends_on: [F0.5, F0.6, F0.7, F1.1]
+    proof: 'NIFTY sample reconciles independently; adjustment status is explicit; no equity backtest is marked trusted until resolved.'
+    model: SOL-H
+
+  - id: F1.3
+    name: 'Build resumable Dhan one-minute backfill in 90-day windows, writing only to the new warehouse.'
+    depends_on: [F0.5, F0.6, F0.7, F1.1, M0.3]
+    proof: 'Per-symbol counts/date coverage/hashes and gap/duplicate report; kill/resume produces no duplicates.'
+    model: SOL-XH
+
+  - id: F1.4
+    name: 'Expired-option 30-day-window backfill with ATM coverage metadata.'
+    depends_on: [F0.5, F0.6, F0.7, F1.1]
+    proof: 'Outside ATM±10/±3 returns strike_unavailable; no substitution; restart-safe writes.'
+    model: SOL-H
+
+  - id: F1.5
+    name: 'Per-segment trading sessions, holidays, timezone normalization, and calendar versions.'
+    depends_on: [F0.7, M0.2]
+    proof: 'Published-calendar fixtures; no bars outside valid session; IST handling is deterministic.'
+    model: SOL-XH
+
+  - id: F1.6
+    name: 'Session-aware resampling from 1m to 3/5/15/30/60/D/W, including partial-bar policy.'
+    depends_on: [F1.1, F1.5]
+    proof: 'OHLC/volume/OI invariants and parity with pandas on independent fixtures.'
+    model: SOL-H
+
+  - id: F1.7
+    name: 'Data-quality reporting for gaps, duplicates, outliers, zero volume, unexpected dates, stale partitions, and coverage by universe/date.'
+    depends_on: [F1.1, F1.2, F1.3, F1.4, F1.5, F1.6]
+    proof: 'Seeded defects are detected; report separates upstream source gaps from warehouse errors.'
+    model: TER-H
+
+  # --- Epic 2: Indicators, StrategyIR, and screener --------------------------------
+  - id: F2.1
+    name: 'Build the vectorized indicator registry in small family batches, not one 100-indicator commit.'
+    depends_on: [F1.1, F1.5, F1.6]
+    proof: 'Each primitive matches TA-Lib/pandas-ta or a documented independent reference, including warm-up/NaN policy.'
+    model: SOL-H
+
+  - id: F2.2
+    name: 'Add the incremental implementation for every accepted vector primitive.'
+    depends_on: [F2.1]
+    proof: 'G1 parity property test for every primitive; no primitive registers with only one implementation.'
+    model: SOL-XH
+
+  - id: F2.3
+    name: 'Safe formula parser, AST validator, compiler, and restricted evaluator.'
+    depends_on: [F2.1, F2.2]
+    proof: 'Fuzz tests; attribute/import/arbitrary-call/negative-ref payloads fail at parse time.'
+    model: SOL-XH
+
+  - id: F2.4
+    name: 'Indicator-builder UI and plotting. Execute after F4.1-F4.3.'
+    depends_on: [F2.3, F4.1, F4.2, F4.3, F4.6]
+    proof: 'Playwright creates, validates, saves, plots, edits, and rejects a malicious formula.'
+    model: TER-H
+
+  - id: F2.5
+    name: 'Versioned Pydantic StrategyIR schema and JSON Schema export, including separate horizon and strategy_type.'
+    depends_on: [F0.7, F0.8, F2.1]
+    proof: 'Round-trip, invalid-node, migration, universe, and option-leg schema tests.'
+    model: SOL-XH
+
+  - id: F2.6
+    name: 'Vectorized StrategyIR compiler/evaluator.'
+    depends_on: [F2.2, F2.3, F2.4, F2.5]
+    proof: 'Hand-verified strategies plus G2 truncated-data audit; deterministic signals.'
+    model: SOL-XH
+    notes: >-
+      Build plan lists this dependency as the literal range "F2.2-F2.5", which spans
+      F2.4 (indicator-builder UI, explicitly deferred to after F4.1-F4.3 per correction
+      C4 and excluded from wave W3). W3 places F2.6 before the frontend shell exists.
+      Transcribed literally per AGENTS.md ("may not be silently rewritten"); flagged in
+      the M0.5 completion report as a build-plan inconsistency needing a user decision
+      before F2.6 is implemented.
+
+  - id: F2.7
+    name: 'Incremental compiler/evaluator with state recovery.'
+    depends_on: [F2.2, F2.5, F2.6]
+    proof: 'Repository parity suite proves identical signals/state across vector and streaming runs.'
+    model: SOL-XH
+
+  - id: F2.8
+    name: 'Point-in-time screener runner using the same signal nodes and historical memberships.'
+    depends_on: [F0.8, F1.1, F2.6]
+    proof: 'Three hand-verified names; G2; survivorship-bias warning where membership evidence is incomplete.'
+    model: SOL-XH
+
+  - id: F2.9
+    name: 'Screener persistence, scheduling, ranking, export, and routing to watchlists/strategy universes.'
+    depends_on: [F0.3, F2.8]
+    proof: 'Offline scheduled-run integration test; output snapshot is reproducible and auditable.'
+    model: TER-H
+
+  # --- Epic 3: Backtester and analysis core ----------------------------------------
+  - id: F3.1
+    name: 'Engine contracts for clock, data source, broker, portfolio, events, and persistence.'
+    depends_on: [F1.1, F2.5, F2.6, F2.7]
+    proof: 'State-machine properties; restart from persisted checkpoint produces the same result.'
+    model: SOL-XH
+
+  - id: F3.2
+    name: 'SimBroker fills and slippage models with explicit signal/fill timing.'
+    depends_on: [F3.1]
+    proof: 'No fill outside bar high/low; next-bar semantics prove no same-bar look-ahead.'
+    model: SOL-XH
+
+  - id: F3.3
+    name: 'Effective-dated Indian cost model.'
+    depends_on: [F3.1, F3.2]
+    proof: 'Reconciles to a redacted real Dhan contract note and hand fixtures for every supported segment/side.'
+    model: SOL-XH
+
+  - id: F3.4
+    name: 'Stock-strategy backtest runner and persistence. This completes the first vertical slice.'
+    depends_on: [F1.1, F2.6, F3.1, F3.2, F3.3]
+    proof: 'Buy-and-hold and one hand-specified intraday strategy reconcile manually; identical seed/input produces byte-identical output.'
+    model: SOL-XH
+
+  - id: F3.5
+    name: 'Multi-leg options backtest with strike offset, premium, absolute, and delta selectors. Execute F8.1 first.'
+    depends_on: [F1.4, F3.1, F3.2, F3.3, F3.4, F8.1]
+    proof: 'Hand-computed straddle; unavailable strikes fail explicitly; leg and portfolio P&L reconcile.'
+    model: SOL-XH
+
+  - id: F3.6
+    name: 'Expiry, settlement, square-off, and rolling rules.'
+    depends_on: [F3.5]
+    proof: 'No unsettled position survives expiry; holiday-shifted expiry fixtures pass.'
+    model: SOL-XH
+
+  - id: F3.7
+    name: 'Pluggable core metrics registry and breakdowns.'
+    depends_on: [F3.4]
+    proof: 'Spreadsheet/reference fixtures; zero-trade and degenerate-return behavior is explicit.'
+    model: SOL-XH
+
+  - id: F3.8
+    name: 'Options-specific metrics and per-leg attribution.'
+    depends_on: [F3.5, F3.6, F3.7, F8.1]
+    proof: 'Independent fixtures for premium capture, Greeks exposure, DTE/IV buckets, margin efficiency.'
+    model: SOL-XH
+
+  - id: F3.9
+    name: 'Parameter sweep, sensitivity surface, and walk-forward evaluation.'
+    depends_on: [F3.4, F3.7]
+    proof: 'Deterministic parallel runs; lone-spike visualization data; in/out-of-sample split has no leakage.'
+    model: SOL-XH
+
+  - id: F3.10
+    name: 'Metric grading, four horizon profiles, style-specific win rate, flags, verdict, config version, and deployment gates.'
+    depends_on: [F3.7]
+    proof: 'Hand-graded fixtures per profile; contiguous boundary properties; overfit result becomes INVESTIGATE.'
+    model: SOL-XH
+
+  - id: F3.11
+    name: 'Grading Thresholds UI. Execute after F4.1-F4.3.'
+    depends_on: [F3.10, F4.1, F4.2, F4.3]
+    proof: 'Preview before save; invalid bands rejected; old scorecards marked stale; explicit re-grade only.'
+    model: TER-H
+
+  - id: F3.12
+    name: 'Shared daily P&L model for backtest/paper/live with realised, MTM, costs, cashflow, and TWR.'
+    depends_on: [F3.4, F3.7]
+    proof: 'Accounting identity, compounding, and pure-cashflow 0% return properties.'
+    model: SOL-XH
+
+  - id: F3.13
+    name: 'P&L calendar widget and drill-down. Execute after F4.1-F4.3.'
+    depends_on: [F1.5, F3.12, F4.1, F4.2, F4.3]
+    proof: 'Playwright day click reconciles to trade book; MTM-only days and segment holidays display correctly.'
+    model: TER-H
+
+  - id: F3.14
+    name: 'Monthly/yearly/rolling returns and continuous mode timeline. Execute after F4.1-F4.3.'
+    depends_on: [F3.12, F4.1, F4.2, F4.3]
+    proof: 'Independent compounded-return fixtures; backtest->paper->live timeline does not double count.'
+    model: TER-H
+
+  # --- Epic 4: Frontend shell, widgets, and charting --------------------------------
+  - id: F4.1
+    name: 'React/TypeScript/Vite shell, routing, theme tokens, API client boundary, error/loading states, and development auth stub.'
+    depends_on: [F0.1, F0.3, F0.4]
+    proof: 'Production build, accessibility smoke test, route/error Playwright tests; no secrets in bundle.'
+    model: TER-H
+
+  - id: F4.2
+    name: 'Typed widget registry with settings-schema validation and lazy loading.'
+    depends_on: [F4.1]
+    proof: 'A fixture widget appears in the palette without editing layout code; invalid settings fail visibly.'
+    model: SOL-H
+
+  - id: F4.3
+    name: 'Draggable/resizable layout engine with persisted layouts, clone/reset/rename/reorder, and optimistic-conflict handling.'
+    depends_on: [F4.2]
+    proof: 'Playwright rearrange->reload persistence; simultaneous-edit behavior is deterministic.'
+    model: TER-H
+
+  - id: F4.4
+    name: 'Seven shipped dashboard preset definitions. Widgets not yet implemented use honest "not available yet" placeholders, never fake data.'
+    depends_on: [F4.2, F4.3]
+    proof: 'Create/reset every preset; schema/version migration tests; no missing registry key crashes a dashboard.'
+    model: TER-M
+
+  - id: F4.5
+    name: 'UDF-shaped historical datafeed adapter over the warehouse API.'
+    depends_on: [F1.1, F1.5, F1.6, F4.1]
+    proof: 'Requested bars/timezones match direct warehouse queries; pagination and empty ranges tested.'
+    model: SOL-H
+
+  - id: F4.6
+    name: 'Lightweight Charts widget with panes, timeframes, crosshair sync, responsive resizing, and data-boundary states.'
+    depends_on: [F4.2, F4.3, F4.4, F4.5]
+    proof: 'Playwright multi-chart synchronization; screenshot/visual check at supported viewport sizes.'
+    model: TER-H
+
+  - id: F4.7
+    name: 'Drawing tools with persistence, symbol/timeframe ownership, edit/delete, and version migration.'
+    depends_on: [F4.6]
+    proof: 'Draw->reload->edit->delete acceptance flow; drawings never attach to the wrong instrument.'
+    model: TER-H
+
+  - id: F4.8
+    name: 'Backtest widgets: run status, equity, drawdown, trade list, chart markers, metrics, scorecard, and comparison view.'
+    depends_on: [F3.4, F3.7, F3.10, F4.2, F4.3, F4.4, F4.5, F4.6]
+    proof: 'UI totals reconcile with API fixtures; marker timestamps/prices link to the exact trade.'
+    model: TER-H
+
+  # --- Epic 5: AI strategy generator -------------------------------------------------
+  - id: F5.1
+    name: 'Define the product runtime AIProvider protocol, disabled/mock provider, auth-mode checks, redaction, timeout, usage accounting, and pluggable real-provider boundary. Do not couple this to the Codex development extension.'
+    depends_on: [F0.4, F2.5]
+    proof: 'Mock contract tests; startup clearly reports disabled/misconfigured provider; prompts/results never leak secrets.'
+    model: SOL-H
+
+  - id: F5.2
+    name: 'Natural-language to schema-constrained StrategyIR through the selected real provider. Provider choice and any API cost require a separate recorded decision.'
+    depends_on: [F2.5, F5.1]
+    proof: 'At least 20 representative descriptions yield schema-valid drafts or clear validation errors; adversarial prompt cannot request deployment.'
+    model: SOL-XH
+
+  - id: F5.3
+    name: 'Render generated IR in the visual builder with diff, explanation, warnings, edit, approve, reject, and draft-only status.'
+    depends_on: [F2.4, F5.2]
+    proof: 'Playwright confirms generation never changes deployment state and requires user approval before save.'
+    model: TER-H
+
+  - id: F5.4
+    name: 'One-click backtest from an approved generated draft, preserving exact IR/version/provider metadata.'
+    depends_on: [F3.4, F4.8, F5.3]
+    proof: 'Generated run equals a manual run with the same IR snapshot and configuration.'
+    model: TER-H
+
+  # --- Epic 6: Composition and regime switching --------------------------------------
+  - id: F6.1
+    name: 'Multi-strategy capital allocation and portfolio run orchestration.'
+    depends_on: [F3.4, F3.12]
+    proof: 'Allocation invariant, no double-spend, isolated strategy books, deterministic rebalancing.'
+    model: SOL-XH
+
+  - id: F6.2
+    name: 'Combined equity curve, portfolio drawdown, aggregate caps, and marginal contribution.'
+    depends_on: [F6.1]
+    proof: 'Combined values reconcile exactly to strategy-level cash/equity fixtures.'
+    model: SOL-XH
+
+  - id: F6.3
+    name: 'Cross-strategy return/signal correlation matrices with missing-period policy.'
+    depends_on: [F6.1, F6.2]
+    proof: 'Matches NumPy/reference fixtures; constant/short series behavior is explicit.'
+    model: SOL-H
+
+  - id: F6.4
+    name: 'StrategySignal nodes and signal-level And/Or/Not composition.'
+    depends_on: [F2.5, F2.6, F2.7, F6.1]
+    proof: 'G1/G2 across composed strategies; cycle detection rejects recursive strategy graphs.'
+    model: SOL-XH
+
+  - id: F6.5
+    name: 'Versioned regime detectors and enforced walk-forward switching.'
+    depends_on: [F3.9, F6.4]
+    proof: 'Headline metrics are refused without walk-forward evidence; no regime label uses future bars.'
+    model: SOL-XH
+
+  # --- Epic 7: Live data layer --------------------------------------------------------
+  - id: F7.1
+    name: 'Dhan live-feed WebSocket client, binary packet parser, heartbeat, reconnect state machine, and captured golden packets.'
+    depends_on: [F0.4, F0.5, F0.6, F0.7, F0.9]
+    proof: 'Independent golden-packet decode; malformed/truncated packets do not corrupt state; no real credentials in fixtures.'
+    model: SOL-XH
+
+  - id: F7.2
+    name: 'Subscription manager across the connection budget, including priority, batching, unsubscribe, reconnect, and resubscribe.'
+    depends_on: [F0.9, F7.1]
+    proof: 'Properties enforce <=5,000/socket and <=100/message under arbitrary operations.'
+    model: SOL-XH
+
+  - id: F7.3
+    name: 'Redis quote/OI/depth hot cache with schema/version, freshness, and feed-health records.'
+    depends_on: [F0.2, F7.1, F7.2]
+    proof: 'Atomic update/read tests; stale data is marked, never presented as live.'
+    model: SOL-H
+
+  - id: F7.4
+    name: 'Browser WebSocket fan-out with snapshots, deltas, backpressure, reconnect/resync, and authorization boundary.'
+    depends_on: [F0.3, F4.1, F7.3]
+    proof: 'Three-client consistency test; slow client cannot block feed ingestion.'
+    model: SOL-XH
+
+  - id: F7.5
+    name: 'Multiple manual and F&O watchlists with configurable columns and stable ordering.'
+    depends_on: [F0.7, F4.2, F4.3, F7.4]
+    proof: 'Playwright create/edit/delete/reorder; symbols survive instrument-master refresh.'
+    model: TER-H
+
+  - id: F7.6
+    name: 'Sector watchlists and index constituent drill-in driven by effective membership/provenance.'
+    depends_on: [F0.8, F7.5]
+    proof: 'Selected historical date/current date returns correct constituents; stale fallback is visible.'
+    model: TER-H
+
+  - id: F7.7
+    name: 'Session-aware live one-minute bar builder merged onto warehouse history.'
+    depends_on: [F1.1, F1.5, F1.6, F7.1, F7.2, F7.3]
+    proof: 'Built bars reconcile with Dhan minute bars; late/duplicate/out-of-order ticks are tested.'
+    model: SOL-XH
+
+  - id: F7.8
+    name: 'Index and constituent heatmaps with breadth and transparent weighting source.'
+    depends_on: [F0.8, F7.4, F7.6]
+    proof: 'Cell totals/breadth match fixture calculations; missing weights are labelled and handled deterministically.'
+    model: TER-H
+
+  - id: F7.9
+    name: '20-level depth ladder/watchlist, on-demand 200-level book, and explicit 5-level fallback for unsupported segments.'
+    depends_on: [F0.9, F7.1, F7.2, F7.3, F7.4]
+    proof: 'Golden depth packets; cumulative quantities monotonic; UI shows segment limitation and connection cost.'
+    model: SOL-XH
+
+  # --- Epic 8: Option analytics and strategy builders ---------------------------------
+  - id: F8.1
+    name: 'Black-76 pricing, forward selection, Brent IV solver, Greeks, conventions, reliability flags, and vector/incremental forms. Execute before F3.5.'
+    depends_on: [F1.5, F2.1, F2.2]
+    proof: 'py_vollib/hand parity; put-call parity; delta/gamma/vega bounds; convergence and near-zero-vega cases.'
+    model: SOL-XH
+
+  - id: F8.2
+    name: 'Dhan-chain calibration, convention fitting, tolerance policy, persistence, and drift badge API/UI.'
+    depends_on: [F0.5, F0.6, F0.7, F8.1]
+    proof: 'At least 20 strikes reconcile; theta convention is explicitly validated; unreliable quotes are excluded with reason.'
+    model: SOL-XH
+
+  - id: F8.3
+    name: 'Streaming option-chain widget combining tick prices/OI with locally computed IV/Greeks.'
+    depends_on: [F4.2, F4.3, F7.1, F7.2, F7.3, F7.4, F8.1, F8.2]
+    proof: 'Tick updates do not exceed render budget; stale/calibration drift is visible; strike/expiry changes resubscribe safely.'
+    model: SOL-H
+
+  - id: F8.4
+    name: 'ATM IV, IV rank/percentile, OI/volume PCR, max pain, skew/smile, and term structure.'
+    depends_on: [F1.4, F8.1, F8.2, F8.3]
+    proof: 'Independent fixtures and explicit minimum-history rules; no division-by-zero/fabricated percentile.'
+    model: SOL-XH
+
+  - id: F8.5
+    name: 'Multi-leg option strategy builder with expiry/T+n payoff, breakevens, extrema, and position Greeks.'
+    depends_on: [F2.5, F4.2, F4.3, F8.1]
+    proof: 'Hand-computed standard structures; payoff/Greek aggregation properties; edit/reorder legs.'
+    model: SOL-XH
+
+  - id: F8.6
+    name: 'Net Greeks plus Dhan margin adapter and reconciliation.'
+    depends_on: [F0.5, F0.6, F0.7, F8.5]
+    proof: 'Recorded margin responses match Dhan calculator samples; unavailable margin is explicit, never zero.'
+    model: SOL-H
+
+  - id: F8.7
+    name: 'Visual stock strategy builder mapping exactly to StrategyIR nodes.'
+    depends_on: [F2.4, F2.5, F2.6, F2.7, F4.2, F4.3]
+    proof: 'UI->IR->UI round-trip preserves meaning; produced IR passes evaluator and G2 tests.'
+    model: TER-H
+
+  # --- Epic 9: Paper trading and forward testing --------------------------------------
+  - id: F9.1
+    name: 'PaperBroker using the live data source, realistic fill policy, persisted orders/fills, and restart recovery.'
+    depends_on: [F2.7, F3.1, F3.2, F3.3, F7.3, F7.4, F7.5, F7.6, F7.7]
+    proof: 'State-machine properties; G1; restart/replay cannot duplicate a fill.'
+    model: SOL-XH
+
+  - id: F9.2
+    name: 'Paper order book, trade book, positions, live MTM, costs, and rejection/reason display.'
+    depends_on: [F4.2, F4.3, F9.1]
+    proof: 'Independent accounting fixture; UI/API/order/fill/position totals reconcile.'
+    model: SOL-H
+
+  - id: F9.3
+    name: 'Multiple concurrent paper strategies with isolated capital and shared account caps.'
+    depends_on: [F6.1, F9.1, F9.2]
+    proof: 'No cross-strategy position/cash leakage; deterministic conflict/cap behavior.'
+    model: SOL-XH
+
+  - id: F9.4
+    name: 'Reuse the Epic 3 metric registry for forward-test results without calculation forks.'
+    depends_on: [F3.7, F3.8, F3.9, F3.10, F9.2]
+    proof: 'The same trade/equity fixture produces the same metrics in backtest and paper modes.'
+    model: SOL-H
+
+  - id: F9.5
+    name: 'Same-session paper-vs-backtest divergence report for signals, timestamps, prices, fills, costs, and P&L.'
+    depends_on: [F3.4, F7.7, F9.1, F9.2, F9.3, F9.4]
+    proof: 'Known injected divergence is localized and explained; identical inputs reconcile within declared tolerances.'
+    model: SOL-XH
+
+  - id: F9.6
+    name: 'Deploy/pause/resume/stop lifecycle, engine ownership, restart reconciliation, and audit events.'
+    depends_on: [F0.3, F9.1, F9.2, F9.3, F9.4, F9.5]
+    proof: 'Restarting api never stops an engine deployment; stop is idempotent; stale state is reconciled.'
+    model: SOL-XH
+
+  - id: F9.7
+    name: 'Paper P&L calendar and monthly/yearly returns by reusing F3.12-F3.14.'
+    depends_on: [F3.12, F3.13, F3.14, F9.2, F9.3, F9.4, F9.5, F9.6]
+    proof: "source_kind='paper' totals reconcile; no duplicated calendar or return-calculation code path."
+    model: TER-H
+
+  # --- Epic 10: Long-term investing -----------------------------------------------------
+  - id: F10.1
+    name: 'Holdings ledger, lots, average cost, corporate actions, and realised/unrealised P&L import/reconciliation.'
+    depends_on: [F0.5, F0.6, F0.7, F3.3, F4.2, F4.3]
+    proof: 'Reconciles to redacted Dhan account fixtures; transfers/corporate actions do not masquerade as returns.'
+    model: SOL-XH
+
+  - id: F10.2
+    name: 'XIRR plus sector/asset allocation and benchmark-aware performance.'
+    depends_on: [F0.8, F10.1]
+    proof: 'Excel XIRR parity across irregular cashflows; multiple-root/failure behavior is explicit.'
+    model: SOL-XH
+
+  - id: F10.3
+    name: 'Dividend event ledger, import, matching, withholding/tax metadata, and income views.'
+    depends_on: [F10.1]
+    proof: 'Recorded/hand fixtures; unmatched payment is reported rather than assigned to the wrong holding.'
+    model: SOL-H
+
+  - id: F10.4
+    name: 'SIP planning and calendar/threshold rebalancing proposals. No automatic orders.'
+    depends_on: [F1.5, F10.1, F10.2, F10.3]
+    proof: 'Cashflow/TWR separation; G2; proposal totals respect cash and configured limits.'
+    model: SOL-H
+
+  - id: F10.5
+    name: 'Point-in-time sectoral momentum rotation research strategy.'
+    depends_on: [F0.8, F2.5, F2.6, F2.7, F3.4, F3.9, F10.2]
+    proof: 'G2, survivorship-bias checks, and enforced walk-forward evidence.'
+    model: SOL-XH
+
+  # --- Epic 11: Codex feature-builder pipeline --------------------------------------------
+  - id: F11.1
+    name: 'Feature request -> structured, editable implementation specification tied to the manifest.'
+    depends_on: [F4.1, F4.2, F4.3, F4.4, M0.5]
+    proof: 'Ambiguous/high-risk requests require approval; generated spec names scope, tests, risk, dependencies, and protected paths.'
+    model: SOL-XH
+
+  - id: F11.2
+    name: 'Git worktree creation, branch ownership, path validation, cleanup, and recovery.'
+    depends_on: [F11.1]
+    proof: 'Property/acceptance tests prove the runner cannot write outside its worktree.'
+    model: SOL-XH
+
+  - id: F11.3
+    name: 'Codex task runner with bounded fresh task context, structured events, browser stream, cancellation, and durable state.'
+    depends_on: [F11.1, F11.2]
+    proof: 'Interrupt/restart resumes from git/state, not conversation history; auth/usage errors are explicit.'
+    model: SOL-XH
+
+  - id: F11.4
+    name: 'Gate harness for G1-G6 plus filtered failure summaries and bounded retry policy.'
+    depends_on: [F11.3]
+    proof: 'Deliberately broken parity/look-ahead/type/UI/protected-path fixtures are all blocked.'
+    model: SOL-XH
+
+  - id: F11.5
+    name: 'Protected-path enforcement for risk, broker, live orders, and parity fixtures at prompt/tool/diff/promotion layers.'
+    depends_on: [F11.2, F11.3, F11.4]
+    proof: 'Attempted protected edit is denied and audited even if one enforcement layer is bypassed.'
+    model: SOL-XH
+
+  - id: F11.6
+    name: 'Isolated sandbox ports, database schema, Redis database, read-only warehouse, and hard-wired PaperBroker.'
+    depends_on: [F9.1, F9.2, F9.3, F9.4, F9.5, F9.6, F11.4, F11.5]
+    proof: 'Sandbox has no credentials or network/code path capable of placing a live order.'
+    model: SOL-XH
+
+  - id: F11.7
+    name: 'Approval-gated blue/green promotion, health check, drain, rollback, and history.'
+    depends_on: [F11.6, F13.1, F13.2, F13.3]
+    proof: 'Promote/rollback during an active paper strategy; engine is not restarted; audit is complete.'
+    model: SOL-XH
+
+  # --- Epic 13: Production deployment (execute before Epic 12) ----------------------------
+  - id: F13.1
+    name: 'Production containers for api, engine, feedd, and worker, with non-root users, health checks, resource limits, and immutable images.'
+    depends_on: [F9.1, F9.2, F9.3, F9.4, F9.5, F9.6, F9.7]
+    proof: 'Local production stack starts cleanly; restarting API leaves engine/paper deployment intact.'
+    model: SOL-XH
+
+  - id: F13.2
+    name: 'Lightsail Mumbai provisioning, network policy, systemd/container supervision, Caddy TLS, and blue/green upstream.'
+    depends_on: [F13.1]
+    proof: 'Staging deploy/rollback runbook is executed; only intended public ports are reachable.'
+    model: SOL-XH
+
+  - id: F13.3
+    name: 'Single-user password + TOTP auth, secure sessions, recovery process, rate limiting, and audit.'
+    depends_on: [F4.1, F13.2]
+    proof: 'Security tests for session fixation, CSRF, brute force, secret storage, and WebSocket authorization.'
+    model: SOL-XH
+
+  - id: F13.4
+    name: 'Nightly Postgres/Parquet/config backups, retention, encryption, integrity checks, and documented restore.'
+    depends_on: [F13.2, F13.3]
+    proof: 'Restore into a clean staging box succeeds and reconciles counts/hashes.'
+    model: SOL-XH
+
+  - id: F13.5
+    name: 'Uptime, feed freshness, disk, token expiry, queue, engine, backup, and data-gap monitoring with actionable alerts.'
+    depends_on: [F13.1, F13.2, F13.3, F13.4]
+    proof: 'Injected failures trigger one clear alert and recovery notice; stale feed cannot look healthy.'
+    model: SOL-H
+
+  # --- Epic 12: Live trading (last; explicit approval only) -------------------------------
+  - id: F12.1
+    name: 'Typed DhanBroker order mapping, idempotency keys, timeout/unknown-state handling, and disabled-by-default feature gate.'
+    depends_on: [F0.5, F0.6, F0.7, F9.1, F9.2, F9.3, F9.4, F9.5, F9.6, F13.1, F13.2, F13.3, F13.4, F13.5]
+    proof: 'Offline cassettes/state properties; no test can reach live Dhan; startup remains paper-only by default.'
+    model: SOL-XH
+
+  - id: F12.2
+    name: 'Live Order Update WebSocket, postback ingestion, deduplication, sequence gaps, and reconciliation.'
+    depends_on: [F7.1, F7.2, F7.3, F12.1]
+    proof: 'Duplicate/lost/out-of-order events converge to broker truth without duplicate fills.'
+    model: SOL-XH
+
+  - id: F12.3
+    name: 'Live order ticket with explicit mode, estimated charges/margin, confirmations, validation, and status uncertainty.'
+    depends_on: [F4.2, F4.3, F8.6, F12.1, F12.2]
+    proof: 'Playwright cannot submit accidentally; paper/live are unmistakable; uncertain order state blocks blind retry.'
+    model: SOL-XH
+
+  - id: F12.4
+    name: 'Account risk layer: kill switch, capital/loss/position/order-rate/price-band caps, and broker-path enforcement.'
+    depends_on: [F3.1, F9.3, F12.1, F12.2, F12.3]
+    proof: 'Exhaustive test proves no path reaches DhanBroker without risk filtering; kill switch halts within one tick.'
+    model: SOL-XH
+
+  - id: F12.5
+    name: 'Continuous positions/orders/funds reconciliation against Dhan with freeze-on-mismatch policy.'
+    depends_on: [F12.1, F12.2, F12.3, F12.4]
+    proof: 'Seeded mismatch freezes affected trading and creates a clear resolution workflow; no silent auto-correction.'
+    model: SOL-XH
+
+  - id: F12.6
+    name: 'Immutable audit of every signal, filter, risk decision, order request, response, update, reconciliation, override, and kill-switch event.'
+    depends_on: [F12.1, F12.2, F12.3, F12.4, F12.5]
+    proof: 'One trade can be reconstructed end to end; sensitive values are redacted; audit tampering is detectable.'
+    model: SOL-XH

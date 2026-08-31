@@ -1,0 +1,10 @@
+{
+  "feature": "M0.5",
+  "status": "in_progress",
+  "branch": "feature/M0.5-feature-manifest",
+  "commit": null,
+  "tests": {},
+  "started_at": "2026-08-31",
+  "finished_at": null,
+  "blockers": []
+}
