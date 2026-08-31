@@ -19,7 +19,10 @@ __pycache__/
 .coverage.*
 coverage.xml
 htmlcov/
-build/
+# Ignore generated nested build output; root /build holds tracked ShreeNexa manifest and orchestration metadata.
+**/build/
+!/build/
+!/build/**
 dist/
 *.egg-info/
 .eggs/
