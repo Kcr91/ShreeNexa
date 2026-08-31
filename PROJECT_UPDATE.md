@@ -183,6 +183,22 @@ This file is the human-readable project progress log. It is updated after each m
 
 - Created `feature/M0.6-green-baseline` from the merged `main` at `22334e8`.
 - M0.6 scope per the build plan: establish the first green baseline and freeze small synthetic/reference fixtures by hash.
+- Scoped with the user: since F0.1 hasn't run, "baseline" means the current documentation/tooling repo bootstraps cleanly from a fresh clone with no manual setup, and the frozen fixtures are small hand-computed placeholders for future numeric-parity features (F1.6, F2.1) to pin against — not an indicator implementation.
+
+### 2026-08-31 — M0.6 baseline and fixtures completed
+
+- Discovered a real risk before freezing anything by hash: local `core.autocrlf=true` with no `.gitattributes` meant a fixture's on-disk bytes (and therefore its SHA-256) could differ between this Windows checkout and a future Linux clone. Added `.gitattributes` forcing LF for `build/fixtures/*` to make the hash freeze meaningful.
+- Added `build/fixtures/ohlc_synthetic_10bar.csv` (hand-authored 10-bar OHLCV series) and `build/fixtures/sma_ema_reference.json` (hand-computed SMA(3)/EMA(3), not derived from any indicator library), with an explicit `null` warm-up policy for the first two bars.
+- Added `build/fixtures/manifest.json` (SHA-256 per fixture) and `build/validate_fixtures.py`, which detects a hash mismatch, an untracked extra fixture, or a missing recorded fixture.
+- Added `build/tests/test_fixtures.py` (8 cases): real fixtures pass; a one-byte tamper is caught; an untracked extra file is caught; a missing file is caught; SMA(3)/EMA(3) reference values are independently re-derived from the CSV and shown to match; warm-up bars are `null`, not a partial average.
+- `python -m ruff check build/` is clean.
+
+### 2026-08-31 — M0.6 clean-clone bootstrap verified
+
+- Performed a real `git clone` of the repository (branch `feature/M0.6-green-baseline`) into an isolated directory, with no setup beyond the clone itself.
+- In that fresh clone: `python build/validate_manifest.py` → 108 items, no cycles; `python build/validate_fixtures.py` → 2 fixtures verified; `python -m pytest build/tests -q` → 27 passed.
+- Confirmed the `.gitattributes` LF pin actually matters: the cloned `ohlc_synthetic_10bar.csv` checked out as pure LF (hash matches the manifest exactly), while an unpinned file (`build/manifest.yaml`) checked out with local-autocrlf CRLF in the same clone — proving the pin is load-bearing, not redundant.
+- Deleted the temporary clone after verification.
 
 ## Known prerequisites and blockers
 

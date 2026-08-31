@@ -1,8 +1,8 @@
 {
   "feature": "M0.6",
-  "status": "in_progress",
+  "status": "review",
   "branch": "feature/M0.6-green-baseline",
-  "commit": "22334e8",
+  "commit": "236be61",
   "tests": {},
   "started_at": "2026-08-31",
   "finished_at": null,
