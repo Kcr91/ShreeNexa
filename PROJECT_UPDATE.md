@@ -7,7 +7,7 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W0 — Greenfield baseline |
-| Current feature | M0.6 — started |
+| Current feature | M0.6 — Review passed; merge authorization requested |
 | Current branch | `feature/M0.6-green-baseline` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
@@ -22,7 +22,7 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.3 | Done | Review finding fixed; full data-root and build-ignore regression probes pass. |
 | M0.4 | Done | Repository guidance and Codex/QA configuration passed independent review; fast-forwarded into `main` at `0c86d5e` after user merge authorization. |
 | M0.5 | Done | Manifest, validator, and state helper pass all tests; F2.6 dependency fix applied (C11). Fast-forwarded into `main` at `22334e8` after user merge authorization. |
-| M0.6 | In progress | First green baseline plus hashed synthetic/reference fixtures; acceptance contract not yet recorded. |
+| M0.6 | Done | First green baseline proven via real fresh-clone bootstrap; fixtures frozen by hash. Not yet merged — awaiting user merge authorization. |
 | F0.1–F13.5 | Pending | Product feature work begins only after M0.6. |
 
 ## Major-task log
@@ -199,6 +199,13 @@ This file is the human-readable project progress log. It is updated after each m
 - In that fresh clone: `python build/validate_manifest.py` → 108 items, no cycles; `python build/validate_fixtures.py` → 2 fixtures verified; `python -m pytest build/tests -q` → 27 passed.
 - Confirmed the `.gitattributes` LF pin actually matters: the cloned `ohlc_synthetic_10bar.csv` checked out as pure LF (hash matches the manifest exactly), while an unpinned file (`build/manifest.yaml`) checked out with local-autocrlf CRLF in the same clone — proving the pin is load-bearing, not redundant.
 - Deleted the temporary clone after verification.
+
+### 2026-08-31 — M0.6 independent review passed
+
+- Reviewed the complete branch against `main`: only `.gitattributes`, `build/fixtures/`, `build/validate_fixtures.py`, `build/tests/test_fixtures.py`, `docs/qa/`, and status files changed — no product code or protected path.
+- Found and fixed a real gap: `docs/qa/README.md` never linked the M0.5 or M0.6 acceptance contracts, defeating its own "fresh session finds it without repo-wide exploration" bar.
+- Re-ran the full suite: `pytest build/tests -q` → 27 passed; `validate_manifest.py` → 108 items, no cycles; `validate_fixtures.py` → 2 verified; `ruff check build/` clean; `git diff --check` clean; no secret-shaped content.
+- M0.6 is approved for fast-forward merge; no schema, runtime, or data impact.
 
 ## Known prerequisites and blockers
 

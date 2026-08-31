@@ -1,10 +1,10 @@
 {
   "feature": "M0.6",
-  "status": "review",
+  "status": "done",
   "branch": "feature/M0.6-green-baseline",
   "commit": "236be61",
   "tests": {},
   "started_at": "2026-08-31",
-  "finished_at": null,
+  "finished_at": "2026-08-31",
   "blockers": []
 }
