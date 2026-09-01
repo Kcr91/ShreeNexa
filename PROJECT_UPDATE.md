@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.5 | Done | Fast-forwarded into `main` at `ccb68e8` after review. |
-| F2.6 | Ready for review | Timeframe-aware multi-resolution indicator calculation pipeline using session-aware bar resampling and lookahead-free point-in-time forward-fill projection across base timestamps. 276/276 tests passing. |
-| F2.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.6 | Done | Fast-forwarded into `main` at `b405c2b` after review. |
+| F2.7 | Ready for review | Composite universe indicator matrix engine computing multi-instrument batch DAG calculations with cell-by-cell parity against sequential single-instrument execution across 50 instruments. 278/278 tests passing. |
+| F2.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -750,4 +750,17 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_multitimeframe_indicators.py`: 3 passed
 - Full repository test suite: 276 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (111 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `b405c2b`.
+
+### 2026-09-01 — F2.7 Composite indicator matrix engine completed
+
+- Implemented `backend/app/indicators/matrix.py`:
+  - `UniverseIndicatorMatrixEngine` for multi-instrument batch indicator calculation over DuckDB/Parquet warehouses and in-memory tables/bars.
+  - Per-symbol grouped execution pipeline producing unified PyArrow Tables with all computed indicator columns.
+  - Integration with `WarehouseReader` for partitioned queries with symbol and time range filters.
+- Exported matrix engine in `backend/app/indicators/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.7.md` and added 2 new test cases verifying universe batch calculation parity against sequential single-instrument runs across 50 instruments and empty universe handling:
+  - `backend/tests/unit/test_universe_matrix_engine.py`: 2 passed
+- Full repository test suite: 278 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (113 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

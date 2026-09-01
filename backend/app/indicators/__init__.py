@@ -1,4 +1,4 @@
-"""Vectorized/streaming technical indicators, formula compiler, and multi-timeframe pipeline."""
+"""Vectorized/streaming technical indicators, formula compiler, and matrix engines."""
 
 from app.indicators.formula import (
     CompiledFormula,
@@ -37,6 +37,7 @@ from app.indicators.incremental_primitives import (
     IncrementalVWAP,
     IncrementalZScore,
 )
+from app.indicators.matrix import UniverseIndicatorMatrixEngine
 from app.indicators.multitimeframe import (
     MultiTimeframeIndicatorPipeline,
     TimeframeAlignmentMode,
@@ -110,6 +111,7 @@ __all__ = [
     "StochasticIndicator",
     "SupertrendIndicator",
     "TimeframeAlignmentMode",
+    "UniverseIndicatorMatrixEngine",
     "VWAPIndicator",
     "VectorIndicator",
     "ZScoreIndicator",

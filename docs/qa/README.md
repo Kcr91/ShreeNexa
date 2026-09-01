@@ -41,5 +41,6 @@
 - [F2.4 — Compound Indicator Dependency Graph and Cycle Detector](acceptance/F2.4.md)
 - [F2.5 — Incremental Compound Indicator Engine](acceptance/F2.5.md)
 - [F2.6 — Multi-Timeframe Indicator Pipeline](acceptance/F2.6.md)
+- [F2.7 — Composite Indicator Matrix Engine](acceptance/F2.7.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.
