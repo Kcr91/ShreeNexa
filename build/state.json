@@ -2,7 +2,7 @@
   "feature": "F2.4",
   "status": "review",
   "branch": "feature/F2.4-indicator-dependency-graph",
-  "commit": null,
+  "commit": "140e62fc00b1ff31405b565d648c68832a8448f2",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -207,7 +207,7 @@
     "F2.4": {
       "status": "review",
       "branch": "feature/F2.4-indicator-dependency-graph",
-      "commit": null,
+      "commit": "140e62fc00b1ff31405b565d648c68832a8448f2",
       "tests": {},
       "evidence": [],
       "verified_at": null,
