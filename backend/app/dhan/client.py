@@ -11,6 +11,8 @@ from app.dhan.exceptions import (
     DhanAuthenticationError,
     DhanMalformedResponseError,
 )
+from app.dhan.limiter import TokenBucket, get_dhan_rate_limiter
+from app.dhan.limits_config import get_category_for_endpoint
 from app.dhan.models import (
     DhanFundLimit,
     DhanHistoricalData,
@@ -28,17 +30,19 @@ from app.dhan.transport import (
 
 
 class DhanRestClient:
-    """Fully typed REST client for DhanHQ v2 API with injectable transport."""
+    """Fully typed REST client for DhanHQ v2 API with injectable transport and rate limiter."""
 
     def __init__(
         self,
         credentials: DhanCredentials | None = None,
         transport: DhanTransport | None = None,
+        limiter: TokenBucket | None = None,
         *,
         timeout: float = 10.0,
     ) -> None:
         self.credentials = credentials or resolve_dhan_credentials()
         self.transport: DhanTransport = transport or HTTPTransport()
+        self.limiter: TokenBucket = limiter or get_dhan_rate_limiter()
         self.timeout = timeout
 
     def _get_headers(self) -> dict[str, str]:
@@ -59,6 +63,9 @@ class DhanRestClient:
         json_data: dict[str, Any] | None = None,
     ) -> Any:
         """Execute request, validate status code, and parse response JSON."""
+        category = get_category_for_endpoint(method, path)
+        self.limiter.acquire(category, timeout=self.timeout)
+
         headers = self._get_headers()
         status_code, _resp_headers, raw_body = self.transport.request(
             method,
@@ -108,9 +115,7 @@ class DhanRestClient:
     def get_profile(self) -> DhanProfile:
         """Fetch account profile metadata and limits."""
         fund_limit = self.get_fund_limits()
-        client_id = fund_limit.client_id or (
-            self.credentials.client_id if self.credentials else ""
-        )
+        client_id = fund_limit.client_id or (self.credentials.client_id if self.credentials else "")
         return DhanProfile(
             client_id=client_id,
             active=True,
@@ -191,11 +196,7 @@ class DhanRestClient:
         return []
 
     def __repr__(self) -> str:
-        cid = (
-            mask_client_id(self.credentials.client_id)
-            if self.credentials
-            else "[NONE]"
-        )
+        cid = mask_client_id(self.credentials.client_id) if self.credentials else "[NONE]"
         return (
             f"DhanRestClient(client_id={cid!r}, "
             f"transport={self.transport.__class__.__name__}, "

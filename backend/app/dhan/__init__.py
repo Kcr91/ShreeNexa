@@ -17,6 +17,19 @@ from app.dhan.exceptions import (
     DhanTimeoutError,
 )
 from app.dhan.health import DhanTokenHealth, check_token_health
+from app.dhan.limiter import (
+    InMemoryTokenBucket,
+    RedisTokenBucket,
+    TokenBucket,
+    get_dhan_rate_limiter,
+)
+from app.dhan.limits_config import (
+    BackoffSpec,
+    DhanLimitsConfig,
+    RateLimitSpec,
+    get_category_for_endpoint,
+    load_dhan_limits,
+)
 from app.dhan.models import (
     DhanFundLimit,
     DhanHistoricalBar,
@@ -35,6 +48,7 @@ from app.dhan.transport import (
 )
 
 __all__ = [
+    "BackoffSpec",
     "CassetteTransport",
     "DhanAuthenticationError",
     "DhanClientError",
@@ -44,6 +58,7 @@ __all__ = [
     "DhanHistoricalBar",
     "DhanHistoricalData",
     "DhanHolding",
+    "DhanLimitsConfig",
     "DhanMalformedResponseError",
     "DhanPosition",
     "DhanProfile",
@@ -56,9 +71,16 @@ __all__ = [
     "DhanTokenHealth",
     "DhanTransport",
     "HTTPTransport",
+    "InMemoryTokenBucket",
     "MockTransport",
+    "RateLimitSpec",
+    "RedisTokenBucket",
+    "TokenBucket",
     "check_token_health",
     "clear_dhan_credentials_dpapi",
+    "get_category_for_endpoint",
+    "get_dhan_rate_limiter",
+    "load_dhan_limits",
     "resolve_dhan_credentials",
     "store_dhan_credentials_dpapi",
 ]

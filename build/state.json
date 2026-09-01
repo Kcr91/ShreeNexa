@@ -1,25 +1,12 @@
 {
-  "feature": "F0.5",
-  "status": "blocked",
-  "branch": "feature/F0.5-dhan-rest-wrapper",
-  "commit": "c6fd2198d2d11a2135431c7662c5e5307c0617f9",
-  "tests": {
-    "pytest_retrospective": {
-      "passed": 105,
-      "failed": 0,
-      "skipped": 0
-    },
-    "format_check": {
-      "passed": 0,
-      "failed": 1
-    }
-  },
+  "feature": "F0.6",
+  "status": "review",
+  "branch": "feature/F0.6-dhan-rate-limiter",
+  "commit": null,
+  "tests": {},
   "started_at": null,
-  "finished_at": "2026-09-01",
-  "blockers": [
-    "Recorded sanitized Dhan cassette evidence is missing; all seven current fixtures are synthetic.",
-    "Retrospective exact-SHA formatting gate is not clean."
-  ],
+  "finished_at": null,
+  "blockers": [],
   "features": {
     "F0.5": {
       "status": "blocked",
@@ -72,6 +59,15 @@
       "blockers": [
         "Retrospective exact-SHA pre-commit fails because ruff-format would modify three F0.4 product files; the first pytest attempt also had one process-startup timeout."
       ]
+    },
+    "F0.6": {
+      "status": "review",
+      "branch": "feature/F0.6-dhan-rate-limiter",
+      "commit": null,
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
     }
   }
 }

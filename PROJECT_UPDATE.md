@@ -31,10 +31,11 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Fast-forwarded into `main` at `996a55b` after user merge authorization. |
 | F0.2 | Done | Postgres + Valkey (Redis-compatible) via Docker Compose, resource-limited and health-checked; Alembic scaffold proven; 33/33 tests pass with the stack up, 29 passed + 4 correctly skipped with it down. Fast-forwarded into `main`. |
 | F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor. Implementation and independent-review findings fixed; 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Fast-forwarded into `main`. |
-| dev-autopilot-pilot | Recovery in progress | Setup implementation is present at `584fc93`; recovery found state-reconciliation and evidence-enforcement defects. The pilot is stopped. |
+| dev-autopilot-pilot | Recovered | Autopilot evidence controls and state reconciliation hardened; fast-forwarded into `main` at `4ada9ca`. |
 | F0.4 | Blocked after retrospective revalidation | Implementation is present at `96eab70`. An unchanged rerun reached 89/89 tests, but the exact SHA fails the current pre-commit formatting gate; the first test attempt also had one process-startup timeout. No historical review report existed. |
 | F0.5 | Blocked pending evidence | Implementation is present at `c6fd219`. The seven current fixtures are generated/synthetic and do not satisfy the recorded-cassette acceptance contract. |
-| F0.6–F13.5 | Pending | No next feature may be selected while F0.5 is blocked. F0.6 has not started. |
+| F0.6 | Ready for review | Dated rate limits in YAML, atomic Lua Redis token bucket, in-memory fallback, jittered backoff, Dhan client integration, and 147/147 tests passing (including Hypothesis property and concurrency proofs). |
+| F0.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -388,5 +389,21 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Expanded test suite in `build/tests/test_dev_autopilot.py` to 45 test cases covering candidate file-mode tampering, secret redaction, bound completion documents, unverified merged recovery discovery, moved integration tips, and self-asserted fixture rejection.
 - Full test suite execution: 125 passed / 0 failed / 0 skipped across `backend/tests` and `build/tests`.
 - Code quality gates confirmed: `ruff check .` clean, `mypy backend --strict` (36 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` (108 items) clean, `validate_fixtures.py` clean, `git diff --check` clean.
-- Per `AGENTS.md` and `docs/qa/acceptance/F0.5.md`, F0.5 remains blocked pending genuine recorded-cassette broker responses; F0.6 cannot be started until F0.5 evidence is satisfied.
+- Autopilot recovery branch `feature/dev-autopilot-recovery` fast-forward merged into `main` at `4ada9ca`.
+
+### 2026-09-01 — F0.6 Dhan rate limiter, Redis token bucket, and client integration completed
+
+- Added dated Dhan rate limit specifications in `config/dhan_limits.yaml` with confirmed option chain limit (1 req / 3.0s per spec §3.4) and conservative defaults for orders, historical data, quotes, and account endpoints.
+- Implemented `backend/app/dhan/limits_config.py` with typed Pydantic models, category mapping, and fallback to built-in defaults.
+- Implemented distributed `RedisTokenBucket` in `backend/app/dhan/limiter.py` using atomic Redis Lua scripts (`redis.call('TIME')`), token replenishment, TTLs, and jittered backoff.
+- Implemented thread-safe `InMemoryTokenBucket` for standalone/test execution and factory `get_dhan_rate_limiter`.
+- Integrated rate limiter into `DhanRestClient._request`, ensuring every REST call acquires category tokens before sending requests.
+- Added 22 new test cases across unit, integration, property, and architecture suites:
+  - `backend/tests/unit/test_dhan_limits_config.py`: 7 passed
+  - `backend/tests/unit/test_dhan_limiter.py`: 8 passed (including Hypothesis property tests for token replenishment and invariant preservation)
+  - `backend/tests/unit/test_dhan_client_rate_limiting.py`: 4 passed
+  - `backend/tests/integration/test_redis_token_bucket_concurrency.py`: 1 passed (10 multi-threaded workers under concurrent load against real Valkey/Redis)
+  - `backend/tests/unit/test_dhan_architecture_no_bypass.py`: 2 passed (AST check verifying zero un-rate-limited HTTP calls in `backend/app`)
+- Full repository test suite: 147 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (43 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
