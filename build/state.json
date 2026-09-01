@@ -1,8 +1,8 @@
 {
-  "feature": "F2.3",
+  "feature": "F2.4",
   "status": "review",
-  "branch": "feature/F2.3-safe-formula-compiler",
-  "commit": "cbbd10c14ca6ea6572eb216016e78864a66ef89b",
+  "branch": "feature/F2.4-indicator-dependency-graph",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -199,6 +199,15 @@
       "status": "review",
       "branch": "feature/F2.3-safe-formula-compiler",
       "commit": "cbbd10c14ca6ea6572eb216016e78864a66ef89b",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F2.4": {
+      "status": "review",
+      "branch": "feature/F2.4-indicator-dependency-graph",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

@@ -8,7 +8,7 @@ from typing import Any
 
 import pyarrow as pa
 
-from app.indicators.registry import extract_series, registry
+from app.indicators.registry import extract_series_nullable, registry
 
 logger = logging.getLogger(__name__)
 
@@ -160,12 +160,7 @@ def helper_crossover(a: list[Any], b: list[Any]) -> list[bool | None]:
     for i in range(1, n):
         a_curr, a_prev = a[i], a[i - 1]
         b_curr, b_prev = b[i], b[i - 1]
-        if (
-            a_curr is not None
-            and a_prev is not None
-            and b_curr is not None
-            and b_prev is not None
-        ):
+        if a_curr is not None and a_prev is not None and b_curr is not None and b_prev is not None:
             out[i] = (a_curr > b_curr) and (a_prev <= b_prev)
         else:
             out[i] = None
@@ -179,12 +174,7 @@ def helper_crossunder(a: list[Any], b: list[Any]) -> list[bool | None]:
     for i in range(1, n):
         a_curr, a_prev = a[i], a[i - 1]
         b_curr, b_prev = b[i], b[i - 1]
-        if (
-            a_curr is not None
-            and a_prev is not None
-            and b_curr is not None
-            and b_prev is not None
-        ):
+        if a_curr is not None and a_prev is not None and b_curr is not None and b_prev is not None:
             out[i] = (a_curr < b_curr) and (a_prev >= b_prev)
         else:
             out[i] = None
@@ -294,7 +284,19 @@ class _FormulaEvaluator:
             name_lower = node.id.lower()
             if name_lower in ("open", "high", "low", "close", "volume", "oi", "open_interest"):
                 col = "open_interest" if name_lower == "oi" else name_lower
-                return extract_series(self.data, col)
+                return extract_series_nullable(self.data, col)
+            elif (
+                isinstance(self.data, pa.Table)
+                and (node.id in self.data.column_names or name_lower in self.data.column_names)
+            ) or (
+                isinstance(self.data, dict) and (node.id in self.data or name_lower in self.data)
+            ):
+                col_target = (
+                    node.id
+                    if (isinstance(self.data, dict) and node.id in self.data)
+                    else name_lower
+                )
+                return extract_series_nullable(self.data, col_target)
             elif name_lower == "true":
                 return True
             elif name_lower == "false":
@@ -413,13 +415,32 @@ class _FormulaEvaluator:
             if func_name in registry._indicators:
                 params: dict[str, Any] = {}
                 meta = registry.get(func_name)
-                keys = list(meta.default_params.keys())
-                for i, a in enumerate(args):
-                    if i < len(keys):
-                        params[keys[i]] = a
+                exec_data: dict[str, Any] = {}
+                if isinstance(self.data, pa.Table):
+                    for col in self.data.column_names:
+                        exec_data[col] = self.data[col].to_pylist()
+                elif isinstance(self.data, dict):
+                    exec_data.update(self.data)
+
+                numeric_keys = [
+                    k for k, v in meta.default_params.items() if isinstance(v, (int, float))
+                ]
+                num_idx = 0
+
+                for a in args:
+                    if isinstance(a, list):
+                        exec_data["_indicator_input_series"] = a
+                        params["column"] = "_indicator_input_series"
+                    elif isinstance(a, (int, float)):
+                        if num_idx < len(numeric_keys):
+                            params[numeric_keys[num_idx]] = a
+                            num_idx += 1
+                    elif isinstance(a, str):
+                        params["column"] = a
+
                 params.update(kwargs)
 
-                res = registry.compute(func_name, self.data, params=params)
+                res = registry.compute(func_name, exec_data, params=params)
                 if isinstance(res, dict):
                     first_k = next(iter(res.keys()))
                     return res[first_k]

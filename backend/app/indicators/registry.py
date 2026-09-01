@@ -49,6 +49,22 @@ def extract_series(data: pa.Table | dict[str, Any], column_name: str) -> list[fl
         raise TypeError(f"Unsupported data container type: {type(data)}")
 
 
+def extract_series_nullable(
+    data: pa.Table | dict[str, Any], column_name: str
+) -> list[float | None]:
+    """Extract a numeric series that may contain None from Table or dict."""
+    if isinstance(data, pa.Table):
+        col = data.column(column_name)
+        return [float(x) if x is not None else None for x in col.to_pylist()]
+    elif isinstance(data, dict):
+        val = data.get(column_name)
+        if val is None:
+            raise KeyError(f"Missing required column '{column_name}' in data dictionary")
+        return [float(x) if x is not None else None for x in val]
+    else:
+        raise TypeError(f"Unsupported data container type: {type(data)}")
+
+
 class VectorIndicator(ABC):
     """Abstract base class for vectorized technical indicator implementations."""
 

@@ -1,4 +1,4 @@
-"""Vectorized and streaming technical indicators registry, primitives, and formula compiler."""
+"""Vectorized/streaming technical indicators, formula compiler, and dependency graph."""
 
 from app.indicators.formula import (
     CompiledFormula,
@@ -8,6 +8,13 @@ from app.indicators.formula import (
     FormulaEvaluationError,
     FormulaSecurityError,
     FormulaSyntaxError,
+)
+from app.indicators.graph import (
+    CyclicDependencyError,
+    DuplicateNodeError,
+    GraphError,
+    IndicatorDependencyGraph,
+    IndicatorExecutionPlan,
 )
 from app.indicators.incremental import (
     IncrementalIndicator,
@@ -57,6 +64,8 @@ __all__ = [
     "ATRIndicator",
     "BollingerBandsIndicator",
     "CompiledFormula",
+    "CyclicDependencyError",
+    "DuplicateNodeError",
     "EMAIndicator",
     "FormulaASTValidator",
     "FormulaCompiler",
@@ -64,6 +73,7 @@ __all__ = [
     "FormulaEvaluationError",
     "FormulaSecurityError",
     "FormulaSyntaxError",
+    "GraphError",
     "IncrementalATR",
     "IncrementalBollingerBands",
     "IncrementalEMA",
@@ -78,6 +88,8 @@ __all__ = [
     "IncrementalSupertrend",
     "IncrementalVWAP",
     "IncrementalZScore",
+    "IndicatorDependencyGraph",
+    "IndicatorExecutionPlan",
     "IndicatorFamily",
     "IndicatorMetadata",
     "IndicatorRegistry",

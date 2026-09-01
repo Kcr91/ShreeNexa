@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.2 | Done | Fast-forwarded into `main` at `4401668` after review. |
-| F2.3 | Ready for review | Safe formula expression engine with strict AST node allowlisting, attribute/import/lambda/eval sandbox blocking, lookahead shift prevention, mathematical crossover/crossunder/shift/highest/lowest/if_else evaluation, and 21 adversarial security fuzz test cases. 265/265 tests passing. |
-| F2.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.3 | Done | Fast-forwarded into `main` at `006b9e4` after review. |
+| F2.4 | Ready for review | Compound indicator dependency graph resolver with Kahn's topological sort, circular dependency detection and error reporting, multi-node compound execution plan, and memoized shared subexpressions. 270/270 tests passing. |
+| F2.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -706,4 +706,19 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_formula_compiler.py`: 21 passed
 - Full repository test suite: 265 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (105 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `006b9e4`.
+
+### 2026-09-01 — F2.4 Compound indicator dependency graph and cycle detector completed
+
+- Implemented `backend/app/indicators/graph.py`:
+  - `IndicatorDependencyGraph` supporting automatic AST-based identifier dependency discovery.
+  - Kahn's algorithm for deterministic topological execution sequence ordering.
+  - Cycle detection and reporting with detailed cycle paths via `CyclicDependencyError`.
+  - `IndicatorExecutionPlan` executing topologically ordered multi-node graphs against Tables/dicts with common subexpression caching.
+- Enhanced `backend/app/indicators/registry.py` and `formula.py` to support `extract_series_nullable` for intermediate pipeline outputs.
+- Exported dependency graph services in `backend/app/indicators/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.4.md` and added 5 new test cases verifying topological ordering, direct/indirect cycle detection, duplicate node rejection, compound plan execution, and shared subexpression re-use:
+  - `backend/tests/unit/test_indicator_graph.py`: 5 passed
+- Full repository test suite: 270 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (107 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
