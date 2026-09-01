@@ -112,9 +112,9 @@ class IndicatorRegistry:
     def __init__(self) -> None:
         self._indicators: dict[str, VectorIndicator] = {}
 
-    def register(self, indicator: VectorIndicator) -> None:
-        """Register a vector indicator instance."""
-        key = indicator.name.lower()
+    def register(self, indicator: VectorIndicator, alias: str | None = None) -> None:
+        """Register a vector indicator instance, optionally under an alias."""
+        key = (alias or indicator.name).lower()
         if key in self._indicators:
             logger.warning("Overwriting existing indicator registration for %s", key)
         self._indicators[key] = indicator

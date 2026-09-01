@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.6 | Done | Fast-forwarded into `main` at `b405c2b` after review. |
-| F2.7 | Ready for review | Composite universe indicator matrix engine computing multi-instrument batch DAG calculations with cell-by-cell parity against sequential single-instrument execution across 50 instruments. 278/278 tests passing. |
-| F2.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.7 | Done | Fast-forwarded into `main` at `c2c0d15` after review. |
+| F2.8 | Ready for review | Hypothesis property test suite validating indicator mathematical invariants (period=1 identity, flat series invariance, scale homogeneity, translation invariance, boundedness, envelope ordering). 283/283 tests passing. |
+| F2.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -763,4 +763,18 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_universe_matrix_engine.py`: 2 passed
 - Full repository test suite: 278 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (113 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `c2c0d15`.
+
+### 2026-09-01 — F2.8 Mathematical indicator property test suite completed
+
+- Enhanced `IndicatorRegistry` in `backend/app/indicators/registry.py` and `backend/app/indicators/primitives/__init__.py` to support indicator alias registration (`stoch` / `stochastic`).
+- Authored comprehensive Hypothesis property-based testing suite in `backend/tests/unit/test_indicator_properties.py`:
+  - `test_identity_period_1_sma_and_ema`: Identity law for period=1 filters.
+  - `test_constant_series_invariants`: Constant mean and zero dispersion across flat series for SMA, EMA, RollingStd, Bollinger Bands, and ATR.
+  - `test_scale_homogeneity_property`: Linear scale homogeneity ($f(\alpha X) = \alpha f(X)$) under scaling factor $\alpha > 0$.
+  - `test_translation_invariance_property`: Translation invariance ($f(X + \beta) = f(X) + \beta$ and dispersion invariance) under shift $\beta$.
+  - `test_boundedness_and_envelope_ordering`: Oscillator bounds ($0 \le RSI, Stoch \le 100$) and Bollinger envelope monotonicity ($lower \le middle \le upper$).
+- Authored acceptance contract `docs/qa/acceptance/F2.8.md`.
+- Full repository test suite: 283 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (114 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
