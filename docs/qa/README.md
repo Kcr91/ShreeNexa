@@ -29,5 +29,6 @@
 - [F1.1 — Immutable DuckDB/Parquet Bar Store](acceptance/F1.1.md)
 - [F1.2 — Dhan Daily Backfill Since Inception](acceptance/F1.2.md)
 - [F1.3 — Resumable Dhan 1-Minute Backfill in 90-Day Windows](acceptance/F1.3.md)
+- [F1.4 — Expired-Option 30-Day Backfill and ATM Limits](acceptance/F1.4.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.

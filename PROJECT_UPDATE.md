@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.2 | Done | Fast-forwarded into `main` at `2f34364` after review. |
-| F1.3 | Ready for review | Resumable Dhan 1-minute historical backfill chunked into 90-day windows, immutable raw ingest provenance with credential redactions, deduplicated bar staging, coverage/gap/duplicate quality reporting, and atomic warehouse promotion. 204/204 tests passing. |
-| F1.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F1.3 | Done | Fast-forwarded into `main` at `613fee9` after review. |
+| F1.4 | Ready for review | Expired-option 1-minute historical backfill chunked into 30-day windows, strict ATM coverage limits (ATM±10 for index, ATM±3 for stock options), explicit `strike_unavailable` reporting with zero silent substitution, raw ingest provenance, and atomic warehouse promotion. 210/210 tests passing. |
+| F1.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -540,4 +540,25 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/integration/test_minute_backfill_resumable.py`: 1 passed (kill/resume idempotency with overlapping windows, 0 duplicates, and DuckDB warehouse reads)
 - Full repository test suite: 204 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (76 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `613fee9`.
+
+### 2026-09-01 — F1.4 Expired-option 30-day backfill and ATM limits completed
+
+- Implemented `backend/app/warehouse/schema.py`:
+  - `OptionBarRecord` Pydantic model with option-specific attributes (`underlying_symbol`, `expiry_date`, `strike_price`, `option_type`, `implied_volatility`, `spot_price`).
+  - `OPTION_BAR_SCHEMA_PYARROW` standardized PyArrow schema.
+  - `option_bars_to_arrow_table` vector converter.
+- Implemented `backend/app/worker/options_backfill.py`:
+  - `generate_30_day_windows` slicing date ranges into contiguous `<= 30`-day windows.
+  - `validate_strike_coverage` enforcing strict ATM±10 (index) and ATM±3 (stock) strike distance limits.
+  - `StrikeUnavailableError` raising `"strike_unavailable"` on out-of-bounds requests with zero silent substitution.
+  - `save_raw_option_ingest` persisting immutable raw JSON responses under `data/raw/dhan/charts_options/<YYYY>/<MM>/<ingest_id>/payload.json` with credential redaction.
+  - `parse_dhan_rolling_option_candles` parsing Dhan rolling option arrays into typed `OptionBarRecord` lists.
+  - `OptionsBackfillManager` executing 30-day window tasks, staging option Parquet partitions, and atomically promoting them via `WarehousePublisher`.
+- Exported option schemas and backfill services in `backend/app/warehouse/__init__.py` and `backend/app/worker/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F1.4.md` and added 6 new test cases across ATM validation, window slicing, parser, and integration suites:
+  - `backend/tests/unit/test_options_backfill_atm.py`: 5 passed (index ATM±10 limits, stock ATM±3 limits, 30-day slicing, rolling option parsing, credential redaction)
+  - `backend/tests/integration/test_options_backfill_resumable.py`: 1 passed (full backfill cycle, raw ingest validation, and DuckDB querying on option partitions)
+- Full repository test suite: 210 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (79 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
