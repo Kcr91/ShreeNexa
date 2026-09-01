@@ -2,7 +2,7 @@
   "feature": "F2.9",
   "status": "review",
   "branch": "feature/F2.9-indicator-catalog-api",
-  "commit": null,
+  "commit": "b4764e0486c91a03006bbd92484fa2d9d936081e",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -252,7 +252,7 @@
     "F2.9": {
       "status": "review",
       "branch": "feature/F2.9-indicator-catalog-api",
-      "commit": null,
+      "commit": "b4764e0486c91a03006bbd92484fa2d9d936081e",
       "tests": {},
       "evidence": [],
       "verified_at": null,
