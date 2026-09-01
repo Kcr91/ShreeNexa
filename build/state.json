@@ -2,7 +2,7 @@
   "feature": "F2.6",
   "status": "review",
   "branch": "feature/F2.6-vector-strategy-compiler",
-  "commit": null,
+  "commit": "3add329737ecae6412cfb53e7f6ea8f0d8ef5889",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -225,7 +225,7 @@
     "F2.6": {
       "status": "review",
       "branch": "feature/F2.6-vector-strategy-compiler",
-      "commit": null,
+      "commit": "3add329737ecae6412cfb53e7f6ea8f0d8ef5889",
       "tests": {},
       "evidence": [],
       "verified_at": null,
