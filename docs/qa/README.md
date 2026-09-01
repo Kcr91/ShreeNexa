@@ -43,5 +43,6 @@
 - [F2.6 — Multi-Timeframe Indicator Pipeline](acceptance/F2.6.md)
 - [F2.7 — Composite Indicator Matrix Engine](acceptance/F2.7.md)
 - [F2.8 — Indicator Mathematical Property Test Suite](acceptance/F2.8.md)
+- [F2.9 — Indicator Catalog and Formula Validation API](acceptance/F2.9.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.

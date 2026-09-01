@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.7 | Done | Fast-forwarded into `main` at `c2c0d15` after review. |
-| F2.8 | Ready for review | Hypothesis property test suite validating indicator mathematical invariants (period=1 identity, flat series invariance, scale homogeneity, translation invariance, boundedness, envelope ordering). 283/283 tests passing. |
-| F2.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.8 | Done | Fast-forwarded into `main` at `bfda7ef` after review. |
+| F2.9 | Ready for review | FastAPI metadata catalog discovery endpoints (`GET /api/v1/indicators`, `GET /api/v1/indicators/{name}`) and AST formula syntax/security validation endpoint (`POST /api/v1/indicators/validate-formula`). 289/289 tests passing. |
+| F3.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -777,4 +777,18 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Authored acceptance contract `docs/qa/acceptance/F2.8.md`.
 - Full repository test suite: 283 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (114 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `bfda7ef`.
+
+### 2026-09-01 — F2.9 Indicator metadata catalog, discovery API, and formula validation endpoint completed
+
+- Implemented `backend/app/api/indicators.py`:
+  - `GET /api/v1/indicators` and `/api/indicators`: Returns full catalog of registered indicators with parameters and output series metadata.
+  - `GET /api/v1/indicators/{name}` and `/api/indicators/{name}`: Detailed single indicator parameter metadata lookup, returning 404 on unknown names.
+  - `POST /api/v1/indicators/validate-formula` and `/api/indicators/validate-formula`: Validates AST expression syntax, identifier references, sandboxing security, and lookahead rules without code execution.
+- Mounted indicator router in `backend/app/main.py`.
+- Added `identifiers` introspection property to `CompiledFormula` in `backend/app/indicators/formula.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.9.md` and added 6 new test cases covering catalog discovery, single indicator retrieval, valid formula validation, adversarial rejection, lookahead shift rejection, and alias prefix routes:
+  - `backend/tests/unit/test_indicators_api.py`: 6 passed
+- Full repository test suite: 289 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (116 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

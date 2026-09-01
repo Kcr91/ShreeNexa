@@ -252,6 +252,21 @@ class CompiledFormula:
         self.raw_formula = raw_formula
         self.parsed_ast = parsed_ast
 
+    @property
+    def identifiers(self) -> set[str]:
+        """Extract all referenced variable / column identifiers in expression."""
+        found: set[str] = set()
+        for node in ast.walk(self.parsed_ast):
+            if isinstance(node, ast.Name):
+                name_lower = node.id.lower()
+                if name_lower not in ALLOWED_FUNCTIONS and name_lower not in (
+                    "true",
+                    "false",
+                    "none",
+                ):
+                    found.add(node.id)
+        return found
+
     def evaluate(self, data: pa.Table | dict[str, Any]) -> list[Any]:
         """Execute formula against price/volume dataset."""
         evaluator = _FormulaEvaluator(data)
