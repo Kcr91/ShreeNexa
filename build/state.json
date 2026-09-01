@@ -2,7 +2,7 @@
   "feature": "F2.2",
   "status": "review",
   "branch": "feature/F2.2-incremental-indicator-parity",
-  "commit": null,
+  "commit": "2bff8064d852a3b2b4064567ecb23e71df91a566",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -189,7 +189,7 @@
     "F2.2": {
       "status": "review",
       "branch": "feature/F2.2-incremental-indicator-parity",
-      "commit": null,
+      "commit": "2bff8064d852a3b2b4064567ecb23e71df91a566",
       "tests": {},
       "evidence": [],
       "verified_at": null,
