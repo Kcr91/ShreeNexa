@@ -2,7 +2,7 @@
   "feature": "F2.1",
   "status": "review",
   "branch": "feature/F2.1-vector-indicator-registry",
-  "commit": null,
+  "commit": "8ea4b901b0b5be57662c1626079c6d1d4ad3f770",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -180,7 +180,7 @@
     "F2.1": {
       "status": "review",
       "branch": "feature/F2.1-vector-indicator-registry",
-      "commit": null,
+      "commit": "8ea4b901b0b5be57662c1626079c6d1d4ad3f770",
       "tests": {},
       "evidence": [],
       "verified_at": null,
