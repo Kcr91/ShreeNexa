@@ -2,11 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["base_sha", "candidate_sha", "verdict", "findings", "evidence_checked"],
+  "required": ["base_sha", "candidate_sha", "verdict", "findings", "evidence_checked", "independent", "reviewer_session_id", "reviewed_at"],
   "properties": {
     "base_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "candidate_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "verdict": {"enum": ["safe_to_merge", "blocked"]},
+    "independent": {"const": true},
+    "reviewer_session_id": {"type": "string", "minLength": 1},
+    "reviewed_at": {"type": "string", "format": "date-time"},
     "findings": {
       "type": "array",
       "items": {

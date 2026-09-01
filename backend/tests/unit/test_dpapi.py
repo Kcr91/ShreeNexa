@@ -81,7 +81,7 @@ def test_store_and_resolve_credentials_dpapi() -> None:
         expiry = datetime(2026, 9, 2, 12, 0, 0, tzinfo=UTC)
 
         target = store_dhan_credentials_dpapi(
-            client_id="1100998877",
+            client_id="0000000000",
             access_token="MY_SECRET_DPAPI_TOKEN",
             expires_at=expiry,
             runtime_root=runtime_root,
@@ -101,7 +101,7 @@ def test_store_and_resolve_credentials_dpapi() -> None:
             dpapi_adapter=fake_adapter,
         )
         assert resolved is not None
-        assert resolved.client_id == "1100998877"
+        assert resolved.client_id == "0000000000"
         assert resolved.get_token_value() == "MY_SECRET_DPAPI_TOKEN"
         assert resolved.expires_at == expiry
         assert resolved.source == "dpapi"

@@ -47,6 +47,14 @@ feature workers may not modify them. A moved integration base, missing or
 malformed evidence, skipped required test, controller-policy change, or
 protected-path change blocks automatic integration.
 
+Recovery clarification: the seven F0.5 Dhan-shaped fixtures are generated and
+synthetic, not recorded broker responses. F0.5 is blocked on its unchanged
+recorded-cassette acceptance requirement, so the pilot must remain stopped and
+must not select F0.6. A merged implementation is distinct from verified feature
+completion. Startup must reconcile Git, validated tracked state, durable run
+state, and exact-SHA evidence and fail closed with `recovery-needed` on any
+disagreement; absence of a runtime journal must never replay a merged feature.
+
 1. Run preflight: `git status --short --branch`, `git log -1 --oneline`, and `python --version`.
 2. Start from clean `main` and create exactly one `feature/<feature-id>-<slug>` branch. Never develop directly on `main`.
 3. Read the feature contract and dependencies. Write/update acceptance criteria before implementation.

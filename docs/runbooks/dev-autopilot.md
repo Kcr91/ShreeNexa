@@ -65,11 +65,16 @@ written only through `build/update_state.py` by the controller.
 
 ## Recovery rules
 
-At startup/resume the controller compares `main`, recorded base, candidate, and
-feature branch. If main is still the base it preserves/resumes the candidate;
-if main already equals the candidate it records the merge exactly once. Any
-other movement, divergence, conflict, user change, control-plane drift, or
-remote change blocks. It never force-resolves or overwrites preserved work.
+At startup/resume the controller reconciles `main`, merged feature-branch tips,
+the validated tracked feature ledger, durable run state, and exact-SHA evidence.
+`merged_unverified` means implementation is present but proof is incomplete;
+`blocked` carries the missing evidence/reason; only `done` means verified
+complete. A missing journal never means a merged feature should be replayed.
+Any disagreement returns `recovery-needed`. If main is still the recorded base,
+unfinished work is preserved; if integration or state persistence already
+occurred, it is finalized exactly once. Any other movement, divergence,
+conflict, user change, control-plane drift, or remote change blocks. The
+controller never force-resolves or overwrites preserved work.
 
 Cancellation terminates the active child process tree within a finite timeout
 and retains commits, branches, worktrees, reports, and state. Authentication,
@@ -91,3 +96,9 @@ untrusted text. Every approval belongs to one exact candidate SHA; a change
 invalidates all prior gates and review. Missing/malformed/timeout/unknown
 review output and any unresolved finding block integration. Synthetic fixtures
 are labelled synthetic and cannot satisfy a required recorded-response gate.
+
+Gate evidence is bound to the controller version and policy digest and includes
+the base/candidate SHAs, start/finish times, exit result, report hash, and parsed
+test counts. Required test gates must execute at least one test and may not
+skip required tests. The controller launches a fresh ephemeral read-only
+reviewer session after implementation and rejects implementer self-review.

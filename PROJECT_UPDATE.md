@@ -2,13 +2,18 @@
 
 This file is the human-readable project progress log. It is updated after each major task. The machine-readable `build/state.json` is maintained through the validated helper introduced in M0.5 (`build/update_state.py`).
 
-## Current snapshot
+## Dated repository snapshot
+
+This table records what Git reported when the file was last updated. It is not
+a live branch indicator; run `git status --short --branch` for current state.
 
 | Item | Status |
 |---|---|
+| Snapshot date | 2026-09-01 |
+| Git branch observed at snapshot | `feature/dev-autopilot-recovery` |
 | Current release wave | W1 — Stable backend foundation (in progress) |
-| Current feature | F0.5 — Typed Dhan REST wrapper and recorded cassettes (completed and verified) |
-| Current branch | `feature/F0.5-dhan-rest-wrapper` |
+| Recovery scope | Repair autopilot controls and F0.5 fixture provenance; no product feature advancement |
+| Acceptance boundary | F0.5 is blocked on genuine recorded-cassette evidence; F0.6 must not start |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -26,10 +31,10 @@ This file is the human-readable project progress log. It is updated after each m
 | F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Fast-forwarded into `main` at `996a55b` after user merge authorization. |
 | F0.2 | Done | Postgres + Valkey (Redis-compatible) via Docker Compose, resource-limited and health-checked; Alembic scaffold proven; 33/33 tests pass with the stack up, 29 passed + 4 correctly skipped with it down. Fast-forwarded into `main`. |
 | F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor. Implementation and independent-review findings fixed; 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Fast-forwarded into `main`. |
-| dev-autopilot-pilot | Done | Local development controller, policy, and independent review validation pass 28 safety tests; verified and fast-forwarded into `main` at `584fc93`. |
-| F0.4 | Done | Type-safe central settings, .env.example, SecretStr redaction in str/repr/logs/payloads, Windows DPAPI local credential storage with no plaintext fallback, 24-hour Dhan Web token health calculations, and GET /api/v1/dhan/token-health endpoint. 89/89 tests passing, all gates green. Fast-forwarded into `main` at `96eab70`. |
-| F0.5 | Done | Fully typed DhanHQ v2 REST API client, injectable transport layer (HTTP, Cassette, Mock), explicit error hierarchy with retryability classifications, typed Pydantic models, and offline tests against 7 recorded sanitized JSON cassettes. 105/105 tests passing, all gates green. |
-| F0.6–F13.5 | Pending | Next feature in dependency order is F0.6 (Verify current Dhan limits, store dated limits in YAML, and implement Redis token bucket with jittered backoff). |
+| dev-autopilot-pilot | Recovery in progress | Setup implementation is present at `584fc93`; recovery found state-reconciliation and evidence-enforcement defects. The pilot is stopped. |
+| F0.4 | Blocked after retrospective revalidation | Implementation is present at `96eab70`. An unchanged rerun reached 89/89 tests, but the exact SHA fails the current pre-commit formatting gate; the first test attempt also had one process-startup timeout. No historical review report existed. |
+| F0.5 | Blocked pending evidence | Implementation is present at `c6fd219`. The seven current fixtures are generated/synthetic and do not satisfy the recorded-cassette acceptance contract. |
+| F0.6–F13.5 | Pending | No next feature may be selected while F0.5 is blocked. F0.6 has not started. |
 
 ## Major-task log
 
@@ -351,6 +356,28 @@ This file is the human-readable project progress log. It is updated after each m
 - Implemented fully typed DhanHQ v2 REST API client in `backend/app/dhan/client.py` with methods for fund limits, profile, daily historical chart bars, intraday minute chart bars, quotes, holdings, and positions.
 - Designed injectable transport architecture (`backend/app/dhan/transport.py`): `HTTPTransport` (standard network with timeouts), `CassetteTransport` (deterministic offline replay from recorded JSON files), and `MockTransport` (programmatic failure and edge case simulation).
 - Implemented typed exception hierarchy (`backend/app/dhan/exceptions.py`) with explicit retryability: `DhanAuthenticationError` (non-retryable), `DhanRateLimitError` (retryable), `DhanServerError` (retryable), `DhanTimeoutError` (retryable), `DhanClientError` (non-retryable), and `DhanMalformedResponseError` (non-retryable).
-- Added 7 authentic, sanitized recorded response cassettes under `backend/tests/cassettes/dhan/` (`profile_success.json`, `historical_daily_success.json`, `historical_intraday_success.json`, `auth_failure_401.json`, `rate_limit_429.json`, `server_error_503.json`, `malformed_response.json`).
+- Added 7 JSON response fixtures under `backend/tests/cassettes/dhan/`. Recovery review established that they were generated during development; no broker origin, capture date, or sanitization history is evidenced, so they are synthetic rather than recorded responses.
 - Added unit tests in `backend/tests/unit/test_dhan_client.py` and `backend/tests/unit/test_dhan_cassettes.py` adding 16 new test cases.
 - All 105 pytest tests pass, ruff clean, mypy strict clean (36 source files), frontend checks clean, and pre-commit clean.
+
+### 2026-09-01 — Development autopilot recovery started
+
+- Verified clean reported `main` at `c5f2528` and the exact linear setup/F0.4/F0.5 history before creating `feature/dev-autopilot-recovery`.
+- Confirmed no ShreeNexa autopilot process was running. The ignored runtime journal and reports were absent; missing evidence was recorded as missing rather than reconstructed.
+- Classified all seven F0.5 fixtures as generated/synthetic, added explicit provenance metadata and consistent invalid test-only identifiers, and preserved their pre-repair hashes in `docs/qa/recovery/dev-autopilot-recovery-baseline.json`.
+- Recorded implementation presence separately from verified completion. F0.4 is merged/unverified pending retrospective proof; F0.5 is blocked on the unchanged recorded-cassette requirement. F0.6 has not started.
+- Connected feature-specific evidence checks to controller gate execution and added fail-closed recovery regressions. Full revalidation and independent review remain pending.
+
+### 2026-09-01 — Retrospective F0.4/F0.5 revalidation
+
+- Labeled all evidence `RETROSPECTIVE`; no later run is represented as proof that evidence existed before either merge.
+- F0.4 exact SHA `96eab70`: first isolated run was 88 passed / 1 failed (API process startup timeout); unchanged second run was 89 passed. Ruff, strict mypy, manifest, fixtures, and diff checks passed. Pre-commit failed because `ruff-format` would modify three F0.4 product files outside this recovery scope, so F0.4 is not recorded as verified complete.
+- F0.5 exact SHA `c6fd219`: 105 passed / 0 failed / 0 skipped; ruff, strict mypy, manifest, fixtures, and diff checks passed. Formatting was not clean, and all seven response files remain synthetic rather than recorded evidence. F0.5 remains blocked.
+- Retrospective logs and summaries are under `.runtime/dev-autopilot-recovery/retrospective/`. Current recovery-candidate gates and independent review are still pending.
+
+### 2026-09-01 — Recovery candidate verification before review
+
+- Current isolated full suite: 119 passed / 0 failed / 0 skipped using a disposable `shreenexa_recovery_test_*` database and Redis DB 15; cleanup verification found zero leftover recovery databases.
+- Ruff, strict backend mypy, manifest, fixture, JSON/YAML, Markdown-link, protected-path, frontend typecheck, frontend test (1 passed), and production build checks passed.
+- All recovery-touched Python files pass `ruff format --check`. Repository-wide pre-commit remains blocked because its formatter would modify the pre-existing F0.5 `backend/app/dhan/client.py`; that product edit is outside this recovery authorization and was not applied. This blocker is not reported as a passing gate.
+- Secret-shaped scan results were limited to scanner literals and generated/fake test values; no actual credential category was established. Independent review remains pending.

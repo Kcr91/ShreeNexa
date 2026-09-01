@@ -1,10 +1,11 @@
-version: 1
+version: 2
 pilot_id: shreenexa-f0-foundation-pilot
 integration_branch: main
 max_repair_cycles: 3
 runtime_root: .runtime/dev-autopilot
 command_timeout_seconds: 1800
 codex_timeout_seconds: 3600
+evidence_max_age_seconds: 86400
 allowlist: [F0.4, F0.5, F0.6, F0.7, F0.8, F0.9]
 forbidden_codex_arguments:
   - --yolo
@@ -59,10 +60,12 @@ gate_commands:
   - id: pytest
     argv: [python, -m, uv, run, pytest, "--junitxml={junit_path}"]
     reject_skips: true
+    requires_tests: true
   - id: frontend_typecheck
     argv: [npm.cmd, --prefix, frontend, run, typecheck]
   - id: frontend_test
     argv: [npm.cmd, --prefix, frontend, run, test]
+    requires_tests: true
   - id: frontend_build
     argv: [npm.cmd, --prefix, frontend, run, build]
   - id: manifest

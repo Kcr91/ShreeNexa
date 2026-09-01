@@ -1,4 +1,11 @@
 {
+  "_fixture": {
+    "classification": "synthetic",
+    "source": "generated_during_development",
+    "recorded_broker_response": false,
+    "account_id": "0000000000",
+    "credential_profile": "invalid_test_only"
+  },
   "status": "success",
   "remarks": "",
   "data": {

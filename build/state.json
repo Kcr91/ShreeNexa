@@ -1,10 +1,77 @@
 {
   "feature": "F0.5",
-  "status": "done",
-  "branch": "main",
-  "commit": "c6fd219",
-  "tests": {},
-  "started_at": "2026-09-01",
+  "status": "blocked",
+  "branch": "feature/F0.5-dhan-rest-wrapper",
+  "commit": "c6fd2198d2d11a2135431c7662c5e5307c0617f9",
+  "tests": {
+    "pytest_retrospective": {
+      "passed": 105,
+      "failed": 0,
+      "skipped": 0
+    },
+    "format_check": {
+      "passed": 0,
+      "failed": 1
+    }
+  },
+  "started_at": null,
   "finished_at": "2026-09-01",
-  "blockers": []
+  "blockers": [
+    "Recorded sanitized Dhan cassette evidence is missing; all seven current fixtures are synthetic.",
+    "Retrospective exact-SHA formatting gate is not clean."
+  ],
+  "features": {
+    "F0.5": {
+      "status": "blocked",
+      "branch": "feature/F0.5-dhan-rest-wrapper",
+      "commit": "c6fd2198d2d11a2135431c7662c5e5307c0617f9",
+      "tests": {
+        "pytest_retrospective": {
+          "passed": 105,
+          "failed": 0,
+          "skipped": 0
+        },
+        "format_check": {
+          "passed": 0,
+          "failed": 1
+        }
+      },
+      "evidence": [
+        ".runtime/dev-autopilot-recovery/retrospective/F0.5/summary.json"
+      ],
+      "verified_at": null,
+      "blockers": [
+        "Recorded sanitized Dhan cassette evidence is missing; all seven current fixtures are synthetic.",
+        "Retrospective exact-SHA formatting gate is not clean."
+      ]
+    },
+    "F0.4": {
+      "status": "blocked",
+      "branch": "feature/F0.4-central-settings",
+      "commit": "96eab705997941138755cbc7e6fb021414ba5330",
+      "tests": {
+        "pytest_attempt_1": {
+          "passed": 88,
+          "failed": 1,
+          "skipped": 0
+        },
+        "pytest_attempt_2": {
+          "passed": 89,
+          "failed": 0,
+          "skipped": 0
+        },
+        "pre_commit": {
+          "passed": 10,
+          "failed": 1
+        }
+      },
+      "evidence": [
+        ".runtime/dev-autopilot-recovery/retrospective/F0.4/summary.json"
+      ],
+      "verified_at": null,
+      "blockers": [
+        "Retrospective exact-SHA pre-commit fails because ruff-format would modify three F0.4 product files; the first pytest attempt also had one process-startup timeout."
+      ]
+    }
+  }
 }

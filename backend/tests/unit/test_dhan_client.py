@@ -19,8 +19,8 @@ from pydantic import SecretStr
 @pytest.fixture
 def sample_creds() -> DhanCredentials:
     return DhanCredentials(
-        client_id="1100998877",
-        access_token=SecretStr("super_secret_access_token_12345"),
+        client_id="0000000000",
+        access_token=SecretStr("test_invalid_dhan_access_token"),
         source="environment",
     )
 
@@ -43,7 +43,7 @@ def test_mock_transport_success_fund_limits(sample_creds: DhanCredentials) -> No
         body={
             "status": "success",
             "data": {
-                "dhanClientId": "1100998877",
+                "dhanClientId": "0000000000",
                 "availabelBalance": 125000.75,
                 "sodLimit": 125000.75,
                 "withdrawableBalance": 100000.0,
@@ -53,12 +53,12 @@ def test_mock_transport_success_fund_limits(sample_creds: DhanCredentials) -> No
 
     client = DhanRestClient(credentials=sample_creds, transport=mock_transport)
     limits = client.get_fund_limits()
-    assert limits.client_id == "1100998877"
+    assert limits.client_id == "0000000000"
     assert limits.available_balance == 125000.75
     assert limits.withdrawable_balance == 100000.0
 
     profile = client.get_profile()
-    assert profile.client_id == "1100998877"
+    assert profile.client_id == "0000000000"
     assert profile.active is True
     assert profile.fund_limit is not None
 

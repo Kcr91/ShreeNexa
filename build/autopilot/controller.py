@@ -12,6 +12,8 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
+import xml.etree.ElementTree as ET
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
@@ -20,8 +22,12 @@ from typing import Any
 
 import yaml
 
+from state_schema import StateError, validate_state
+from update_state import update_state
+
 ALLOWLIST = ("F0.4", "F0.5", "F0.6", "F0.7", "F0.8", "F0.9")
 BASELINE_COMPLETE = {"M0.3", "F0.1", "F0.2", "F0.3"}
+CONTROLLER_VERSION = 2
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 TEST_SUMMARY_RE = re.compile(
     r"(?:(?P<passed>\d+) passed)?(?:,?\s*(?P<failed>\d+) failed)?"
@@ -69,6 +75,15 @@ class GateEvidence:
     failed: int = 0
     skipped: int = 0
     output_file: str | None = None
+    base_sha: str = ""
+    controller_version: int = CONTROLLER_VERSION
+    policy_digest: str = ""
+    started_at: str = ""
+    finished_at: str = ""
+    output_sha256: str = ""
+    test_required: bool = False
+    test_report_file: str | None = None
+    test_report_sha256: str = ""
 
 
 @dataclass
@@ -85,9 +100,11 @@ class RuntimeState:
     worktree: str | None = None
     repair_cycle: int = 0
     completed: dict[str, str] = field(default_factory=dict)
+    implemented: dict[str, str] = field(default_factory=dict)
     evidence: list[dict[str, Any]] = field(default_factory=list)
     active_pid: int | None = None
     blocker: str | None = None
+    implementation_session_id: str | None = None
     updated_at: str | None = None
 
 
@@ -165,6 +182,13 @@ def validate_runtime_state(state: RuntimeState) -> None:
         raise AutopilotError("runtime completed features are not an ordered allowlist prefix")
     if any(not SHA_RE.fullmatch(sha) for sha in state.completed.values()):
         raise AutopilotError("runtime completed feature contains an invalid SHA")
+    implemented_ids = list(state.implemented)
+    if implemented_ids != list(ALLOWLIST[: len(implemented_ids)]):
+        raise AutopilotError("runtime implemented features are not an ordered allowlist prefix")
+    if any(not SHA_RE.fullmatch(sha) for sha in state.implemented.values()):
+        raise AutopilotError("runtime implemented feature contains an invalid SHA")
+    if any(state.implemented.get(key) != value for key, value in state.completed.items()):
+        raise AutopilotError("verified runtime completion is not present in implemented Git state")
     for field_name in ("setup_sha", "base_sha", "candidate_sha"):
         value = getattr(state, field_name)
         if value is not None and not SHA_RE.fullmatch(value):
@@ -261,8 +285,8 @@ class Policy:
     def load(cls, path: Path) -> Policy:
         payload = path.read_bytes()
         raw = yaml.safe_load(payload)
-        if not isinstance(raw, dict) or raw.get("version") != 1:
-            raise AutopilotError("policy must be a version-1 mapping")
+        if not isinstance(raw, dict) or raw.get("version") != CONTROLLER_VERSION:
+            raise AutopilotError(f"policy must match controller version {CONTROLLER_VERSION}")
         if tuple(raw.get("allowlist", ())) != ALLOWLIST:
             raise AutopilotError("policy allowlist differs from the authorized F0.4-F0.9 sequence")
         if set(raw.get("features", {})) != set(ALLOWLIST):
@@ -343,6 +367,18 @@ def git_is_ancestor(repo: Path, ancestor: str, descendant: str) -> bool:
     return result.returncode == 0
 
 
+def git_ref_exists(repo: Path, ref: str) -> bool:
+    result = subprocess.run(
+        ["git", "show-ref", "--verify", "--quiet", ref],
+        cwd=repo,
+        timeout=120,
+        check=False,
+    )
+    if result.returncode not in {0, 1}:
+        raise AutopilotError("Git reference check failed")
+    return result.returncode == 0
+
+
 def changed_paths(repo: Path, base_sha: str, candidate_sha: str) -> list[str]:
     output = run_git(repo, "diff", "--name-only", f"{base_sha}..{candidate_sha}")
     return [_normalized_repo_path(line) for line in output.splitlines() if line.strip()]
@@ -376,10 +412,26 @@ def validate_candidate_paths(
     return paths
 
 
-def validate_review(document: Any, base_sha: str, candidate_sha: str) -> dict[str, Any]:
+def validate_review(
+    document: Any,
+    base_sha: str,
+    candidate_sha: str,
+    *,
+    expected_review_session_id: str | None = None,
+    implementer_session_id: str | None = None,
+) -> dict[str, Any]:
     if not isinstance(document, dict):
         raise AutopilotError("review output is missing or not a JSON object")
-    required = {"base_sha", "candidate_sha", "verdict", "findings", "evidence_checked"}
+    required = {
+        "base_sha",
+        "candidate_sha",
+        "verdict",
+        "findings",
+        "evidence_checked",
+        "independent",
+        "reviewer_session_id",
+        "reviewed_at",
+    }
     if set(document) != required:
         raise AutopilotError("review output has missing or unknown fields")
     if document["base_sha"] != base_sha or document["candidate_sha"] != candidate_sha:
@@ -390,6 +442,21 @@ def validate_review(document: Any, base_sha: str, candidate_sha: str) -> dict[st
         raise AutopilotError("review output contains invalid SHA syntax")
     if document["verdict"] not in {"safe_to_merge", "blocked"}:
         raise AutopilotError("review verdict is unknown")
+    if document["independent"] is not True:
+        raise AutopilotError("implementer self-review is not independent review")
+    if not isinstance(document["reviewer_session_id"], str) or not document["reviewer_session_id"]:
+        raise AutopilotError("reviewer session identity is missing")
+    if (
+        expected_review_session_id is not None
+        and document["reviewer_session_id"] != expected_review_session_id
+    ):
+        raise AutopilotError("review output came from the wrong reviewer session")
+    if implementer_session_id and document["reviewer_session_id"] == implementer_session_id:
+        raise AutopilotError("implementer self-review is not independent review")
+    reviewed_at = parse_utc(document["reviewed_at"], "reviewed_at")
+    age = (datetime.now(UTC) - reviewed_at).total_seconds()
+    if age < -300 or age > 86_400:
+        raise AutopilotError("independent review is stale or has an invalid timestamp")
     findings = document["findings"]
     evidence = document["evidence_checked"]
     if not isinstance(findings, list) or not isinstance(evidence, list) or not evidence:
@@ -426,6 +493,18 @@ def validate_review(document: Any, base_sha: str, candidate_sha: str) -> dict[st
     return document
 
 
+def parse_utc(value: object, field_name: str) -> datetime:
+    if not isinstance(value, str):
+        raise AutopilotError(f"{field_name} is missing or malformed")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise AutopilotError(f"{field_name} is missing or malformed") from exc
+    if parsed.tzinfo is None:
+        raise AutopilotError(f"{field_name} must include a timezone")
+    return parsed.astimezone(UTC)
+
+
 def parse_pytest_summary(output: str) -> tuple[int, int, int]:
     passed = failed = skipped = 0
     for match in TEST_SUMMARY_RE.finditer(output):
@@ -435,10 +514,142 @@ def parse_pytest_summary(output: str) -> tuple[int, int, int]:
     return passed, failed, skipped
 
 
+def parse_test_summary(output: str) -> tuple[int, int, int]:
+    pytest_counts = parse_pytest_summary(output)
+    if sum(pytest_counts):
+        return pytest_counts
+    match = re.search(
+        r"Tests\s+(?:(?P<passed>\d+)\s+passed)?(?:\s*\|\s*)?"
+        r"(?:(?P<failed>\d+)\s+failed)?(?:\s*\|\s*)?"
+        r"(?:(?P<skipped>\d+)\s+skipped)?",
+        output,
+        re.IGNORECASE,
+    )
+    if not match:
+        return 0, 0, 0
+    return tuple(int(match.group(name) or 0) for name in ("passed", "failed", "skipped"))
+
+
+def parse_junit_summary(path: Path) -> tuple[int, int, int]:
+    try:
+        root = ET.parse(path).getroot()
+    except (ET.ParseError, OSError) as exc:
+        raise AutopilotError("pytest JUnit report is missing or malformed") from exc
+    suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+    if not suites:
+        raise AutopilotError("pytest JUnit report contains no test suites")
+    total = sum(int(suite.attrib.get("tests", "0")) for suite in suites)
+    failed = sum(
+        int(suite.attrib.get("failures", "0")) + int(suite.attrib.get("errors", "0"))
+        for suite in suites
+    )
+    skipped = sum(int(suite.attrib.get("skipped", "0")) for suite in suites)
+    passed = total - failed - skipped
+    if min(total, failed, skipped, passed) < 0:
+        raise AutopilotError("pytest JUnit report has invalid test counts")
+    return passed, failed, skipped
+
+
+def validate_fixture_metadata(document: object) -> str:
+    if not isinstance(document, dict) or not isinstance(document.get("_fixture"), dict):
+        raise AutopilotError("cassette fixture provenance metadata is missing")
+    metadata = document["_fixture"]
+    required = {
+        "classification",
+        "source",
+        "recorded_broker_response",
+        "account_id",
+        "credential_profile",
+    }
+    if not required.issubset(metadata):
+        raise AutopilotError("cassette fixture provenance metadata is malformed")
+    account_id = metadata["account_id"]
+    if not isinstance(account_id, str) or not re.fullmatch(r"\d{10}", account_id):
+        raise AutopilotError("cassette fixture account identifier has the wrong format")
+    classification = metadata["classification"]
+    if classification == "synthetic":
+        if (
+            set(metadata) != required
+            or metadata["source"] != "generated_during_development"
+            or metadata["recorded_broker_response"] is not False
+            or account_id != "0000000000"
+            or metadata["credential_profile"] != "invalid_test_only"
+        ):
+            raise AutopilotError("synthetic cassette fixture metadata is ambiguous")
+        return "synthetic"
+    if classification == "recorded_sanitized":
+        recorded_required = required | {"recorded_at", "broker_origin", "sanitization"}
+        if set(metadata) != recorded_required or metadata["recorded_broker_response"] is not True:
+            raise AutopilotError("recorded cassette metadata contradicts its classification")
+        if not all(
+            isinstance(metadata[key], str) and metadata[key].strip()
+            for key in ("recorded_at", "broker_origin", "sanitization")
+        ):
+            raise AutopilotError("recorded cassette provenance is incomplete")
+        return "recorded_sanitized"
+    raise AutopilotError("cassette fixture classification is unknown")
+
+
+def validate_feature_evidence(
+    worktree: Path,
+    base_sha: str,
+    candidate_sha: str,
+    feature: dict[str, Any],
+) -> dict[str, Any]:
+    checks = feature.get("evidence_checks", {})
+    paths = changed_paths(worktree, base_sha, candidate_sha)
+    for pattern in checks.get("required_changed_globs", []):
+        if not any(PurePosixPath(path).match(pattern) for path in paths):
+            raise AutopilotError(f"feature evidence is missing required changed path: {pattern}")
+    allowed_paths = list(feature.get("allowed_paths", []))
+    searchable_paths = [
+        path for path in paths if any(path_matches(path, allowed) for allowed in allowed_paths)
+    ]
+    searchable = "\n".join(
+        (worktree / path).read_text(encoding="utf-8", errors="replace")
+        for path in searchable_paths
+        if (worktree / path).is_file()
+    ).lower()
+    missing_terms = [
+        term for term in checks.get("required_terms", []) if str(term).lower() not in searchable
+    ]
+    if missing_terms:
+        raise AutopilotError("feature evidence is missing required acceptance terms")
+    fixture_classes: dict[str, str] = {}
+    recorded_glob = checks.get("recorded_json_glob")
+    if recorded_glob:
+        fixtures = sorted(worktree.glob(str(recorded_glob)))
+        if not fixtures:
+            raise AutopilotError("recorded-cassette evidence is missing")
+        for fixture in fixtures:
+            try:
+                document = json.loads(fixture.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise AutopilotError("cassette fixture JSON is malformed") from exc
+            fixture_classes[fixture.name] = validate_fixture_metadata(document)
+        if any(value != "recorded_sanitized" for value in fixture_classes.values()):
+            raise AutopilotError(
+                "synthetic fixtures cannot satisfy the recorded-cassette evidence requirement"
+            )
+    return {
+        "base_sha": base_sha,
+        "candidate_sha": candidate_sha,
+        "required_terms": list(checks.get("required_terms", [])),
+        "fixture_classifications": fixture_classes,
+        "result": "passed",
+        "validated_at": utc_now(),
+    }
+
+
 def validate_gate_evidence(
     evidence: Sequence[GateEvidence],
     candidate_sha: str,
     required_gate_ids: Sequence[str] | None = None,
+    *,
+    base_sha: str | None = None,
+    controller_version: int | None = None,
+    policy_digest: str | None = None,
+    repo: Path | None = None,
 ) -> None:
     if not evidence:
         raise AutopilotError("no gate evidence was supplied")
@@ -449,10 +660,48 @@ def validate_gate_evidence(
         ids.add(item.gate_id)
         if item.candidate_sha != candidate_sha:
             raise AutopilotError("gate evidence was produced for a different candidate SHA")
+        if base_sha is not None and item.base_sha != base_sha:
+            raise AutopilotError("gate evidence was produced for a different base SHA")
+        if controller_version is not None and item.controller_version != controller_version:
+            raise AutopilotError("gate evidence used a different controller version")
+        if policy_digest is not None and item.policy_digest != policy_digest:
+            raise AutopilotError("gate evidence used a different policy digest")
         if item.exit_code != 0 or item.failed:
             raise GateFailureError(f"gate {item.gate_id} failed")
-        if item.gate_id == "pytest" and item.skipped:
-            raise AutopilotError("required pytest run contains skipped tests")
+        if item.test_required and item.passed + item.failed + item.skipped == 0:
+            raise AutopilotError(f"required test gate {item.gate_id} executed zero tests")
+        if item.test_required and item.skipped:
+            raise AutopilotError(f"required test gate {item.gate_id} contains skipped tests")
+        if item.finished_at:
+            age = (
+                datetime.now(UTC) - parse_utc(item.finished_at, "gate finished_at")
+            ).total_seconds()
+            if age < -300 or age > 86_400:
+                raise AutopilotError(f"gate evidence for {item.gate_id} is stale")
+        elif repo is not None:
+            raise AutopilotError(f"gate evidence for {item.gate_id} has no timestamp")
+        if repo is not None:
+            if not item.output_file or not item.output_sha256:
+                raise AutopilotError(f"gate report for {item.gate_id} is missing")
+            report = (repo / item.output_file).resolve()
+            if repo.resolve() not in report.parents or not report.is_file():
+                raise AutopilotError(f"gate report for {item.gate_id} is missing")
+            if hashlib.sha256(report.read_bytes()).hexdigest() != item.output_sha256:
+                raise AutopilotError(f"gate report for {item.gate_id} is malformed or stale")
+            if item.gate_id == "pytest":
+                if not item.test_report_file or not item.test_report_sha256:
+                    raise AutopilotError("pytest JUnit report is missing")
+                test_report = (repo / item.test_report_file).resolve()
+                if repo.resolve() not in test_report.parents or not test_report.is_file():
+                    raise AutopilotError("pytest JUnit report is missing")
+                if hashlib.sha256(test_report.read_bytes()).hexdigest() != item.test_report_sha256:
+                    raise AutopilotError("pytest JUnit report is malformed or stale")
+                if parse_junit_summary(test_report) != (
+                    item.passed,
+                    item.failed,
+                    item.skipped,
+                ):
+                    raise AutopilotError("pytest JUnit counts disagree with gate evidence")
     if required_gate_ids is not None and ids != set(required_gate_ids):
         raise AutopilotError("gate evidence does not exactly match the pinned required gate set")
 
@@ -474,9 +723,28 @@ def promote_fast_forward(
     evidence: Sequence[GateEvidence],
     review: dict[str, Any],
     required_gate_ids: Sequence[str] | None = None,
+    controller_version: int | None = None,
+    policy_digest: str | None = None,
+    review_file: Path | None = None,
+    review_sha256: str | None = None,
 ) -> str:
-    validate_gate_evidence(evidence, candidate_sha, required_gate_ids)
+    validate_gate_evidence(
+        evidence,
+        candidate_sha,
+        required_gate_ids,
+        base_sha=base_sha,
+        controller_version=controller_version,
+        policy_digest=policy_digest,
+        repo=repo if controller_version is not None else None,
+    )
     validate_review(review, base_sha, candidate_sha)
+    if review_file is not None:
+        resolved_review = review_file.resolve()
+        if repo.resolve() not in resolved_review.parents or not resolved_review.is_file():
+            raise AutopilotError("independent review report is absent")
+        actual_review_sha256 = hashlib.sha256(resolved_review.read_bytes()).hexdigest()
+        if not review_sha256 or actual_review_sha256 != review_sha256:
+            raise AutopilotError("independent review report is malformed or stale")
     main_sha = git_sha(repo, "main")
     reconciliation = reconcile_merge(main_sha, base_sha, candidate_sha)
     if reconciliation == "already_merged":
@@ -745,7 +1013,9 @@ stop and state the exact blocker in your final response.
 """
 
 
-def review_prompt(feature_id: str, base_sha: str, candidate_sha: str) -> str:
+def review_prompt(
+    feature_id: str, base_sha: str, candidate_sha: str, reviewer_session_id: str
+) -> str:
     return f"""Independently review ShreeNexa {feature_id}. Base SHA is
 {base_sha}; exact candidate SHA is {candidate_sha}. Remain read-only. Verify
 scope, acceptance behavior, tests, secrets, path safety, determinism,
@@ -753,6 +1023,9 @@ migrations, service isolation, control-plane/protected paths, and truthful
 evidence. Any unresolved finding is blocking regardless of severity. Return
 only the required JSON shape bound to those exact SHAs. Never use credentials,
 make external writes, or accept the implementer's summary as evidence.
+Set independent to true, reviewer_session_id to {reviewer_session_id}, and
+reviewed_at to the current UTC instant. This is a fresh ephemeral reviewer
+session distinct from the implementation session.
 """
 
 
@@ -805,11 +1078,30 @@ class PilotController:
                     state.feature = None
                     self.store.save(state)
                     return state
+                if feature_id in state.implemented:
+                    state.phase = "blocked"
+                    state.feature = feature_id
+                    state.blocker = (
+                        f"recovery-needed: {feature_id} is merged but is not verified complete"
+                    )
+                    self.store.save(state)
+                    raise AutopilotError(state.blocker)
                 self._run_feature(state, feature_id)
 
     def _verify_setup_pin(self, state: RuntimeState) -> None:
         if state.setup_sha is None:
-            state.setup_sha = git_sha(self.repo, "main")
+            setup_sha = run_git(
+                self.repo,
+                "log",
+                "-1",
+                "--format=%H",
+                "main",
+                "--",
+                "build/autopilot/controller.py",
+            )
+            if not SHA_RE.fullmatch(setup_sha):
+                raise AutopilotError("approved controller version is not present in Git history")
+            state.setup_sha = setup_sha
             state.remote_fingerprint = hashlib.sha256(
                 run_git(self.repo, "remote", "-v").encode("utf-8")
             ).hexdigest()
@@ -827,16 +1119,189 @@ class PilotController:
                 raise AutopilotError(f"pinned control-plane path changed after setup: {path}")
 
     def _reconcile(self, state: RuntimeState) -> None:
-        if state.base_sha and state.candidate_sha:
-            result = reconcile_merge(
-                git_sha(self.repo, "main"), state.base_sha, state.candidate_sha
+        tracked_path = self.repo / "build/state.json"
+        try:
+            tracked = json.loads(tracked_path.read_text(encoding="utf-8"))
+            validate_state(tracked)
+        except (OSError, json.JSONDecodeError, StateError) as exc:
+            raise AutopilotError("recovery-needed: tracked feature state is invalid") from exc
+        tracked_features = tracked.get("features", {})
+        main_sha = git_sha(self.repo, "main")
+        implemented: dict[str, str] = {}
+        for feature_id in ALLOWLIST:
+            branch = str(self.policy.feature(feature_id)["branch"])
+            ref = f"refs/heads/{branch}"
+            record = tracked_features.get(feature_id)
+            tracked_commit = record.get("commit") if isinstance(record, dict) else None
+            candidate: str | None = None
+            if tracked_commit:
+                try:
+                    candidate = git_sha(self.repo, str(tracked_commit))
+                except AutopilotError as exc:
+                    raise AutopilotError(
+                        f"recovery-needed: tracked commit for {feature_id} is invalid"
+                    ) from exc
+            if git_ref_exists(self.repo, ref):
+                branch_candidate = git_sha(self.repo, ref)
+                if candidate is not None and branch_candidate != candidate:
+                    raise AutopilotError(
+                        f"recovery-needed: branch and tracked commit disagree for {feature_id}"
+                    )
+                candidate = branch_candidate
+            if candidate is None:
+                break
+            if not git_is_ancestor(self.repo, candidate, main_sha):
+                break
+            implemented[feature_id] = candidate
+        if state.implemented and state.implemented != implemented:
+            raise AutopilotError(
+                "recovery-needed: durable journal disagrees with merged Git feature history"
             )
+        state.implemented = implemented
+        verified: dict[str, str] = {}
+        pending_finalize = False
+        for feature_id, candidate_sha in implemented.items():
+            record = tracked_features.get(feature_id)
+            if not isinstance(record, dict):
+                state.completed = verified
+                state.phase = "blocked"
+                state.blocker = (
+                    f"recovery-needed: {feature_id} is merged but has no tracked feature record"
+                )
+                self.store.save(state)
+                raise AutopilotError(state.blocker)
+            try:
+                tracked_commit = git_sha(self.repo, str(record.get("commit")))
+            except AutopilotError as exc:
+                raise AutopilotError(
+                    f"recovery-needed: tracked commit for {feature_id} is invalid"
+                ) from exc
+            if tracked_commit != candidate_sha:
+                raise AutopilotError(
+                    f"recovery-needed: Git and tracked commit disagree for {feature_id}"
+                )
+            if record.get("status") != "done":
+                if (
+                    state.feature == feature_id
+                    and state.candidate_sha == candidate_sha
+                    and main_sha == candidate_sha
+                    and state.phase in {"approved", "merged"}
+                ):
+                    pending_finalize = True
+                    break
+                state.completed = verified
+                state.phase = "blocked"
+                state.feature = feature_id
+                state.blocker = (
+                    f"recovery-needed: {feature_id} is merged with status {record.get('status')!r}"
+                )
+                self.store.save(state)
+                raise AutopilotError(state.blocker)
+            self._validate_tracked_evidence(feature_id, candidate_sha, record)
+            verified[feature_id] = candidate_sha
+        if pending_finalize:
+            state.completed = verified
+            self._resume_merged_candidate(state)
+            return
+        if state.completed and state.completed != verified:
+            raise AutopilotError(
+                "recovery-needed: durable verified state disagrees with tracked evidence"
+            )
+        state.completed = verified
+        if state.base_sha and state.candidate_sha:
+            if (
+                git_is_ancestor(self.repo, state.candidate_sha, main_sha)
+                and state.candidate_sha != main_sha
+                and state.completed.get(state.feature or "") == state.candidate_sha
+            ):
+                state.base_sha = None
+                state.candidate_sha = None
+                state.feature = None
+                state.branch = None
+                state.worktree = None
+                state.acceptance_sha256 = None
+                state.evidence = []
+                state.blocker = None
+                state.phase = "merged"
+                self.store.save(state)
+                return
+            result = reconcile_merge(main_sha, state.base_sha, state.candidate_sha)
             if result == "already_merged" and state.feature:
                 state.completed.setdefault(state.feature, state.candidate_sha)
                 state.phase = "merged"
                 self.store.save(state)
         elif state.base_sha and git_sha(self.repo, "main") != state.base_sha:
             raise AutopilotError("main moved while an unfinished feature was recorded")
+        self.store.save(state)
+
+    def _resume_merged_candidate(self, state: RuntimeState) -> None:
+        feature_id = state.feature
+        candidate_sha = state.candidate_sha
+        base_sha = state.base_sha
+        branch = state.branch
+        if not feature_id or not candidate_sha or not base_sha or not branch:
+            raise AutopilotError("recovery-needed: merged runtime candidate is incomplete")
+        feature = self.policy.feature(feature_id)
+        evidence = [GateEvidence(**item) for item in state.evidence]
+        report_dir = self.runtime_root / "reports" / feature_id
+        review_file = report_dir / f"review-{state.repair_cycle}.json"
+        try:
+            review = json.loads(review_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise AutopilotError("recovery-needed: merged review evidence is unavailable") from exc
+        promote_fast_forward(
+            self.repo,
+            base_sha=base_sha,
+            candidate_sha=candidate_sha,
+            branch=branch,
+            evidence=evidence,
+            review=review,
+            required_gate_ids=[item["id"] for item in self.policy.raw["gate_commands"]],
+            controller_version=CONTROLLER_VERSION,
+            policy_digest=self.policy.digest,
+            review_file=review_file,
+            review_sha256=hashlib.sha256(review_file.read_bytes()).hexdigest(),
+        )
+        self._persist_verified_completion(
+            state, feature_id, feature, candidate_sha, evidence, review_file
+        )
+        state.completed[feature_id] = candidate_sha
+        state.base_sha = None
+        state.candidate_sha = None
+        state.feature = None
+        state.branch = None
+        state.worktree = None
+        state.acceptance_sha256 = None
+        state.evidence = []
+        state.blocker = None
+        state.phase = "merged"
+        self.store.save(state)
+
+    def _validate_tracked_evidence(
+        self, feature_id: str, candidate_sha: str, record: dict[str, Any]
+    ) -> None:
+        evidence_paths = record.get("evidence")
+        if not isinstance(evidence_paths, list) or not evidence_paths:
+            raise AutopilotError(f"recovery-needed: verified {feature_id} has no evidence paths")
+        for raw_path in evidence_paths:
+            relative = _normalized_repo_path(str(raw_path))
+            report = (self.repo / relative).resolve()
+            if self.repo not in report.parents or not report.is_file():
+                raise AutopilotError(f"recovery-needed: evidence for {feature_id} is missing")
+            try:
+                document = json.loads(report.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise AutopilotError(
+                    f"recovery-needed: evidence for {feature_id} is malformed"
+                ) from exc
+            if (
+                not isinstance(document, dict)
+                or document.get("candidate_sha") != candidate_sha
+                or document.get("result") != "passed"
+            ):
+                raise AutopilotError(
+                    f"recovery-needed: evidence for {feature_id} is wrong-SHA or failed"
+                )
 
     def _run_feature(self, state: RuntimeState, feature_id: str) -> None:
         feature = self.policy.feature(feature_id)
@@ -908,6 +1373,8 @@ class PilotController:
                             "rerun for the new commit.\n"
                         )
                     worker_head = git_sha(worktree, "HEAD")
+                    state.implementation_session_id = uuid.uuid4().hex
+                    self.store.save(state)
                     self.codex.implement(worktree, prompt, worker_output)
                     self._verify_acceptance_contract(state, worktree, feature)
                     self._commit_candidate(
@@ -923,14 +1390,21 @@ class PilotController:
                 try:
                     evidence = self._run_gates(worktree, candidate_sha, report_dir)
                     review_file = report_dir / f"review-{state.repair_cycle}.json"
+                    reviewer_session_id = uuid.uuid4().hex
                     review = self.codex.review(
                         worktree,
-                        review_prompt(feature_id, base_sha, candidate_sha),
+                        review_prompt(feature_id, base_sha, candidate_sha, reviewer_session_id),
                         self.repo / "build/autopilot/review.schema.json",
                         review_file,
                         base_sha,
                     )
-                    validate_review(review, base_sha, candidate_sha)
+                    validate_review(
+                        review,
+                        base_sha,
+                        candidate_sha,
+                        expected_review_session_id=reviewer_session_id,
+                        implementer_session_id=state.implementation_session_id,
+                    )
                     if git_sha(worktree, "HEAD") != candidate_sha or run_git(
                         worktree, "status", "--porcelain"
                     ):
@@ -938,6 +1412,7 @@ class PilotController:
                     state.evidence = [asdict(item) for item in evidence]
                     state.phase = "approved"
                     self.store.save(state)
+                    review_sha256 = hashlib.sha256(review_file.read_bytes()).hexdigest()
                     promote_fast_forward(
                         self.repo,
                         base_sha=base_sha,
@@ -946,9 +1421,26 @@ class PilotController:
                         evidence=evidence,
                         review=review,
                         required_gate_ids=[item["id"] for item in self.policy.raw["gate_commands"]],
+                        controller_version=CONTROLLER_VERSION,
+                        policy_digest=self.policy.digest,
+                        review_file=review_file,
+                        review_sha256=review_sha256,
+                    )
+                    state.phase = "merged"
+                    self.store.save(state)
+                    self._persist_verified_completion(
+                        state, feature_id, feature, candidate_sha, evidence, review_file
                     )
                     state.completed[feature_id] = candidate_sha
-                    state.phase = "merged"
+                    state.base_sha = None
+                    state.candidate_sha = None
+                    state.feature = None
+                    state.branch = None
+                    state.worktree = None
+                    state.acceptance_sha256 = None
+                    state.evidence = []
+                    state.blocker = None
+                    state.implementation_session_id = None
                     self.store.save(state)
                     run_git(self.repo, "worktree", "remove", str(worktree))
                     return
@@ -1081,12 +1573,10 @@ base, zero required test skips, and fast-forward-only integration must pass.
                 "--feature",
                 feature_id,
                 "--status",
-                "done",
+                "review",
                 "--branch",
                 str(feature["branch"]),
                 "--started-at",
-                utc_now(),
-                "--finished-at",
                 utc_now(),
             ],
             cwd=worktree,
@@ -1113,6 +1603,58 @@ base, zero required test skips, and fast-forward-only integration must pass.
             report_dir / f"candidate-{state.repair_cycle}.json",
             {"base_sha": base_sha, "candidate_sha": candidate_sha, "paths": uncommitted_paths},
         )
+
+    def _persist_verified_completion(
+        self,
+        state: RuntimeState,
+        feature_id: str,
+        feature: dict[str, Any],
+        candidate_sha: str,
+        evidence: Sequence[GateEvidence],
+        review_file: Path,
+    ) -> None:
+        tests = {
+            item.gate_id: {
+                "passed": item.passed,
+                "failed": item.failed,
+                "skipped": item.skipped,
+                "exit_code": item.exit_code,
+            }
+            for item in evidence
+            if item.test_required
+        }
+        gate_manifest = self.runtime_root / "reports" / feature_id / f"gates-{candidate_sha}.json"
+        completion_manifest = (
+            self.runtime_root / "reports" / feature_id / f"completion-{candidate_sha}.json"
+        )
+        atomic_write_json(
+            completion_manifest,
+            {
+                "base_sha": state.base_sha,
+                "candidate_sha": candidate_sha,
+                "result": "passed",
+                "controller_version": CONTROLLER_VERSION,
+                "policy_digest": self.policy.digest,
+                "gates_sha256": hashlib.sha256(gate_manifest.read_bytes()).hexdigest(),
+                "review_sha256": hashlib.sha256(review_file.read_bytes()).hexdigest(),
+                "verified_at": utc_now(),
+            },
+        )
+        evidence_paths = [str(completion_manifest.relative_to(self.repo)).replace("\\", "/")]
+        update_state(
+            self.repo / "build/state.json",
+            feature=feature_id,
+            status="done",
+            branch=str(feature["branch"]),
+            commit=candidate_sha,
+            tests=tests,
+            finished_at=utc_now(),
+            blockers=[],
+            evidence=evidence_paths,
+            verified_at=utc_now(),
+        )
+        run_git(self.repo, "add", "--", "build/state.json")
+        run_git(self.repo, "commit", "-m", f"chore: record verified {feature_id} evidence")
 
     def _update_project_progress(
         self, worktree: Path, feature_id: str, feature: dict[str, Any]
@@ -1160,6 +1702,7 @@ base, zero required test skips, and fast-forward-only integration must pass.
                     )
                     for part in gate["argv"]
                 )
+                started_at = utc_now()
                 exit_code, duration, output = self.runner.run(
                     argv,
                     cwd=worktree,
@@ -1169,10 +1712,17 @@ base, zero required test skips, and fast-forward-only integration must pass.
                     ),
                 )
                 output_path = report_dir / f"gate-{gate['id']}-{candidate_sha}.log"
-                output_path.write_text(output, encoding="utf-8")
+                output_path.write_text(output, encoding="utf-8", newline="\n")
+                finished_at = utc_now()
                 passed = failed = skipped = 0
+                test_report_file: str | None = None
+                test_report_sha256 = ""
                 if gate["id"] == "pytest":
-                    passed, failed, skipped = parse_pytest_summary(output)
+                    passed, failed, skipped = parse_junit_summary(junit_path)
+                    test_report_file = str(junit_path.relative_to(self.repo))
+                    test_report_sha256 = hashlib.sha256(junit_path.read_bytes()).hexdigest()
+                elif gate.get("requires_tests"):
+                    passed, failed, skipped = parse_test_summary(output)
                 item = GateEvidence(
                     gate_id=gate["id"],
                     candidate_sha=candidate_sha,
@@ -1183,6 +1733,15 @@ base, zero required test skips, and fast-forward-only integration must pass.
                     failed=failed,
                     skipped=skipped,
                     output_file=str(output_path.relative_to(self.repo)),
+                    base_sha=base_sha,
+                    controller_version=CONTROLLER_VERSION,
+                    policy_digest=self.policy.digest,
+                    started_at=started_at,
+                    finished_at=finished_at,
+                    output_sha256=hashlib.sha256(output_path.read_bytes()).hexdigest(),
+                    test_required=bool(gate.get("requires_tests", False)),
+                    test_report_file=test_report_file,
+                    test_report_sha256=test_report_sha256,
                 )
                 evidence.append(item)
                 if git_sha(worktree, "HEAD") != candidate_sha or run_git(
@@ -1193,7 +1752,19 @@ base, zero required test skips, and fast-forward-only integration must pass.
             evidence,
             candidate_sha,
             [item["id"] for item in self.policy.raw["gate_commands"]],
+            base_sha=self.store.load().base_sha,
+            controller_version=CONTROLLER_VERSION,
+            policy_digest=self.policy.digest,
+            repo=self.repo,
         )
+        base_sha = self.store.load().base_sha
+        assert base_sha is not None
+        feature_id = self.store.load().feature
+        assert feature_id is not None
+        feature_report = validate_feature_evidence(
+            worktree, base_sha, candidate_sha, self.policy.feature(feature_id)
+        )
+        atomic_write_json(report_dir / f"feature-evidence-{candidate_sha}.json", feature_report)
         self._scan_candidate_for_secrets(worktree, candidate_sha, report_dir)
         atomic_write_json(report_dir / f"gates-{candidate_sha}.json", [asdict(x) for x in evidence])
         return evidence

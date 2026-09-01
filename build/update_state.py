@@ -20,8 +20,9 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
-from state_schema import StateError, validate_state
+from state_schema import VALID_STATUSES, StateError, validate_state
 
 DEFAULT_STATE_PATH = Path(__file__).parent / "state.json"
 
@@ -45,6 +46,8 @@ def update_state(
     started_at: str | None = None,
     finished_at: str | None = None,
     blockers: list[str] | None = None,
+    evidence: list[str] | None = None,
+    verified_at: str | None = None,
 ) -> dict:
     """Validate the proposed fields and atomically write build/state.json.
 
@@ -58,6 +61,23 @@ def update_state(
     on_disk = read_state(path)
     existing = on_disk if on_disk is not None and on_disk.get("feature") == feature else {}
 
+    features: dict[str, dict[str, Any]] = dict(
+        on_disk.get("features", {}) if on_disk is not None else {}
+    )
+    record_existing = features.get(feature, {})
+    record = {
+        "status": status,
+        "branch": branch if branch is not None else existing.get("branch"),
+        "commit": commit if commit is not None else existing.get("commit"),
+        "tests": tests if tests is not None else existing.get("tests", {}),
+        "evidence": evidence if evidence is not None else record_existing.get("evidence", []),
+        "verified_at": verified_at
+        if verified_at is not None
+        else record_existing.get("verified_at"),
+        "blockers": blockers if blockers is not None else existing.get("blockers", []),
+    }
+    features[feature] = record
+
     doc = {
         "feature": feature,
         "status": status,
@@ -67,6 +87,7 @@ def update_state(
         "started_at": started_at if started_at is not None else existing.get("started_at"),
         "finished_at": finished_at if finished_at is not None else existing.get("finished_at"),
         "blockers": blockers if blockers is not None else existing.get("blockers", []),
+        "features": features,
     }
 
     validate_state(doc)
@@ -84,20 +105,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--status",
         required=True,
-        choices=[
-            "pending",
-            "in_progress",
-            "review",
-            "done",
-            "blocked",
-            "parked",
-        ],
+        choices=VALID_STATUSES,
     )
     parser.add_argument("--branch")
     parser.add_argument("--commit")
     parser.add_argument("--started-at")
     parser.add_argument("--finished-at")
     parser.add_argument("--blocker", action="append", dest="blockers", default=None)
+    parser.add_argument("--evidence", action="append", default=None)
+    parser.add_argument("--verified-at")
     return parser.parse_args(argv)
 
 
@@ -113,6 +129,8 @@ def main(argv: list[str]) -> int:
             started_at=args.started_at,
             finished_at=args.finished_at,
             blockers=args.blockers,
+            evidence=args.evidence,
+            verified_at=args.verified_at,
         )
     except StateError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)

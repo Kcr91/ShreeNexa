@@ -1,7 +1,8 @@
-"""Offline tests driven by recorded sanitized JSON response cassettes."""
+"""Offline tests driven by deterministic synthetic Dhan-shaped fixtures."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -19,11 +20,26 @@ from pydantic import SecretStr
 CASSETTES_DIR = Path(__file__).resolve().parents[1] / "cassettes" / "dhan"
 
 
+def test_all_cassette_fixtures_are_explicitly_synthetic() -> None:
+    fixtures = sorted(CASSETTES_DIR.glob("*.json"))
+    assert len(fixtures) == 7
+    for fixture in fixtures:
+        document = json.loads(fixture.read_text(encoding="utf-8"))
+        metadata = document["_fixture"]
+        assert metadata == {
+            "classification": "synthetic",
+            "source": "generated_during_development",
+            "recorded_broker_response": False,
+            "account_id": "0000000000",
+            "credential_profile": "invalid_test_only",
+        }
+
+
 @pytest.fixture
 def cassette_client() -> DhanRestClient:
     creds = DhanCredentials(
-        client_id="1100998877",
-        access_token=SecretStr("mock_dhan_access_token_12345"),
+        client_id="0000000000",
+        access_token=SecretStr("test_invalid_dhan_access_token"),
         source="environment",
     )
     transport = CassetteTransport(CASSETTES_DIR)
@@ -32,7 +48,7 @@ def cassette_client() -> DhanRestClient:
 
 def test_cassette_profile_success(cassette_client: DhanRestClient) -> None:
     fund_limit = cassette_client.get_fund_limits()
-    assert fund_limit.client_id == "1100998877"
+    assert fund_limit.client_id == "0000000000"
     assert fund_limit.available_balance == 250000.5
     assert fund_limit.sod_limit == 250000.5
     assert fund_limit.collateral_amount == 50000.0
@@ -40,7 +56,7 @@ def test_cassette_profile_success(cassette_client: DhanRestClient) -> None:
     assert fund_limit.withdrawable_balance == 235000.25
 
     profile = cassette_client.get_profile()
-    assert profile.client_id == "1100998877"
+    assert profile.client_id == "0000000000"
     assert profile.active is True
     assert profile.fund_limit is not None
 
@@ -88,8 +104,8 @@ def test_cassette_historical_intraday_success(cassette_client: DhanRestClient) -
 
 def test_cassette_auth_failure_401() -> None:
     creds = DhanCredentials(
-        client_id="1100998877",
-        access_token=SecretStr("mock_token"),
+        client_id="0000000000",
+        access_token=SecretStr("test_invalid_dhan_access_token"),
         source="environment",
     )
     transport = CassetteTransport(CASSETTES_DIR)
@@ -107,8 +123,8 @@ def test_cassette_auth_failure_401() -> None:
 
 def test_cassette_rate_limit_429() -> None:
     creds = DhanCredentials(
-        client_id="1100998877",
-        access_token=SecretStr("mock_token"),
+        client_id="0000000000",
+        access_token=SecretStr("test_invalid_dhan_access_token"),
         source="environment",
     )
     transport = CassetteTransport(CASSETTES_DIR)
@@ -126,8 +142,8 @@ def test_cassette_rate_limit_429() -> None:
 
 def test_cassette_server_error_503() -> None:
     creds = DhanCredentials(
-        client_id="1100998877",
-        access_token=SecretStr("mock_token"),
+        client_id="0000000000",
+        access_token=SecretStr("test_invalid_dhan_access_token"),
         source="environment",
     )
     transport = CassetteTransport(CASSETTES_DIR)
@@ -145,8 +161,8 @@ def test_cassette_server_error_503() -> None:
 
 def test_cassette_malformed_response() -> None:
     creds = DhanCredentials(
-        client_id="1100998877",
-        access_token=SecretStr("mock_token"),
+        client_id="0000000000",
+        access_token=SecretStr("test_invalid_dhan_access_token"),
         source="environment",
     )
     transport = CassetteTransport(CASSETTES_DIR)

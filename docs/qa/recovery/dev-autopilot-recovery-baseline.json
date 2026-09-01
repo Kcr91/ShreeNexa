@@ -1,0 +1,64 @@
+{
+  "recorded_at": "2026-09-01",
+  "repository_root": "F:\\ShreeNexa",
+  "branch_created": "feature/dev-autopilot-recovery",
+  "baseline_main_sha": "c5f2528a7f97bb9bc442d196e5cf290dc543d3b8",
+  "reported_history_verified": {
+    "setup": "584fc939db7f8c9273b94627d58ded7daccf2dda",
+    "F0.4": "96eab705997941138755cbc7e6fb021414ba5330",
+    "F0.4_state_update": "8af3ebd4ddd7b2f389918c390556721fd9f4957a",
+    "F0.5": "c6fd2198d2d11a2135431c7662c5e5307c0617f9",
+    "F0.5_state_update": "c5f2528a7f97bb9bc442d196e5cf290dc543d3b8"
+  },
+  "autopilot_process": "not_running",
+  "pre_repair_runtime_journal": "missing",
+  "pre_repair_runtime_reports": "missing",
+  "pre_repair_tracked_state_source": "c5f2528a7f97bb9bc442d196e5cf290dc543d3b8:build/state.json",
+  "pre_repair_fixture_sha256": {
+    "auth_failure_401.json": "e548db24e286ed0900aceebe07edd04d161ae51b97166efda7a436f0fc2eb931",
+    "historical_daily_success.json": "a5fe9c40b2f1f0dadbaa08f371489a04dedc06552e10611a73e1a0e42d1eae04",
+    "historical_intraday_success.json": "bf517b4bebd968eebe6f747ac1fa0db16d63d7659f9a59912e656eef3b8fd47f",
+    "malformed_response.json": "c0064b248ac78e99d74b2574f1b3b3acab05b7bf8b4c206ee47cfc37c7e32b08",
+    "profile_success.json": "c8d06434458771ab3606bb92df50ac17e16309cdd5dbe8ca9539c3b26ef87791",
+    "rate_limit_429.json": "fa49b032831bdd722997fbb5655f8ed28649bce0057e4198d4df9fe3b1817e16",
+    "server_error_503.json": "6176ccb3a4e217acab86134809704a023772aece30494223499a538e31320f85"
+  },
+  "secret_history_scan": [
+    {
+      "paths": ["backend/app/config.py", "backend/app/dhan/client.py", "backend/app/dhan/credentials.py", "backend/app/dhan/health.py"],
+      "category": "credential-field-name",
+      "classification": "code identifiers; no credential value established"
+    },
+    {
+      "paths": ["backend/tests/integration/conftest.py", "backend/tests/integration/test_docker_services.py"],
+      "category": "credential-assignment",
+      "classification": "documented isolated local test service values"
+    },
+    {
+      "paths": ["backend/tests/unit/test_config.py", "backend/tests/unit/test_dhan_cassettes.py", "backend/tests/unit/test_dhan_client.py", "backend/tests/unit/test_dhan_token_health.py", "backend/tests/unit/test_dpapi.py", "build/tests/test_dev_autopilot.py"],
+      "category": "credential-or-jwt-shaped-test-value",
+      "classification": "generated/fake automated test values"
+    },
+    {
+      "paths": ["backend/tests/cassettes/dhan/historical_daily_success.json", "backend/tests/cassettes/dhan/historical_intraday_success.json"],
+      "category": "ten-digit-number",
+      "classification": "synthetic epoch timestamps; account-ID regex false positive"
+    },
+    {
+      "paths": ["backend/tests/cassettes/dhan/profile_success.json"],
+      "category": "ten-digit-account-identifier",
+      "classification": "generated/synthetic test identifier"
+    },
+    {
+      "paths": ["build/autopilot/controller.py"],
+      "category": "private-key-marker",
+      "classification": "secret scanner detection literal"
+    },
+    {
+      "paths": ["uv.lock"],
+      "category": "ten-digit-number",
+      "classification": "lockfile metadata; account-ID regex false positive"
+    }
+  ],
+  "historical_evidence_note": "No runtime journal, gate reports, review reports, or historical timestamps were present to preserve. Missing evidence is recorded as missing."
+}

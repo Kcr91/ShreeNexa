@@ -51,6 +51,25 @@ product feature-builder.
    are pinned to the setup SHA and the pilot launches without another routine
    confirmation. It stops after F0.9 or at the first defined blocker.
 
+## Recovery requirements (2026-09-01)
+
+- Git implementation presence, verified test/review evidence, and full feature
+  acceptance are separate facts. `merged_unverified`, `blocked`, and `done`
+  (verified complete) are not interchangeable.
+- Startup reconciles merged feature-branch tips, the validated tracked feature
+  ledger, the durable runtime journal, and exact-SHA evidence before selecting
+  work. Any disagreement returns `recovery-needed`; a missing journal cannot
+  cause a merged feature to replay.
+- Controller policy version, policy digest, base SHA, candidate SHA, timestamps,
+  command results, test counts, report hashes, and a fresh independent reviewer
+  session are promotion inputs. Missing, stale, malformed, wrong-SHA, skipped,
+  or zero-test evidence blocks.
+- Feature-specific `evidence_checks` execute in the controller path. Worker prose
+  and self-review never establish completion, and tracked status is not `done`
+  until promotion evidence has passed.
+- Synthetic Dhan-shaped fixtures fail F0.5's recorded-cassette requirement.
+  Repairing controller enforcement does not make the pilot or F0.5 ready.
+
 ## Synthetic proof
 
 Temporary repositories and a fake Codex adapter prove: passing merge/advance;

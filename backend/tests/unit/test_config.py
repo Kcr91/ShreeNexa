@@ -24,7 +24,7 @@ def test_default_settings() -> None:
 def test_settings_load_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "staging")
     monkeypatch.setenv("LOG_LEVEL", "DEBUG")
-    monkeypatch.setenv("DHAN_CLIENT_ID", "1100998877")
+    monkeypatch.setenv("DHAN_CLIENT_ID", "0000000000")
     monkeypatch.setenv("DHAN_ACCESS_TOKEN", "SECRET_TOKEN_VALUE_XYZ")
     monkeypatch.setenv(
         "DATABASE_URL",
@@ -34,7 +34,7 @@ def test_settings_load_from_environment(monkeypatch: pytest.MonkeyPatch) -> None
     settings = Settings.load(env_file=None)
     assert settings.environment == "staging"
     assert settings.log_level == "DEBUG"
-    assert settings.dhan_client_id == "1100998877"
+    assert settings.dhan_client_id == "0000000000"
     assert settings.dhan_access_token is not None
     assert settings.dhan_access_token.get_secret_value() == "SECRET_TOKEN_VALUE_XYZ"
     assert (
@@ -72,7 +72,7 @@ def test_settings_load_from_env_file() -> None:
 def test_secrets_never_appear_in_repr_or_str() -> None:
     settings = Settings(
         database_url=SecretStr("postgresql+psycopg://u:super_secret_db_pw@host/db"),
-        dhan_client_id="1100998877",
+        dhan_client_id="0000000000",
         dhan_access_token=SecretStr("super_secret_dhan_access_token_12345"),
     )
     repr_str = repr(settings)
@@ -84,7 +84,7 @@ def test_secrets_never_appear_in_repr_or_str() -> None:
     assert "super_secret_dhan_access_token_12345" not in str_val
 
     assert "**********" in repr_str
-    assert "1100***877" in repr_str
+    assert "0000***000" in repr_str
 
 
 def test_redact_text() -> None:

@@ -41,7 +41,7 @@ def test_token_health_missing() -> None:
 
 def test_token_health_unknown_expiry() -> None:
     creds = DhanCredentials(
-        client_id="1100998877",
+        client_id="0000000000",
         access_token=SecretStr("token_xyz"),
         expires_at=None,
         source="environment",
@@ -49,7 +49,7 @@ def test_token_health_unknown_expiry() -> None:
     health = check_token_health(creds)
     assert health.status == "unknown_expiry"
     assert health.is_valid is True
-    assert health.client_id_masked == "1100***877"
+    assert health.client_id_masked == "0000***000"
     assert health.expires_at is None
     assert health.expires_in_seconds is None
     assert health.source == "environment"
@@ -60,7 +60,7 @@ def test_token_health_valid() -> None:
     # 24-hour Dhan Web token validity test (e.g. expires 10 hours from now)
     expires = now + timedelta(hours=10)
     creds = DhanCredentials(
-        client_id="1100998877",
+        client_id="0000000000",
         access_token=SecretStr("token_xyz"),
         expires_at=expires,
         source="dpapi",
@@ -78,7 +78,7 @@ def test_token_health_expiring_soon() -> None:
     # Expiring in 90 minutes (<= 2 hours threshold)
     expires = now + timedelta(minutes=90)
     creds = DhanCredentials(
-        client_id="1100998877",
+        client_id="0000000000",
         access_token=SecretStr("token_xyz"),
         expires_at=expires,
         source="environment",
@@ -95,7 +95,7 @@ def test_token_health_expired() -> None:
     # Expired 5 minutes ago
     expires = now - timedelta(minutes=5)
     creds = DhanCredentials(
-        client_id="1100998877",
+        client_id="0000000000",
         access_token=SecretStr("token_xyz"),
         expires_at=expires,
         source="environment",
@@ -109,7 +109,7 @@ def test_token_health_expired() -> None:
 
 def test_token_health_revoked() -> None:
     creds = DhanCredentials(
-        client_id="1100998877",
+        client_id="0000000000",
         access_token=SecretStr("token_xyz"),
         expires_at=datetime(2026, 9, 2, 10, 0, 0, tzinfo=UTC),
         source="environment",

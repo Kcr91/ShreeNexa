@@ -77,3 +77,13 @@ necessary.
 - F0.5's recorded-cassette requirement is not weakened. If authorized,
   authentic sanitized evidence cannot be obtained without real credentials or
   a new decision, the pilot stops rather than fabricating a cassette.
+
+## Recovery clarification (2026-09-01)
+
+The recovery task established that the seven F0.5 files were generated during
+development and have no evidenced broker origin, capture date, or sanitization
+history. They are synthetic deterministic fixtures, not recorded responses.
+The controller must reconcile Git implementation, tracked status, durable run
+state, and exact-SHA evidence before selection, and feature-specific evidence
+checks must execute in the controller path. F0.5 therefore remains blocked on
+the original recorded-cassette requirement.

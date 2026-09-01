@@ -55,9 +55,7 @@ class HTTPTransport:
     ) -> tuple[int, dict[str, str], bytes]:
         url = f"{self.base_url}/{path.lstrip('/')}"
         if params:
-            query = urllib.parse.urlencode(
-                {k: v for k, v in params.items() if v is not None}
-            )
+            query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
             if query:
                 url = f"{url}?{query}"
 
@@ -90,21 +88,15 @@ class HTTPTransport:
             err_headers = {k: v for k, v in err.headers.items()} if err.headers else {}
             return int(err.code), err_headers, err_content
         except TimeoutError as err:
-            raise DhanTimeoutError(
-                f"Request to {path} timed out after {timeout}s"
-            ) from err
+            raise DhanTimeoutError(f"Request to {path} timed out after {timeout}s") from err
         except urllib.error.URLError as err:
             if isinstance(err.reason, TimeoutError):
-                raise DhanTimeoutError(
-                    f"Request to {path} timed out: {err.reason}"
-                ) from err
-            raise DhanServerError(
-                f"Connection error reaching {path}: {err.reason}"
-            ) from err
+                raise DhanTimeoutError(f"Request to {path} timed out: {err.reason}") from err
+            raise DhanServerError(f"Connection error reaching {path}: {err.reason}") from err
 
 
 class CassetteTransport:
-    """Deterministic offline transport replaying recorded sanitized JSON cassettes."""
+    """Deterministic offline transport replaying Dhan-shaped JSON fixtures."""
 
     def __init__(self, cassette_dir: Path | str) -> None:
         self.cassette_dir = Path(cassette_dir)
@@ -152,9 +144,7 @@ class CassetteTransport:
                 matched_file = self.routes.get("historical_intraday_success")
 
         if not matched_file or not matched_file.is_file():
-            raise FileNotFoundError(
-                f"No recorded cassette found for {method} {path} (key: {key})"
-            )
+            raise FileNotFoundError(f"No cassette fixture found for {method} {path} (key: {key})")
 
         content = matched_file.read_bytes()
         status_code = 200

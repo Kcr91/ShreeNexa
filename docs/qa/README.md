@@ -7,6 +7,7 @@
 - [Protected paths](protected-paths.md)
 - [Completion report template](completion-report-template.md)
 - [Controlled local development autopilot runbook](../runbooks/dev-autopilot.md)
+- [Dhan recorded-cassette evidence procedure](../runbooks/dhan-recorded-cassette-evidence.md)
 
 ## Acceptance contracts
 

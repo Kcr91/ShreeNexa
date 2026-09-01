@@ -62,6 +62,42 @@ def test_invalid_status_is_rejected() -> None:
         )
 
 
+def test_merged_unverified_is_distinct_from_verified_done() -> None:
+    validate_state(
+        {
+            "feature": "F0.4",
+            "status": "merged_unverified",
+            "branch": "feature/F0.4-central-settings",
+            "commit": "a" * 40,
+            "tests": {},
+            "started_at": None,
+            "finished_at": None,
+            "blockers": [],
+            "features": {
+                "F0.4": {
+                    "status": "merged_unverified",
+                    "branch": "feature/F0.4-central-settings",
+                    "commit": "a" * 40,
+                    "tests": {},
+                    "evidence": [],
+                    "verified_at": None,
+                    "blockers": [],
+                }
+            },
+        }
+    )
+
+
+def test_verified_done_requires_exact_evidence_and_no_blocker(tmp_path: Path) -> None:
+    with pytest.raises(StateError, match="cannot be done"):
+        update_state(
+            tmp_path / "state.json",
+            feature="F0.4",
+            status="done",
+            commit="a" * 40,
+        )
+
+
 def test_missing_field_is_rejected() -> None:
     with pytest.raises(StateError, match="missing required field"):
         validate_state({"feature": "M0.5", "status": "pending"})
@@ -126,7 +162,7 @@ def test_update_state_does_not_leak_fields_across_features(tmp_path: Path) -> No
     update_state(
         state_path,
         feature="M0.5",
-        status="done",
+        status="blocked",
         branch="feature/M0.5-feature-manifest",
         commit="abc1234",
         finished_at="2026-08-31",
