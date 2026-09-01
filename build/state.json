@@ -2,7 +2,7 @@
   "feature": "F2.6",
   "status": "review",
   "branch": "feature/F2.6-multi-timeframe-indicators",
-  "commit": null,
+  "commit": "ab4c2c4d576a02bfe88dfbc26a3194511d7396a5",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -225,7 +225,7 @@
     "F2.6": {
       "status": "review",
       "branch": "feature/F2.6-multi-timeframe-indicators",
-      "commit": null,
+      "commit": "ab4c2c4d576a02bfe88dfbc26a3194511d7396a5",
       "tests": {},
       "evidence": [],
       "verified_at": null,
