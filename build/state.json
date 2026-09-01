@@ -2,7 +2,7 @@
   "feature": "F1.7",
   "status": "review",
   "branch": "feature/F1.7-data-quality-reporting",
-  "commit": null,
+  "commit": "6ea78a4b49ef1d743a3d5ea66522c0022fa59f97",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -153,7 +153,7 @@
     "F1.7": {
       "status": "review",
       "branch": "feature/F1.7-data-quality-reporting",
-      "commit": null,
+      "commit": "6ea78a4b49ef1d743a3d5ea66522c0022fa59f97",
       "tests": {},
       "evidence": [],
       "verified_at": null,
