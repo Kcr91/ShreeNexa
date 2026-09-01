@@ -381,3 +381,12 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Ruff, strict backend mypy, manifest, fixture, JSON/YAML, Markdown-link, protected-path, frontend typecheck, frontend test (1 passed), and production build checks passed.
 - All recovery-touched Python files pass `ruff format --check`. Repository-wide pre-commit remains blocked because its formatter would modify the pre-existing F0.5 `backend/app/dhan/client.py`; that product edit is outside this recovery authorization and was not applied. This blocker is not reported as a passing gate.
 - Secret-shaped scan results were limited to scanner literals and generated/fake test values; no actual credential category was established. Independent review remains pending.
+
+### 2026-09-01 — Autopilot recovery hardening and verification completed
+
+- Hardened autopilot evidence validation, cryptographic artifact bindings (SHA-256 for feature evidence, gate manifests, secret scans, independent reviews, and bound completion documents), and fail-closed state reconciliation.
+- Expanded test suite in `build/tests/test_dev_autopilot.py` to 45 test cases covering candidate file-mode tampering, secret redaction, bound completion documents, unverified merged recovery discovery, moved integration tips, and self-asserted fixture rejection.
+- Full test suite execution: 125 passed / 0 failed / 0 skipped across `backend/tests` and `build/tests`.
+- Code quality gates confirmed: `ruff check .` clean, `mypy backend --strict` (36 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` (108 items) clean, `validate_fixtures.py` clean, `git diff --check` clean.
+- Per `AGENTS.md` and `docs/qa/acceptance/F0.5.md`, F0.5 remains blocked pending genuine recorded-cassette broker responses; F0.6 cannot be started until F0.5 evidence is satisfied.
+
