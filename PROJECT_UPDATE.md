@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.9 | Done | Fast-forwarded into `main` at `ed96fd6` after review. |
-| F2.5 | Ready for review | Versioned Pydantic StrategyIR specification with separate `horizon` and `strategy_type`, recursive signal AST nodes, option legs and strike selectors, version migration, and JSON Schema export. 295/295 tests passing. |
-| F2.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.5 | Done | Fast-forwarded into `main` at `8a685fc` after review. |
+| F2.6 | Ready for review | Vectorized StrategyIR compiler and batch execution engine with signal AST evaluators (And, Or, Not, Compare, CrossOver, PriceLevelBreak with after, Sequence, TimeWindow, PctChange, Persist), multi-bar dataset normalization, and G2 anti-lookahead invariance. 299/299 tests passing. |
+| F2.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -808,4 +808,20 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_strategy_ir_schema.py`: 6 passed
 - Full repository test suite: 295 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (120 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `8a685fc`.
+
+### 2026-09-01 — F2.6 Vectorized StrategyIR compiler/evaluator completed
+
+- Implemented `backend/app/strategy/compiler.py`:
+  - `VectorStrategyCompiler` and `CompiledStrategy`: Vectorized strategy compilation and batch evaluation engine.
+  - Multi-source dataset normalization for `BarRecord` lists, PyArrow `Table`s, and dictionary series.
+  - Automatic indicator calculation over declared primitives and custom formulas.
+  - Opening range high/low (`OPENING_RANGE_HIGH`, `OPENING_RANGE_LOW`) session detectors.
+  - Full recursive signal AST evaluator: `AndNode`, `OrNode`, `NotNode`, `IndicatorCompareNode`, `CrossOverNode`, `CrossUnderNode`, `PriceLevelBreakNode` (with `after` precondition gating), `SequenceNode`, `TimeWindowNode` (`clock` & `from_open`), `PctChangeNode`, `PersistNode`.
+  - Structured output `StrategyEvaluationResult` with per-entry/exit boolean trigger masks.
+- Exported compiler in `backend/app/strategy/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.6.md` and added 4 new unit tests covering worked example ORB execution, sequence and crossover conditions, persist and pct-change filters, and G2 truncated-data anti-lookahead invariance:
+  - `backend/tests/unit/test_vector_strategy_compiler.py`: 4 passed
+- Full repository test suite: 299 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (122 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

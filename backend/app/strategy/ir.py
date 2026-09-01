@@ -227,9 +227,7 @@ class ConstOperand(BaseModel):
     const: float | int | bool | str = Field(description="Scalar literal value")
 
 
-OperandRef = (
-    FieldOperand | RefOperand | ConstOperand | dict[str, Any] | float | int | str
-)
+OperandRef = FieldOperand | RefOperand | ConstOperand | dict[str, Any] | float | int | str
 
 
 class LevelRef(BaseModel):

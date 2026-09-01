@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from app.strategy.compiler import (
+    CompiledStrategy,
+    StrategyEvaluationResult,
+    VectorStrategyCompiler,
+)
 from app.strategy.ir import (
     AbsoluteStrike,
     AndNode,
@@ -59,6 +64,7 @@ __all__ = [
     "AbsoluteStrike",
     "AndNode",
     "CompareOp",
+    "CompiledStrategy",
     "ConstOperand",
     "CrossOverNode",
     "CrossUnderNode",
@@ -94,6 +100,7 @@ __all__ = [
     "SignalNode",
     "SizingRule",
     "StaticUniverse",
+    "StrategyEvaluationResult",
     "StrategyHorizon",
     "StrategyIR",
     "StrategyKind",
@@ -102,6 +109,7 @@ __all__ = [
     "StrikeSelector",
     "TimeWindowNode",
     "UniverseSelector",
+    "VectorStrategyCompiler",
     "WatchlistUniverse",
     "export_strategy_ir_json_schema",
     "migrate_strategy_ir",

@@ -1,8 +1,8 @@
 {
-  "feature": "F2.5",
+  "feature": "F2.6",
   "status": "review",
-  "branch": "feature/F2.5-strategy-ir-schema",
-  "commit": "2770c96443c6838a5e378c3b47fe79ca0fb98939",
+  "branch": "feature/F2.6-vector-strategy-compiler",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -224,8 +224,8 @@
     },
     "F2.6": {
       "status": "review",
-      "branch": "feature/F2.6-multi-timeframe-indicators",
-      "commit": "ab4c2c4d576a02bfe88dfbc26a3194511d7396a5",
+      "branch": "feature/F2.6-vector-strategy-compiler",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
