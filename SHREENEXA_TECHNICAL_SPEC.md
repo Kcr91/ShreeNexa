@@ -136,7 +136,7 @@ Python 3.14 was released roughly ten months before this audit, which is ample ti
 
 | # | Item | Action |
 |---|---|---|
-| P6 | Dhan `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN` | Generate at web.dhan.co. **Never** commit these, never expose them to the frontend. Server-side environment variables only. Self-generated tokens expire in ~30 days — the terminal monitors expiry and shows a banner |
+| P6 | Dhan `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN` | Generate manually at web.dhan.co. **Never** commit these or expose them to the frontend. Dhan documents a 24-hour validity for manually generated Dhan Web access tokens; this is distinct from the Data API subscription renewal period and from other authentication artifacts. Production uses injected server-side environment variables. Local development may persist only the client ID, access token, and non-secret absolute expiry metadata using current-Windows-user DPAPI, with no plaintext fallback. The terminal monitors expiry and shows a non-secret banner |
 | P7 | TradingView Advanced Charting Library application | Free but requires approval, which can take weeks. Apply in week 1. Nothing is blocked on it — the datafeed is written in TradingView's UDF shape so approval becomes a swap, not a rewrite |
 | P8 | Current supported Codex IDE extension and CLI | Pin the tested version when Epic 11 begins; do not design the orchestrator around undocumented flags or output formats |
 

@@ -7,8 +7,8 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W1 — Stable backend foundation (in progress) |
-| Current feature | F0.3 — Review passed; merged. F0.4 blocked on Dhan token-validity source conflict |
-| Current branch | `main` |
+| Current feature | Development autopilot pilot setup — contract recorded; implementation in progress |
+| Current branch | `feature/dev-autopilot-pilot` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -26,7 +26,7 @@ This file is the human-readable project progress log. It is updated after each m
 | F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Fast-forwarded into `main` at `996a55b` after user merge authorization. |
 | F0.2 | Done | Postgres + Valkey (Redis-compatible) via Docker Compose, resource-limited and health-checked; Alembic scaffold proven; 33/33 tests pass with the stack up, 29 passed + 4 correctly skipped with it down. Fast-forwarded into `main`. |
 | F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor. Implementation and independent-review findings fixed; 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Fast-forwarded into `main`. |
-| F0.4–F13.5 | Pending | F0.4 is next, but its token-expiry behavior is blocked until the approved specification's ~30-day Dhan token statement is reconciled with current official Dhan documentation stating 24-hour validity. |
+| F0.4–F13.5 | Pending | The user resolved F0.4's source conflict on 2026-09-01: manually generated Dhan Web access tokens use the documented 24-hour lifetime, while unrelated subscription and authentication-artifact periods remain unchanged. F0.4–F0.9 are allowlisted for the controlled local autopilot pilot after its setup passes independent review. |
 
 ## Major-task log
 
@@ -314,5 +314,11 @@ This file is the human-readable project progress log. It is updated after each m
 
 ## Known prerequisites and blockers
 
-- **F0.4 blocked:** reconcile the approved specification's approximately 30-day Dhan access-token statement with current official Dhan documentation stating 24-hour validity, then select whether local encrypted storage is Windows DPAPI-backed while production continues to use injected environment variables. No real credential should be entered until that decision is recorded and F0.4's redaction tests are green.
+- **F0.4 decision resolved:** local persistence will use current-user Windows DPAPI with no plaintext fallback; production retains injected environment variables. No real credential is entered until F0.4's implementation and redaction tests are green, and credentials are never supplied through a coding session.
 - Docker Desktop remains installed and both ShreeNexa services are healthy.
+
+### 2026-09-01 — Controlled local autopilot pilot authorized and started
+
+- Verified clean `main` at `eb46c23`, containing the final F0.3 result, before creating `feature/dev-autopilot-pilot`.
+- Verified Codex CLI `0.148.0-alpha.9` and its supported non-interactive, sandbox, JSONL, output-schema, last-message, ephemeral, and review interfaces against the current official non-interactive documentation. No installation, authentication export, or permission bypass was performed.
+- Recorded the narrowly scoped automatic local-integration exception and the approved F0.4 24-hour Dhan Web token/current-user DPAPI decisions in ADR-0006. The exception ends at F0.9 and changes none of the remote, production, live-trading, protected-path, cost, or credential restrictions.

@@ -1,0 +1,159 @@
+version: 1
+pilot_id: shreenexa-f0-foundation-pilot
+integration_branch: main
+max_repair_cycles: 3
+runtime_root: .runtime/dev-autopilot
+command_timeout_seconds: 1800
+codex_timeout_seconds: 3600
+allowlist: [F0.4, F0.5, F0.6, F0.7, F0.8, F0.9]
+forbidden_codex_arguments:
+  - --yolo
+  - --dangerously-bypass-approvals-and-sandbox
+  - --dangerously-bypass-hook-trust
+  - --ignore-rules
+  - --ignore-user-config
+  - --skip-git-repo-check
+control_plane:
+  - AGENTS.md
+  - .codex/config.toml
+  - build/dev_autopilot.py
+  - build/autopilot/
+  - build/tests/test_dev_autopilot.py
+  - docs/decisions/0006-controlled-local-autopilot-and-dhan-credentials.md
+  - docs/qa/acceptance/dev-autopilot-pilot.md
+  - docs/qa/gates.md
+  - docs/qa/protected-paths.md
+  - SHREENEXA_TECHNICAL_SPEC.md
+protected_paths:
+  - backend/app/engine/risk.py
+  - backend/app/engine/broker.py
+  - backend/app/dhan/orders.py
+  - backend/tests/parity/
+  - .github/workflows/
+  - .codex/
+controller_owned_progress:
+  - build/state.json
+  - PROJECT_UPDATE.md
+gate_commands:
+  - id: diff_check
+    argv: [git, diff, --check, "{base_sha}..{candidate_sha}"]
+    timeout_seconds: 120
+  - id: ruff
+    argv: [python, -m, uv, run, ruff, check, .]
+  - id: mypy
+    argv: [python, -m, uv, run, mypy, backend, --strict]
+  - id: migration_upgrade
+    argv: [python, -m, uv, run, alembic, -c, backend/alembic.ini, upgrade, head]
+  - id: migration_rollback
+    argv: [python, -m, uv, run, alembic, -c, backend/alembic.ini, downgrade, -1]
+  - id: migration_restore
+    argv: [python, -m, uv, run, alembic, -c, backend/alembic.ini, upgrade, head]
+  - id: pytest
+    argv: [python, -m, uv, run, pytest, "--junitxml={junit_path}"]
+    reject_skips: true
+  - id: frontend_typecheck
+    argv: [npm.cmd, --prefix, frontend, run, typecheck]
+  - id: frontend_test
+    argv: [npm.cmd, --prefix, frontend, run, test]
+  - id: frontend_build
+    argv: [npm.cmd, --prefix, frontend, run, build]
+  - id: manifest
+    argv: [python, -m, uv, run, python, build/validate_manifest.py]
+  - id: fixtures
+    argv: [python, -m, uv, run, python, build/validate_fixtures.py]
+  - id: pre_commit
+    argv: [python, -m, uv, run, pre-commit, run, --all-files]
+features:
+  F0.4:
+    dependencies: [F0.1, F0.2, F0.3]
+    branch: feature/F0.4-central-settings
+    allowed_paths:
+      - .env.example
+      - backend/app/config.py
+      - backend/app/dhan/
+      - backend/app/main.py
+      - backend/tests/
+      - docs/qa/acceptance/F0.4.md
+      - pyproject.toml
+      - uv.lock
+    non_goals:
+      - No real Dhan credentials or authentication calls.
+      - No PIN, password, TOTP seed, browser cookie, API key, or API secret storage.
+      - No order placement or live activation.
+    evidence:
+      - Fake-only DPAPI adapter tests and Windows current-user integration proof.
+      - Expiry, unknown-expiry, timezone, restart, revocation, and auth-rejection tests.
+      - Secret redaction and frontend-payload tests.
+  F0.5:
+    dependencies: [F0.4]
+    branch: feature/F0.5-dhan-rest-wrapper
+    allowed_paths:
+      - backend/app/dhan/
+      - backend/tests/
+      - docs/qa/acceptance/F0.5.md
+      - pyproject.toml
+      - uv.lock
+    non_goals:
+      - No real credential retrieval, token generation, renewal, orders, or live calls.
+      - Synthetic fixtures may not be described as recorded responses.
+    evidence:
+      - Authentic sanitized recorded cassettes or an explicit blocker; never fabricated cassettes.
+      - Offline success, auth-failure, malformed, timeout, and retryable-error tests.
+  F0.6:
+    dependencies: [F0.2, F0.5]
+    branch: feature/F0.6-dhan-rate-limits
+    allowed_paths:
+      - backend/app/dhan/
+      - backend/tests/
+      - config/dhan_limits.yaml
+      - docs/qa/acceptance/F0.6.md
+      - pyproject.toml
+      - uv.lock
+    non_goals:
+      - No undocumented limit assumptions or REST bypass.
+    evidence:
+      - Dated official limits evidence.
+      - Concurrency/property proof and no-bypass architecture test.
+  F0.7:
+    dependencies: [F0.5, F0.6]
+    branch: feature/F0.7-instrument-master
+    allowed_paths:
+      - backend/app/dhan/
+      - backend/app/marketdata/
+      - backend/tests/
+      - docs/qa/acceptance/F0.7.md
+      - pyproject.toml
+      - uv.lock
+    non_goals:
+      - No hard-coded segment count or real account access.
+    evidence:
+      - Provenanced official sample/snapshot and schema-drift tests.
+  F0.8:
+    dependencies: [M0.3, F0.7]
+    branch: feature/F0.8-index-membership
+    allowed_paths:
+      - backend/app/marketdata/
+      - backend/tests/
+      - config/
+      - docs/qa/acceptance/F0.8.md
+      - pyproject.toml
+      - uv.lock
+    non_goals:
+      - No survivorship-biased current-only substitution.
+    evidence:
+      - Dated official source snapshot/fallback provenance and interval tests.
+  F0.9:
+    dependencies: [F0.3, F0.4, F0.5]
+    branch: feature/F0.9-connection-budget
+    allowed_paths:
+      - backend/app/feedd/
+      - backend/app/dhan/
+      - backend/tests/
+      - config/
+      - docs/qa/acceptance/F0.9.md
+      - pyproject.toml
+      - uv.lock
+    non_goals:
+      - No market socket connection or live feed activation.
+    evidence:
+      - Property proof that socket six never opens and exhaustion is explicit.

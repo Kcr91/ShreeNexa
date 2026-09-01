@@ -27,6 +27,26 @@ If these sources disagree, stop and report the conflict. The approved specificat
 
 ## Feature workflow
 
+### Controlled local autopilot pilot exception (2026-09-01)
+
+The user has authorized `feature/dev-autopilot-pilot` to add a local-only
+development controller and, after that setup is independently reviewed and
+fast-forwarded to `main`, to implement and locally fast-forward F0.4 through
+F0.9 in manifest dependency order. For only this setup task and those six
+features, the controller may replace the routine manual approval at each
+commit, merge, and next-feature boundary when every pinned gate and fresh
+independent review passes for the exact candidate SHA. This is not the Epic 11
+product feature-builder and the exception expires after F0.9.
+
+The exception does not authorize remote pushes or pull requests, production
+deployment or provisioning, live orders or broker-account changes, new costs
+or credentials, system installation, permission bypasses, protected-path
+changes, or work beyond F0.9. The pinned controller, policy, gate definitions,
+review contract, allowlist, and safety tests are control-plane files: product
+feature workers may not modify them. A moved integration base, missing or
+malformed evidence, skipped required test, controller-policy change, or
+protected-path change blocks automatic integration.
+
 1. Run preflight: `git status --short --branch`, `git log -1 --oneline`, and `python --version`.
 2. Start from clean `main` and create exactly one `feature/<feature-id>-<slug>` branch. Never develop directly on `main`.
 3. Read the feature contract and dependencies. Write/update acceptance criteria before implementation.

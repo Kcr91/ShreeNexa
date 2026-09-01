@@ -21,6 +21,7 @@ Repository workflow, gates, protected paths, and completion evidence are indexed
 - [ADR-0003 — Storage ownership](../decisions/0003-storage-ownership.md)
 - [ADR-0004 — Packages and Windows topology](../decisions/0004-packages-and-windows-topology.md)
 - [ADR-0005 — Data root and lifecycle](../decisions/0005-data-root-and-lifecycle.md)
+- [ADR-0006 — Controlled local autopilot and Dhan local credentials](../decisions/0006-controlled-local-autopilot-and-dhan-credentials.md)
 
 ## Binding invariants
 

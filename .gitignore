@@ -23,6 +23,10 @@ htmlcov/
 **/build/
 !/build/
 !/build/**
+# The tracked root build tree still excludes generated Python cache artifacts.
+/build/__pycache__/
+/build/**/__pycache__/
+/build/**/*.py[cod]
 dist/
 *.egg-info/
 .eggs/
