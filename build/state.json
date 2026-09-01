@@ -1,8 +1,8 @@
 {
-  "feature": "F0.8",
+  "feature": "F0.9",
   "status": "review",
-  "branch": "feature/F0.8-index-constituents",
-  "commit": "2e9b319225caefeb1bc2ecfe9a80e152ff84ee2c",
+  "branch": "feature/F0.9-connection-budget",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -82,6 +82,15 @@
       "status": "review",
       "branch": "feature/F0.8-index-constituents",
       "commit": "2e9b319225caefeb1bc2ecfe9a80e152ff84ee2c",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F0.9": {
+      "status": "review",
+      "branch": "feature/F0.9-connection-budget",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

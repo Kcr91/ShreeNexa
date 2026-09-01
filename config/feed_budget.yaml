@@ -1,0 +1,14 @@
+# Dhan WebSocket Connection Budget Configuration
+# Per SHREENEXA_TECHNICAL_SPEC.md §3.3.1:
+# Defaults to the conservative assumption of ONE SHARED POOL of 5 connections,
+# split 3 feed / 2 depth.
+# If Dhan confirms independent pools, switch pool_mode to 'independent' (5 feed / 5 depth).
+
+schema_version: 1
+updated_at: "2026-09-01"
+
+pool_mode: "shared"  # 'shared' or 'independent'
+total_capacity: 5
+feed_capacity: 3
+depth_capacity: 2
+acquire_timeout_seconds: 5.0

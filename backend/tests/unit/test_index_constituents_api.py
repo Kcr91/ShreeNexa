@@ -57,9 +57,7 @@ def test_api_get_constituents(client: TestClient) -> None:
 
 
 def test_api_membership_check_member(client: TestClient) -> None:
-    response = client.get(
-        "/api/v1/indices/NIFTY%2050/membership?symbol=RELIANCE&as_of=2026-08-01"
-    )
+    response = client.get("/api/v1/indices/NIFTY%2050/membership?symbol=RELIANCE&as_of=2026-08-01")
     assert response.status_code == 200
     data = response.json()
     assert data["is_member"] is True

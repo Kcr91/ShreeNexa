@@ -36,8 +36,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.5 | Blocked pending evidence | Implementation is present at `c6fd219`. The seven current fixtures are generated/synthetic and do not satisfy the recorded-cassette acceptance contract. |
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
-| F0.8 | Ready for review | PostgreSQL `index_constituent` table migration, committed fallback snapshots for NIFTY 50/BANK/IT, point-in-time effective interval tracking `[valid_from, valid_to]`, reconstitution interval updates, manual overrides with visible provenance, and FastAPI endpoints. 176/176 tests passing. |
-| F0.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
+| F0.9 | Ready for review | Central connection-budget manager for Dhan feed and depth WebSocket sockets, conservative shared 5-socket ceiling (3 feed / 2 depth), independent pool mode switch, typed lease lifecycle, FastAPI monitoring endpoint, and Hypothesis property proofs. 187/187 tests passing. **W1 (F0.1–F0.9) backend foundation complete.** |
+| F1.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -456,4 +457,23 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_index_constituents_api.py`: 6 passed
 - Full repository test suite: 176 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (57 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `370757a`.
+
+### 2026-09-01 — F0.9 Connection budget manager and WebSocket pool ceilings completed
+
+- Implemented `backend/app/feedd/budget.py`:
+  - `ConnectionBudgetConfig` with typed `PoolMode` (`SHARED` vs `INDEPENDENT`), capacity limits (total 5, feed 3, depth 2), and timeout configuration.
+  - `ConnectionLease` token representing allocated sockets with unique UUIDs, timestamp, and socket type.
+  - `ConnectionBudgetManager` with thread-safe and async synchronization enforcing hard ceiling limits (never opens socket 6 on a 5-connection pool).
+  - Explicit `ConnectionBudgetExhaustedError` on exhaustion with active socket breakdown, preventing silent disconnections.
+  - Idempotent `release`, sync `lease` and async `lease_async` context managers, and `get_status` snapshot inspection.
+  - Configuration loader `load_budget_config` reading `config/feed_budget.yaml`.
+- Exported all symbols in `backend/app/feedd/__init__.py`.
+- Implemented REST endpoint `GET /api/v1/feed/budget` in `backend/app/api/feed.py` and mounted router into FastAPI in `backend/app/main.py`.
+- Authored acceptance contract `docs/qa/acceptance/F0.9.md` and added 11 new test cases across configuration, manager, property, and API suites:
+  - `backend/tests/unit/test_feed_budget_config.py`: 3 passed
+  - `backend/tests/unit/test_feed_budget_manager.py`: 7 passed (including Hypothesis property tests validating ceiling invariant preservation under randomized concurrent interleavings)
+  - `backend/tests/unit/test_feed_budget_api.py`: 1 passed
+- Full repository test suite: 187 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (62 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

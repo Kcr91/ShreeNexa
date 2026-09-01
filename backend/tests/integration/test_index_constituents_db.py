@@ -136,9 +136,7 @@ def test_index_reconstitution_effective_intervals(db_engine: Engine) -> None:
     assert c_after.weight == Decimal("40.0000")
 
     # Verify constituent list on 2026-06-01 contains STOCK_A and STOCK_C, but not STOCK_B
-    constituents_june = get_constituents_at_date(
-        db_engine, "TEST_INDEX", as_of=date(2026, 6, 1)
-    )
+    constituents_june = get_constituents_at_date(db_engine, "TEST_INDEX", as_of=date(2026, 6, 1))
     symbols_june = {c.symbol for c in constituents_june}
     assert "STOCK_B" not in symbols_june
     assert "STOCK_A" in symbols_june
@@ -169,9 +167,10 @@ def test_manual_override_addition_and_removal(db_engine: Engine) -> None:
     assert override_res.weight == Decimal("1.5000")
 
     # Before effective date: was not member
-    assert is_member_at_date(
-        db_engine, "NIFTY 50", "SPECIAL_STOCK", as_of=date(2026, 8, 14)
-    ).is_member is False
+    assert (
+        is_member_at_date(db_engine, "NIFTY 50", "SPECIAL_STOCK", as_of=date(2026, 8, 14)).is_member
+        is False
+    )
 
     # 2. Manual removal of RELIANCE on 2026-08-20
     apply_manual_override(
@@ -182,9 +181,11 @@ def test_manual_override_addition_and_removal(db_engine: Engine) -> None:
         effective_date=date(2026, 8, 20),
     )
 
-    assert is_member_at_date(
-        db_engine, "NIFTY 50", "RELIANCE", as_of=date(2026, 8, 19)
-    ).is_member is True
-    assert is_member_at_date(
-        db_engine, "NIFTY 50", "RELIANCE", as_of=date(2026, 8, 20)
-    ).is_member is False
+    assert (
+        is_member_at_date(db_engine, "NIFTY 50", "RELIANCE", as_of=date(2026, 8, 19)).is_member
+        is True
+    )
+    assert (
+        is_member_at_date(db_engine, "NIFTY 50", "RELIANCE", as_of=date(2026, 8, 20)).is_member
+        is False
+    )

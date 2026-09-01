@@ -240,9 +240,7 @@ def load_fallback_config(config_path: Path | str | None = None) -> list[dict[str
         return []
 
 
-def ingest_fallback_constituents(
-    engine: Engine, config_path: Path | str | None = None
-) -> int:
+def ingest_fallback_constituents(engine: Engine, config_path: Path | str | None = None) -> int:
     """Ingest all committed index fallback snapshots into PostgreSQL."""
     indices = load_fallback_config(config_path)
     total_ingested = 0

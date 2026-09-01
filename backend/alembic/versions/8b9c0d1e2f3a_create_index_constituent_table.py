@@ -30,9 +30,7 @@ def upgrade() -> None:
         sa.Column("valid_to", sa.Date(), nullable=True),
         sa.Column("source_date", sa.Date(), nullable=False),
         sa.Column("source", sa.Text(), nullable=False),
-        sa.PrimaryKeyConstraint(
-            "index_name", "symbol", "valid_from", name="pk_index_constituent"
-        ),
+        sa.PrimaryKeyConstraint("index_name", "symbol", "valid_from", name="pk_index_constituent"),
         sa.CheckConstraint(
             "valid_to IS NULL OR valid_to >= valid_from",
             name="ck_index_constituent_valid_interval",

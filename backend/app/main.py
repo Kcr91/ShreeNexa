@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.feed import router as feed_router
 from app.api.instruments import router as instruments_router
 from app.api.universe import router as universe_router
 from app.contracts import heartbeat as hb
@@ -56,6 +57,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="ShreeNexa API", lifespan=lifespan)
 app.include_router(instruments_router)
 app.include_router(universe_router)
+app.include_router(feed_router)
 
 
 @app.get("/healthz")
