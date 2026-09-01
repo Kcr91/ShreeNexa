@@ -1,5 +1,25 @@
-"""Vectorized technical indicators registry and primitives across all financial families."""
+"""Vectorized and streaming technical indicators registry and primitives."""
 
+from app.indicators.incremental import (
+    IncrementalIndicator,
+    create_incremental_indicator,
+    register_incremental,
+)
+from app.indicators.incremental_primitives import (
+    IncrementalATR,
+    IncrementalBollingerBands,
+    IncrementalEMA,
+    IncrementalMACD,
+    IncrementalOBV,
+    IncrementalROC,
+    IncrementalRollingStd,
+    IncrementalRSI,
+    IncrementalSMA,
+    IncrementalStochastic,
+    IncrementalSupertrend,
+    IncrementalVWAP,
+    IncrementalZScore,
+)
 from app.indicators.primitives import (
     ATRIndicator,
     BollingerBandsIndicator,
@@ -28,6 +48,20 @@ __all__ = [
     "ATRIndicator",
     "BollingerBandsIndicator",
     "EMAIndicator",
+    "IncrementalATR",
+    "IncrementalBollingerBands",
+    "IncrementalEMA",
+    "IncrementalIndicator",
+    "IncrementalMACD",
+    "IncrementalOBV",
+    "IncrementalROC",
+    "IncrementalRSI",
+    "IncrementalRollingStd",
+    "IncrementalSMA",
+    "IncrementalStochastic",
+    "IncrementalSupertrend",
+    "IncrementalVWAP",
+    "IncrementalZScore",
     "IndicatorFamily",
     "IndicatorMetadata",
     "IndicatorRegistry",
@@ -42,6 +76,8 @@ __all__ = [
     "VWAPIndicator",
     "VectorIndicator",
     "ZScoreIndicator",
+    "create_incremental_indicator",
     "extract_series",
+    "register_incremental",
     "registry",
 ]

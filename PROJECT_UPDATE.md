@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.7 | Done | Fast-forwarded into `main` at `b37988c` after review. |
-| F2.1 | Ready for review | Vectorized technical indicator registry across Trend, Momentum, Volatility, Volume, and Statistical families (SMA, EMA, MACD, Supertrend, RSI, Stochastic, ROC, ATR, Bollinger Bands, OBV, VWAP, ZScore, RollingStd) with explicit warm-up tracking, deterministic None/NaN policy, and TA-Lib/pandas-ta reference parity. 241/241 tests passing. |
-| F2.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.1 | Done | Fast-forwarded into `main` at `3ec0d37` after review. |
+| F2.2 | Ready for review | Stateful incremental indicator engine for all 12 primitives with G1 vector/incremental parity property verification, state checkpointing/restoration, and reset lifecycle. 244/244 tests passing. |
+| F2.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -673,4 +673,23 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_vector_indicators.py`: 5 passed
 - Full repository test suite: 241 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (100 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `3ec0d37`.
+
+### 2026-09-01 — F2.2 Incremental indicator engine and G1 parity completed
+
+- Implemented `backend/app/indicators/incremental.py`:
+  - `IncrementalIndicator` ABC with `name`, `is_ready`, `update(bar)`, `reset()`, `state`, and `restore_state()`.
+  - Factory function `create_incremental_indicator(name, params)`.
+  - Automatic registry decorator `@register_incremental(name)`.
+- Implemented `backend/app/indicators/incremental_primitives.py` covering all 12 primitives:
+  - `IncrementalSMA`, `IncrementalEMA`, `IncrementalMACD`, `IncrementalSupertrend`.
+  - `IncrementalRSI`, `IncrementalStochastic`, `IncrementalROC`.
+  - `IncrementalATR`, `IncrementalBollingerBands`.
+  - `IncrementalOBV`, `IncrementalVWAP`.
+  - `IncrementalZScore`, `IncrementalRollingStd`.
+- Exported all incremental indicator classes and factories in `backend/app/indicators/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.2.md` and added 3 new test cases verifying G1 Vector/Incremental Parity across all 12 indicators, state checkpoint/restore persistence, and buffer reset cleanup:
+  - `backend/tests/unit/test_incremental_indicators.py`: 3 passed
+- Full repository test suite: 244 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (103 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
