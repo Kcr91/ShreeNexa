@@ -2,7 +2,7 @@
   "feature": "F2.7",
   "status": "review",
   "branch": "feature/F2.7-composite-indicator-matrix",
-  "commit": null,
+  "commit": "8a6bb5c68f121d1d87e02e0ea288db42ba6ec89d",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -234,7 +234,7 @@
     "F2.7": {
       "status": "review",
       "branch": "feature/F2.7-composite-indicator-matrix",
-      "commit": null,
+      "commit": "8a6bb5c68f121d1d87e02e0ea288db42ba6ec89d",
       "tests": {},
       "evidence": [],
       "verified_at": null,
