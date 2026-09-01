@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.1 | Done | Fast-forwarded into `main` at `de84d8e` after review. |
-| F1.2 | Ready for review | Dhan daily historical backfill since inception with resumable task specification, immutable raw JSON ingest provenance with credential redactions, corporate-action-adjustment investigation metadata, independent NIFTY sample reconciliation, and atomic warehouse promotion. 199/199 tests passing. |
-| F1.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F1.2 | Done | Fast-forwarded into `main` at `2f34364` after review. |
+| F1.3 | Ready for review | Resumable Dhan 1-minute historical backfill chunked into 90-day windows, immutable raw ingest provenance with credential redactions, deduplicated bar staging, coverage/gap/duplicate quality reporting, and atomic warehouse promotion. 204/204 tests passing. |
+| F1.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -523,4 +523,21 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/integration/test_daily_backfill_resumable.py`: 1 passed (end-to-end backfill execution, raw provenance artifact validation, and DuckDB warehouse querying)
 - Full repository test suite: 199 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (73 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `2f34364`.
+
+### 2026-09-01 — F1.3 Resumable Dhan 1-minute backfill in 90-day windows completed
+
+- Implemented `backend/app/worker/minute_backfill.py`:
+  - `generate_90_day_windows` slicing broad historical date intervals into contiguous `<= 90`-day slices.
+  - `MinuteBackfillTask` and `MinuteCoverageReport` models.
+  - `save_raw_minute_ingest` saving immutable raw JSON responses to `data/raw/dhan/charts_intraday/<YYYY>/<MM>/<ingest_id>/payload.json` with credential redaction.
+  - `parse_dhan_intraday_candles` parsing Dhan 1-minute intraday arrays into typed `BarRecord` lists.
+  - `analyze_minute_bars` evaluating timestamp gaps, duplicates, and SHA-256 bar fingerprints.
+  - `MinuteBackfillManager` executing multi-window tasks with timestamp-based deduplication across windows and promoting staged Parquet partitions via `WarehousePublisher`.
+- Exported minute backfill services in `backend/app/worker/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F1.3.md` and added 5 new test cases across window slicing, parser, quality reporting, and integration suites:
+  - `backend/tests/unit/test_minute_backfill_windows.py`: 4 passed (window slicing, 1m parsing, duplicate detection, credential redaction)
+  - `backend/tests/integration/test_minute_backfill_resumable.py`: 1 passed (kill/resume idempotency with overlapping windows, 0 duplicates, and DuckDB warehouse reads)
+- Full repository test suite: 204 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (76 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
