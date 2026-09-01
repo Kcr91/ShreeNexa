@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.4 | Done | Fast-forwarded into `main` at `1b83a9e` after review. |
-| F2.5 | Ready for review | Real-time streaming compound indicator execution engine with topological DAG node updates, G1 compound graph mathematical parity against batch vector execution, state checkpointing/restoration, and reset lifecycle. 273/273 tests passing. |
-| F2.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.5 | Done | Fast-forwarded into `main` at `ccb68e8` after review. |
+| F2.6 | Ready for review | Timeframe-aware multi-resolution indicator calculation pipeline using session-aware bar resampling and lookahead-free point-in-time forward-fill projection across base timestamps. 276/276 tests passing. |
+| F2.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -736,4 +736,18 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_incremental_graph_engine.py`: 3 passed
 - Full repository test suite: 273 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (109 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `ccb68e8`.
+
+### 2026-09-01 — F2.6 Timeframe-aware multi-resolution indicator calculation pipeline completed
+
+- Implemented `backend/app/indicators/multitimeframe.py`:
+  - `MultiTimeframeIndicatorPipeline` calculating higher-timeframe indicators over session-aware resampled bars.
+  - Strict lookahead-free point-in-time projection (`TimeframeAlignmentMode.LOOKAHEAD_FREE`) aligning completed HTF intervals with base lower-timeframe timestamps.
+  - Multi-resolution compound graph support (`compute_graph`) evaluating topological DAGs across timeframes.
+  - PyArrow Table and `BarRecord` interoperability.
+- Exported multi-timeframe pipeline in `backend/app/indicators/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.6.md` and added 3 new test cases verifying lookahead-free HTF alignment, compound DAG multi-timeframe execution, and PyArrow Table input handling:
+  - `backend/tests/unit/test_multitimeframe_indicators.py`: 3 passed
+- Full repository test suite: 276 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (111 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

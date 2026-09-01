@@ -1,8 +1,8 @@
 {
-  "feature": "F2.5",
+  "feature": "F2.6",
   "status": "review",
-  "branch": "feature/F2.5-incremental-graph-engine",
-  "commit": "ffb960e659be432724fe9234bcf9db751bf873c9",
+  "branch": "feature/F2.6-multi-timeframe-indicators",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -217,6 +217,15 @@
       "status": "review",
       "branch": "feature/F2.5-incremental-graph-engine",
       "commit": "ffb960e659be432724fe9234bcf9db751bf873c9",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F2.6": {
+      "status": "review",
+      "branch": "feature/F2.6-multi-timeframe-indicators",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
