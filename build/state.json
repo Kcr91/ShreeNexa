@@ -2,7 +2,7 @@
   "feature": "F2.3",
   "status": "review",
   "branch": "feature/F2.3-safe-formula-compiler",
-  "commit": null,
+  "commit": "cbbd10c14ca6ea6572eb216016e78864a66ef89b",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -198,7 +198,7 @@
     "F2.3": {
       "status": "review",
       "branch": "feature/F2.3-safe-formula-compiler",
-      "commit": null,
+      "commit": "cbbd10c14ca6ea6572eb216016e78864a66ef89b",
       "tests": {},
       "evidence": [],
       "verified_at": null,
