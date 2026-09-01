@@ -100,9 +100,7 @@ class DataQualityAnalyzer:
 
         defects: list[DefectRecord] = []
         default_origin = (
-            OriginCategory.UPSTREAM_SOURCE
-            if is_raw_ingest
-            else OriginCategory.WAREHOUSE_INTEGRITY
+            OriginCategory.UPSTREAM_SOURCE if is_raw_ingest else OriginCategory.WAREHOUSE_INTEGRITY
         )
 
         # 1. Duplicate detection

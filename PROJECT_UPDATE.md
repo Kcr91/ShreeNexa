@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.9 | Done | Fast-forwarded into `main` at `efc592f` after review. |
-| F1.7 | Ready for review | Data-quality reporting engine for gaps, duplicates, price outliers, zero volume, unexpected dates/holidays, stale partitions, and universe/date coverage metrics, with distinct classification of upstream source gaps vs warehouse integrity errors. 236/236 tests passing. |
-| F2.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F1.7 | Done | Fast-forwarded into `main` at `b37988c` after review. |
+| F2.1 | Ready for review | Vectorized technical indicator registry across Trend, Momentum, Volatility, Volume, and Statistical families (SMA, EMA, MACD, Supertrend, RSI, Stochastic, ROC, ATR, Bollinger Bands, OBV, VWAP, ZScore, RollingStd) with explicit warm-up tracking, deterministic None/NaN policy, and TA-Lib/pandas-ta reference parity. 241/241 tests passing. |
+| F2.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -655,4 +655,22 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_data_quality_analyzer.py`: 3 passed
 - Full repository test suite: 236 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (91 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `b37988c`.
+
+### 2026-09-01 — F2.1 Vectorized technical indicator registry completed
+
+- Created independent mathematical reference test fixture `backend/tests/fixtures/sample_indicators_reference.json`.
+- Implemented `backend/app/indicators/`:
+  - `IndicatorRegistry`, `VectorIndicator` ABC, `IndicatorFamily` (`TREND`, `MOMENTUM`, `VOLATILITY`, `VOLUME`, `STATISTICAL`), and `IndicatorMetadata` models in `registry.py`.
+  - Trend primitives in `primitives/trend.py`: `SMAIndicator`, `EMAIndicator`, `MACDIndicator`, and `SupertrendIndicator`.
+  - Momentum primitives in `primitives/momentum.py`: `RSIIndicator`, `StochasticIndicator`, and `ROCIndicator`.
+  - Volatility primitives in `primitives/volatility.py`: `ATRIndicator` and `BollingerBandsIndicator`.
+  - Volume primitives in `primitives/volume.py`: `OBVIndicator` and `VWAPIndicator`.
+  - Statistical primitives in `primitives/statistical.py`: `ZScoreIndicator` and `RollingStdIndicator`.
+  - Global auto-registration upon package import with strict `warmup_period` tracking and deterministic `None` placement for leading warm-up bars.
+- Exported all indicator primitives and registry services in `backend/app/indicators/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.1.md` and added 5 new test cases verifying registry discovery, reference parity, multi-output execution, PyArrow Table integration, and invalid indicator handling:
+  - `backend/tests/unit/test_vector_indicators.py`: 5 passed
+- Full repository test suite: 241 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (100 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

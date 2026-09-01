@@ -35,5 +35,6 @@
 - [F1.7 — Data-Quality Reporting for Gaps, Duplicates, and Outliers](acceptance/F1.7.md)
 - [F1.8 — Continuous Synthetic Futures Series Generator](acceptance/F1.8.md)
 - [F1.9 — Synthetic Continuous Option Surface Generator](acceptance/F1.9.md)
+- [F2.1 — Vectorized Technical Indicator Registry](acceptance/F2.1.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.

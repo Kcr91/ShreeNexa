@@ -1,8 +1,8 @@
 {
-  "feature": "F1.7",
+  "feature": "F2.1",
   "status": "review",
-  "branch": "feature/F1.7-data-quality-reporting",
-  "commit": "6ea78a4b49ef1d743a3d5ea66522c0022fa59f97",
+  "branch": "feature/F2.1-vector-indicator-registry",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -172,6 +172,15 @@
       "status": "review",
       "branch": "feature/F1.9-continuous-option-surface",
       "commit": "b3acc1fe58e5f5643485038f8319f07fe71578ff",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F2.1": {
+      "status": "review",
+      "branch": "feature/F2.1-vector-indicator-registry",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
