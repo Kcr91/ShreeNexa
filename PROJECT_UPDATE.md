@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.3 | Done | Fast-forwarded into `main` at `613fee9` after review. |
-| F1.4 | Ready for review | Expired-option 1-minute historical backfill chunked into 30-day windows, strict ATM coverage limits (ATM±10 for index, ATM±3 for stock options), explicit `strike_unavailable` reporting with zero silent substitution, raw ingest provenance, and atomic warehouse promotion. 210/210 tests passing. |
-| F1.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F1.4 | Done | Fast-forwarded into `main` at `80e28f1` after review. |
+| F1.5 | Ready for review | Per-segment Indian market trading sessions, versioned holiday calendar registry, deterministic IST/UTC timezone normalization, special session handling (Muhurat trading), and session boundary bar validation. 215/215 tests passing. |
+| F1.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -561,4 +561,21 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/integration/test_options_backfill_resumable.py`: 1 passed (full backfill cycle, raw ingest validation, and DuckDB querying on option partitions)
 - Full repository test suite: 210 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (79 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `80e28f1`.
+
+### 2026-09-01 — F1.5 Trading sessions, holidays, and calendar versions completed
+
+- Implemented `config/calendars/nse_calendar.yaml`:
+  - Published versioned holiday calendar `cal-2024-2027-v1`.
+  - Default session definitions for `NSE_EQ`, `BSE_EQ`, `NSE_FNO`, `BSE_FNO`, `IDX_I` (09:15–15:30), `NSE_CURR`, `BSE_CURR` (09:00–17:00), `MCX_COMM` (09:00–23:30).
+  - Indian national holidays and special trading sessions (Diwali Muhurat trading 18:15–19:15 IST and Disaster Recovery live switch session).
+- Implemented `backend/app/marketdata/calendar.py`:
+  - Deterministic bidirectional timezone conversion helpers `to_utc`, `to_ist`, `make_ist_datetime` (`Asia/Kolkata` / `+05:30`).
+  - `SessionBounds`, `SpecialSession`, `Holiday` data models.
+  - `TradingCalendar` with holiday checking, trading day resolution, session boundaries in UTC, session time verification, and bar session boundary validation.
+- Exported calendar services in `backend/app/marketdata/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F1.5.md` and added 5 new test cases across timezone normalization, holiday exclusion, session boundaries, special Muhurat sessions, and bar validation:
+  - `backend/tests/unit/test_trading_calendar.py`: 5 passed
+- Full repository test suite: 215 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (81 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

@@ -1,8 +1,8 @@
 {
-  "feature": "F1.4",
+  "feature": "F1.5",
   "status": "review",
-  "branch": "feature/F1.4-expired-options-backfill",
-  "commit": "287b66c5e2ec8b264b2dca97210e470875a50e9a",
+  "branch": "feature/F1.5-trading-calendar-sessions",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -127,6 +127,15 @@
       "status": "review",
       "branch": "feature/F1.4-expired-options-backfill",
       "commit": "287b66c5e2ec8b264b2dca97210e470875a50e9a",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F1.5": {
+      "status": "review",
+      "branch": "feature/F1.5-trading-calendar-sessions",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

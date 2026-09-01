@@ -1,0 +1,90 @@
+calendar_version: "cal-2024-2027-v1"
+timezone: "Asia/Kolkata"
+
+default_sessions:
+  NSE_EQ:
+    start: "09:15:00"
+    end: "15:30:00"
+  BSE_EQ:
+    start: "09:15:00"
+    end: "15:30:00"
+  NSE_FNO:
+    start: "09:15:00"
+    end: "15:30:00"
+  BSE_FNO:
+    start: "09:15:00"
+    end: "15:30:00"
+  IDX_I:
+    start: "09:15:00"
+    end: "15:30:00"
+  NSE_CURR:
+    start: "09:00:00"
+    end: "17:00:00"
+  BSE_CURR:
+    start: "09:00:00"
+    end: "17:00:00"
+  MCX_COMM:
+    start: "09:00:00"
+    end: "23:30:00"
+
+holidays:
+  - date: "2026-01-26"
+    name: "Republic Day"
+    segments: ["ALL"]
+  - date: "2026-03-03"
+    name: "Holi"
+    segments: ["ALL"]
+  - date: "2026-03-20"
+    name: "Eid-ul-Fitr"
+    segments: ["ALL"]
+  - date: "2026-04-03"
+    name: "Good Friday"
+    segments: ["ALL"]
+  - date: "2026-04-14"
+    name: "Dr. Baba Saheb Ambedkar Jayanti"
+    segments: ["ALL"]
+  - date: "2026-05-01"
+    name: "Maharashtra Day"
+    segments: ["ALL"]
+  - date: "2026-05-27"
+    name: "Bakri Eid"
+    segments: ["ALL"]
+  - date: "2026-06-25"
+    name: "Muharram"
+    segments: ["ALL"]
+  - date: "2026-08-15"
+    name: "Independence Day"
+    segments: ["ALL"]
+  - date: "2026-09-04"
+    name: "Ganesh Chaturthi"
+    segments: ["ALL"]
+  - date: "2026-10-02"
+    name: "Mahatma Gandhi Jayanti"
+    segments: ["ALL"]
+  - date: "2026-10-20"
+    name: "Dussehra"
+    segments: ["ALL"]
+  - date: "2026-11-08"
+    name: "Diwali Laxmi Pujan (Regular Trading Closed)"
+    segments: ["ALL"]
+  - date: "2026-11-10"
+    name: "Diwali Balipratipada"
+    segments: ["ALL"]
+  - date: "2026-11-24"
+    name: "Gurunanak Jayanti"
+    segments: ["ALL"]
+  - date: "2026-12-25"
+    name: "Christmas"
+    segments: ["ALL"]
+
+special_sessions:
+  - date: "2026-11-08"
+    name: "Diwali Muhurat Trading"
+    segments: ["NSE_EQ", "NSE_FNO", "BSE_EQ", "BSE_FNO", "IDX_I"]
+    start: "18:15:00"
+    end: "19:15:00"
+  - date: "2026-03-07"
+    name: "Disaster Recovery Live Switch Session"
+    segments: ["NSE_EQ", "NSE_FNO", "BSE_EQ", "BSE_FNO"]
+    start: "09:15:00"
+    end: "12:30:00"
