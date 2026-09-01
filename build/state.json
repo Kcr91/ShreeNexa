@@ -2,7 +2,7 @@
   "feature": "F2.5",
   "status": "review",
   "branch": "feature/F2.5-incremental-graph-engine",
-  "commit": null,
+  "commit": "ffb960e659be432724fe9234bcf9db751bf873c9",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -216,7 +216,7 @@
     "F2.5": {
       "status": "review",
       "branch": "feature/F2.5-incremental-graph-engine",
-      "commit": null,
+      "commit": "ffb960e659be432724fe9234bcf9db751bf873c9",
       "tests": {},
       "evidence": [],
       "verified_at": null,
