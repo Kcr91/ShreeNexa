@@ -7,8 +7,8 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W1 — Stable backend foundation (in progress) |
-| Current feature | F0.3 — Review passed; ready to merge |
-| Current branch | `feature/F0.3-process-skeletons` |
+| Current feature | F0.3 — Review passed; merged. F0.4 blocked on Dhan token-validity source conflict |
+| Current branch | `main` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -25,8 +25,8 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.6 | Done | First green baseline proven via real fresh-clone bootstrap; fixtures frozen by hash. Fast-forwarded into `main` at `fef0814` after user merge authorization. **W0 (M0.1–M0.6) complete.** |
 | F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Fast-forwarded into `main` at `996a55b` after user merge authorization. |
 | F0.2 | Done | Postgres + Valkey (Redis-compatible) via Docker Compose, resource-limited and health-checked; Alembic scaffold proven; 33/33 tests pass with the stack up, 29 passed + 4 correctly skipped with it down. Fast-forwarded into `main`. |
-| F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor. Implementation and independent-review findings fixed; 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Ready to merge. |
-| F0.4–F13.5 | Pending | F0.4 (central settings, `.env.example`, secret redaction, Dhan token-expiry banner) is next. |
+| F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor. Implementation and independent-review findings fixed; 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Fast-forwarded into `main`. |
+| F0.4–F13.5 | Pending | F0.4 is next, but its token-expiry behavior is blocked until the approved specification's ~30-day Dhan token statement is reconciled with current official Dhan documentation stating 24-hour validity. |
 
 ## Major-task log
 
@@ -306,6 +306,13 @@ This file is the human-readable project progress log. It is updated after each m
 - `ruff check .`, `mypy backend --strict`, frontend typecheck/test/build, manifest and fixture validators, `pre-commit run --all-files`, and `git diff --check` all pass. The pre-commit rerun used the existing cached hook environments and a one-command Git safe-directory override; it did not modify global Git configuration.
 - Reviewed the full F0.3 diff against the F0.2 tip for process/storage ownership, migration reversibility, orphan cleanup, protected paths, secrets, legacy coupling, and scope. No blocking finding remains; F0.3 is safe to fast-forward merge.
 
+### 2026-09-01 — F0.3 merged; F0.4 source conflict found
+
+- Fast-forwarded the independently reviewed F0.3 branch into `main`. No merge commit or history rewrite was used.
+- Before creating the F0.4 branch, checked the changing Dhan authentication fact its token-expiry monitor depends on. `SHREENEXA_TECHNICAL_SPEC.md` says self-generated tokens expire in approximately 30 days, but Dhan's current official v2 authentication documentation says manually generated access tokens have 24-hour validity. The approved specification was not silently rewritten and no F0.4 implementation was started.
+- The earlier request for encrypted local credentials also requires an explicit F0.4 storage decision. The approved specification currently requires server-side environment variables for `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN`; it does not authorize storing the Dhan login PIN, password, or TOTP seed.
+
 ## Known prerequisites and blockers
 
-- None currently blocking. Docker Desktop is installed and verified working.
+- **F0.4 blocked:** reconcile the approved specification's approximately 30-day Dhan access-token statement with current official Dhan documentation stating 24-hour validity, then select whether local encrypted storage is Windows DPAPI-backed while production continues to use injected environment variables. No real credential should be entered until that decision is recorded and F0.4's redaction tests are green.
+- Docker Desktop remains installed and both ShreeNexa services are healthy.
