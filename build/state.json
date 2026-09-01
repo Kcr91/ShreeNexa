@@ -3,7 +3,11 @@
   "status": "done",
   "branch": "feature/F0.3-process-skeletons",
   "commit": null,
-  "tests": {},
+  "tests": {
+    "stack_up": "38 passed",
+    "stack_down": "31 passed, 7 skipped",
+    "gates": "ruff, mypy, frontend, manifest, fixtures, pre-commit, diff-check passed"
+  },
   "started_at": "2026-09-01",
   "finished_at": "2026-09-01",
   "blockers": []

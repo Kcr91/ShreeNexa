@@ -25,7 +25,9 @@ CONNECT_TIMEOUT_S = 3
 
 def psycopg_dsn(sqlalchemy_url: str) -> str:
     url = make_url(sqlalchemy_url)
-    return url.render_as_string(hide_password=False).replace("postgresql+psycopg://", "postgresql://")
+    return url.render_as_string(hide_password=False).replace(
+        "postgresql+psycopg://", "postgresql://"
+    )
 
 
 @pytest.fixture()

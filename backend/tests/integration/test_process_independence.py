@@ -19,6 +19,8 @@ import sys
 import time
 from collections.abc import Callable
 from datetime import datetime
+from functools import partial
+from itertools import pairwise
 
 import pytest
 from app.contracts import heartbeat as hb
@@ -38,10 +40,11 @@ POLL_INTERVAL_S = 0.2
 
 
 @pytest.fixture()
-def process_env(postgres_or_skip: str) -> dict[str, str]:
+def process_env(postgres_or_skip: str, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     """Also clears process_heartbeat first: these tests key rows by the real
     process_name ("engine", "api", ...), so a row left over from a previous
     run would otherwise race with this test's own spawned process."""
+    monkeypatch.setenv("DATABASE_URL", DATABASE_URL)
     engine = hb.make_engine()
     try:
         with engine.begin() as conn:
@@ -75,9 +78,7 @@ def _row(engine: Engine, process_name: str) -> hb.HeartbeatRow | None:
     return hb.read(engine, process_name)
 
 
-def _row_advanced(
-    engine: Engine, process_name: str, after: datetime
-) -> hb.HeartbeatRow | None:
+def _row_advanced(engine: Engine, process_name: str, after: datetime) -> hb.HeartbeatRow | None:
     row = hb.read(engine, process_name)
     if row is not None and row.last_heartbeat_at > after:
         return row
@@ -89,6 +90,21 @@ def _row_with_pid(engine: Engine, process_name: str, pid: int) -> hb.HeartbeatRo
     if row is not None and row.pid == pid:
         return row
     return None
+
+
+def _heartbeat_times(
+    engine: Engine,
+    process_name: str,
+    after: datetime,
+    count: int,
+) -> list[datetime]:
+    times: list[datetime] = []
+    last = after
+    for _ in range(count):
+        row = _wait_for(partial(_row_advanced, engine, process_name, last))
+        times.append(row.last_heartbeat_at)
+        last = row.last_heartbeat_at
+    return times
 
 
 def _gone(pid: int) -> bool | None:
@@ -105,12 +121,28 @@ def test_kill_api_does_not_affect_engine(process_env: dict[str, str]) -> None:
         engine_started_at = engine_row.started_at
         assert engine_row.pid == engine_pid
 
-        # Prove engine is actually heartbeating (advancing), not a static row.
-        _wait_for(lambda: _row_advanced(engine, "engine", engine_row.last_heartbeat_at))
+        # Prove both processes sustain 3+ heartbeats before the kill, not just
+        # that their startup upsert produced one static row.
+        engine_beats = _heartbeat_times(engine, "engine", engine_row.last_heartbeat_at, count=3)
 
         _, api_pid = _spawn("api", process_env)
         real_pids.append(api_pid)
-        _wait_for(lambda: _row(engine, "api"))
+        api_row = _wait_for(lambda: _row(engine, "api"))
+        api_last_heartbeat = api_row.last_heartbeat_at
+        api_beat_count = 0
+        observed_engine_beats = [engine_beats[-1]]
+        while api_beat_count < 3:
+            current_engine = hb.read(engine, "engine")
+            assert current_engine is not None
+            if current_engine.last_heartbeat_at > observed_engine_beats[-1]:
+                observed_engine_beats.append(current_engine.last_heartbeat_at)
+
+            current_api = hb.read(engine, "api")
+            assert current_api is not None
+            if current_api.last_heartbeat_at > api_last_heartbeat:
+                api_last_heartbeat = current_api.last_heartbeat_at
+                api_beat_count += 1
+            time.sleep(POLL_INTERVAL_S)
 
         # Forceful kill of the *real* api process -- not SIGTERM/graceful.
         # api never gets to run its own shutdown code. The point: engine
@@ -120,9 +152,22 @@ def test_kill_api_does_not_affect_engine(process_env: dict[str, str]) -> None:
         api_last = hb.read(engine, "api")
         assert api_last is not None
 
-        before = hb.read(engine, "engine")
-        assert before is not None
-        after = _wait_for(lambda: _row_advanced(engine, "engine", before.last_heartbeat_at))
+        observation_deadline = time.time() + 5.0
+        while time.time() < observation_deadline:
+            current_engine = hb.read(engine, "engine")
+            assert current_engine is not None
+            if current_engine.last_heartbeat_at > observed_engine_beats[-1]:
+                observed_engine_beats.append(current_engine.last_heartbeat_at)
+            time.sleep(POLL_INTERVAL_S)
+
+        all_engine_beats = [*engine_beats[:-1], *observed_engine_beats]
+        gaps = [
+            (current - previous).total_seconds() for previous, current in pairwise(all_engine_beats)
+        ]
+        assert max(gaps) <= 2.5, f"engine heartbeat gap exceeded two intervals: {gaps}"
+
+        after = hb.read(engine, "engine")
+        assert after is not None
         assert after.pid == engine_pid, "engine restarted its own process -- it must not"
         assert after.started_at == engine_started_at
         assert after.status == "running"
@@ -173,14 +218,18 @@ def test_supervisor_restarts_a_killed_child(process_env: dict[str, str]) -> None
     from app.cli.supervisor import Supervisor
 
     engine = hb.make_engine()
-    sup = Supervisor(roles=("engine", "feedd"))
+    sup = Supervisor()
+    child_pids: list[int] = []
     sup.start_all()
     try:
-        _wait_for(lambda: _row(engine, "engine"))
-        _wait_for(lambda: _row(engine, "feedd"))
+        for role in MODULE_FOR_ROLE:
+            _wait_for(partial(_row, engine, role))
 
         old_engine_pid = sup.children["engine"].real_pid
-        old_feedd_pid = sup.children["feedd"].real_pid
+        old_sibling_pids = {
+            role: child.real_pid for role, child in sup.children.items() if role != "engine"
+        }
+        child_pids.extend(child.real_pid for child in sup.children.values())
         engine_row = hb.read(engine, "engine")
         assert engine_row is not None
         assert engine_row.pid == old_engine_pid
@@ -192,11 +241,14 @@ def test_supervisor_restarts_a_killed_child(process_env: dict[str, str]) -> None
         assert sup.children["engine"].real_pid != old_engine_pid, (
             "supervisor did not restart the child"
         )
-        assert sup.children["feedd"].real_pid == old_feedd_pid, (
-            "supervisor touched an untouched sibling"
-        )
+        for role, old_pid in old_sibling_pids.items():
+            assert sup.children[role].real_pid == old_pid, (
+                f"supervisor touched untouched sibling {role}"
+            )
 
         new_pid = sup.children["engine"].real_pid
+        child_pids.append(new_pid)
         _wait_for(lambda: _row_with_pid(engine, "engine", new_pid))
     finally:
         sup.stop_all()
+    assert all(not is_alive(pid) for pid in child_pids), "supervisor left an orphaned child"

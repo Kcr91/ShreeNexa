@@ -25,7 +25,7 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.6 | Done | First green baseline proven via real fresh-clone bootstrap; fixtures frozen by hash. Fast-forwarded into `main` at `fef0814` after user merge authorization. **W0 (M0.1–M0.6) complete.** |
 | F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Fast-forwarded into `main` at `996a55b` after user merge authorization. |
 | F0.2 | Done | Postgres + Valkey (Redis-compatible) via Docker Compose, resource-limited and health-checked; Alembic scaffold proven; 33/33 tests pass with the stack up, 29 passed + 4 correctly skipped with it down. Fast-forwarded into `main`. |
-| F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor; found and fixed a real Windows/uv trampoline process-supervision bug. 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Ready to merge. |
+| F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor. Implementation and independent-review findings fixed; 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Ready to merge. |
 | F0.4–F13.5 | Pending | F0.4 (central settings, `.env.example`, secret redaction, Dhan token-expiry banner) is next. |
 
 ## Major-task log
@@ -293,6 +293,18 @@ This file is the human-readable project progress log. It is updated after each m
 - Full suite with the stack up: 38 passed. With it down: 31 passed + 7 correctly **skipped** (named reasons), matching F0.2's established pattern.
 - `ruff check .`, `mypy backend --strict`, and `pre-commit run --all-files` all clean (mypy strict now covers 22 source files including tests, since `mypy backend --strict`'s CLI argument overrides the `[tool.mypy] files` config — found and fixed several real strict-mode gaps in the new test code, not just suppressed them).
 - Scope check: no protected path exists yet (`engine/risk.py`, `engine/broker.py` are not created by this feature), no Dhan connection, no real job/strategy logic.
+
+### 2026-09-01 — F0.3 independent-review finding fixed
+
+- A clean-shell rerun found that all three process-independence tests errored when `DATABASE_URL` was not already set in the parent shell. The shared integration fixture knew the documented local default, but the process tests called `heartbeat.make_engine()` before placing that value in the test environment. The earlier passing result therefore depended on ambient shell state.
+- Fixed the fixture to set `DATABASE_URL` through pytest's reversible `monkeypatch` before any application engine is created. The spawned processes and in-process supervisor now inherit the same explicit test environment, so the tests pass from the documented default setup rather than an accidental developer-shell prerequisite.
+- Strengthened the literal proof: both engine and API must produce at least three sustained heartbeats before the forced API kill; the engine is sampled continuously while API runs and for five seconds after it is killed; no observed heartbeat gap may exceed two intervals. The supervisor test now launches all four roles, proves the three untouched siblings retain their PIDs when engine is restarted, and asserts no child is orphaned on supervisor shutdown.
+
+### 2026-09-01 — F0.3 independent-review rerun passed
+
+- Re-proved the reversible migration (`downgrade -1`, then `upgrade head`) and ran every backend/frontend/build gate. With Postgres and Valkey healthy, all 38 backend/build tests passed; with both services stopped, 31 passed and all 7 integration tests skipped with named reasons. Both services were restored healthy afterward.
+- `ruff check .`, `mypy backend --strict`, frontend typecheck/test/build, manifest and fixture validators, `pre-commit run --all-files`, and `git diff --check` all pass. The pre-commit rerun used the existing cached hook environments and a one-command Git safe-directory override; it did not modify global Git configuration.
+- Reviewed the full F0.3 diff against the F0.2 tip for process/storage ownership, migration reversibility, orphan cleanup, protected paths, secrets, legacy coupling, and scope. No blocking finding remains; F0.3 is safe to fast-forward merge.
 
 ## Known prerequisites and blockers
 
