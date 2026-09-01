@@ -2,7 +2,7 @@
   "feature": "F0.7",
   "status": "review",
   "branch": "feature/F0.7-dhan-instrument-master",
-  "commit": null,
+  "commit": "2c59990f3c5f590494cfebf972b22ecdf5c093a1",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -72,7 +72,7 @@
     "F0.7": {
       "status": "review",
       "branch": "feature/F0.7-dhan-instrument-master",
-      "commit": null,
+      "commit": "2c59990f3c5f590494cfebf972b22ecdf5c093a1",
       "tests": {},
       "evidence": [],
       "verified_at": null,
