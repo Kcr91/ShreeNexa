@@ -2,7 +2,7 @@
   "feature": "F1.5",
   "status": "review",
   "branch": "feature/F1.5-trading-calendar-sessions",
-  "commit": null,
+  "commit": "14d6be0ae38d17ba9cfda9feebf1604a43a0e671",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -135,7 +135,7 @@
     "F1.5": {
       "status": "review",
       "branch": "feature/F1.5-trading-calendar-sessions",
-      "commit": null,
+      "commit": "14d6be0ae38d17ba9cfda9feebf1604a43a0e671",
       "tests": {},
       "evidence": [],
       "verified_at": null,
