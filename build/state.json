@@ -2,7 +2,7 @@
   "feature": "F2.5",
   "status": "review",
   "branch": "feature/F2.5-strategy-ir-schema",
-  "commit": null,
+  "commit": "2770c96443c6838a5e378c3b47fe79ca0fb98939",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -216,7 +216,7 @@
     "F2.5": {
       "status": "review",
       "branch": "feature/F2.5-strategy-ir-schema",
-      "commit": null,
+      "commit": "2770c96443c6838a5e378c3b47fe79ca0fb98939",
       "tests": {},
       "evidence": [],
       "verified_at": null,
