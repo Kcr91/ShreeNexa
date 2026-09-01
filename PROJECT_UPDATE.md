@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.6 | Done | Fast-forwarded into `main` at `d50bcdf` after review. |
-| F1.7 | Ready for review | Corporate action adjustment pipeline (splits, bonuses, dividends, rights), point-in-time preservation, compounded multi-action cumulative factors, inverse volume/OI scaling, and unadjusted data immutability. 224/224 tests passing. |
-| F1.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F1.7 | Done | Fast-forwarded into `main` at `cc8f3ce` after review. |
+| F1.8 | Ready for review | Continuous synthetic futures series generator (`NIFTY_F1`, `BANKNIFTY_F1`), calendar/volume/OI roll rules, difference (Panama) and ratio roll adjustments, and typed `RollEvent` audit metadata. 229/229 tests passing. |
+| F1.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -609,4 +609,20 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_corporate_adjustments.py`: 5 passed
 - Full repository test suite: 224 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (85 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `cc8f3ce`.
+
+### 2026-09-01 — F1.8 Continuous synthetic futures generator completed
+
+- Created independent reference test fixture `backend/tests/fixtures/sample_futures_contracts.json`.
+- Implemented `backend/app/marketdata/continuous_futures.py`:
+  - `RollTrigger` (`CALENDAR`, `VOLUME`, `OPEN_INTEREST`) and `AdjustmentMethod` (`UNADJUSTED`, `DIFFERENCE`, `RATIO`).
+  - `ContractMetadata` and `RollEvent` audit models.
+  - `ContinuousFuturesGenerator` building front-month stitched series with roll detection across volume/OI crossovers and calendar deadlines.
+  - Backward difference (Panama spread shift) and multiplicative ratio adjustment algorithms.
+  - `build_continuous_table` for direct PyArrow Table vector integration.
+- Exported continuous futures services in `backend/app/marketdata/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F1.8.md` and added 5 new test cases across calendar roll, volume roll, OI roll, Panama difference adjustment, ratio adjustment, and Arrow export:
+  - `backend/tests/unit/test_continuous_futures.py`: 5 passed
+- Full repository test suite: 229 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (87 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

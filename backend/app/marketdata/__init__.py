@@ -1,4 +1,4 @@
-"""Market data, universe management, trading calendar, resampling, and adjustments."""
+"""Market data, universe, trading calendar, resampling, adjustments, and futures."""
 
 from app.marketdata.adjustments import (
     ActionType,
@@ -14,6 +14,13 @@ from app.marketdata.calendar import (
     to_ist,
     to_utc,
 )
+from app.marketdata.continuous_futures import (
+    AdjustmentMethod,
+    ContinuousFuturesGenerator,
+    ContractMetadata,
+    RollEvent,
+    RollTrigger,
+)
 from app.marketdata.resampler import (
     BarResampler,
     PartialBarPolicy,
@@ -23,11 +30,16 @@ from app.marketdata.resampler import (
 
 __all__ = [
     "ActionType",
+    "AdjustmentMethod",
     "AdjustmentPipeline",
     "BarResampler",
+    "ContinuousFuturesGenerator",
+    "ContractMetadata",
     "CorporateAction",
     "Holiday",
     "PartialBarPolicy",
+    "RollEvent",
+    "RollTrigger",
     "SessionBounds",
     "SpecialSession",
     "Timeframe",

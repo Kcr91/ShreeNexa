@@ -1,8 +1,8 @@
 {
-  "feature": "F1.7",
+  "feature": "F1.8",
   "status": "review",
-  "branch": "feature/F1.7-corporate-action-adjustment",
-  "commit": "f1f19689408bcfc1f34eeeb965a9538a7cbb0299",
+  "branch": "feature/F1.8-continuous-futures-generator",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -154,6 +154,15 @@
       "status": "review",
       "branch": "feature/F1.7-corporate-action-adjustment",
       "commit": "f1f19689408bcfc1f34eeeb965a9538a7cbb0299",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F1.8": {
+      "status": "review",
+      "branch": "feature/F1.8-continuous-futures-generator",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

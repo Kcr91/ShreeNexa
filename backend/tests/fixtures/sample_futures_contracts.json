@@ -1,0 +1,70 @@
+{
+  "contracts": [
+    {
+      "symbol": "NIFTY26AUGFUT",
+      "expiry_date": "2026-08-27",
+      "bars": [
+        {
+          "date": "2026-08-24",
+          "open": 24800.0,
+          "high": 24900.0,
+          "low": 24750.0,
+          "close": 24850.0,
+          "volume": 500000,
+          "open_interest": 1000000
+        },
+        {
+          "date": "2026-08-25",
+          "open": 24860.0,
+          "high": 24950.0,
+          "low": 24820.0,
+          "close": 24900.0,
+          "volume": 400000,
+          "open_interest": 700000
+        },
+        {
+          "date": "2026-08-26",
+          "open": 24910.0,
+          "high": 25000.0,
+          "low": 24880.0,
+          "close": 24950.0,
+          "volume": 200000,
+          "open_interest": 300000
+        }
+      ]
+    },
+    {
+      "symbol": "NIFTY26SEPFUT",
+      "expiry_date": "2026-09-24",
+      "bars": [
+        {
+          "date": "2026-08-24",
+          "open": 24900.0,
+          "high": 25000.0,
+          "low": 24850.0,
+          "close": 24950.0,
+          "volume": 250000,
+          "open_interest": 500000
+        },
+        {
+          "date": "2026-08-25",
+          "open": 24960.0,
+          "high": 25050.0,
+          "low": 24920.0,
+          "close": 25000.0,
+          "volume": 600000,
+          "open_interest": 850000
+        },
+        {
+          "date": "2026-08-26",
+          "open": 25010.0,
+          "high": 25100.0,
+          "low": 24980.0,
+          "close": 25060.0,
+          "volume": 800000,
+          "open_interest": 1200000
+        }
+      ]
+    }
+  ]
+}
