@@ -88,9 +88,7 @@ class InstrumentSearchQuery(BaseModel):
     instrument_type: str | None = Field(default=None, description="Filter by instrument type")
     underlying_id: str | None = Field(default=None, description="Filter by underlying security ID")
     expiry_date: date | str | None = Field(default=None, description="Filter by expiry date")
-    strike_price: float | Decimal | None = Field(
-        default=None, description="Filter by strike price"
-    )
+    strike_price: float | Decimal | None = Field(default=None, description="Filter by strike price")
     option_type: str | None = Field(default=None, description="Filter by option type (CE or PE)")
     is_active_only: bool = Field(default=True, description="Filter active instruments only")
     limit: int = Field(default=50, ge=1, le=500, description="Max results")

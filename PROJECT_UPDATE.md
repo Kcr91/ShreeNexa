@@ -35,8 +35,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.4 | Blocked after retrospective revalidation | Implementation is present at `96eab70`. An unchanged rerun reached 89/89 tests, but the exact SHA fails the current pre-commit formatting gate; the first test attempt also had one process-startup timeout. No historical review report existed. |
 | F0.5 | Blocked pending evidence | Implementation is present at `c6fd219`. The seven current fixtures are generated/synthetic and do not satisfy the recorded-cassette acceptance contract. |
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
-| F0.7 | Ready for review | PostgreSQL instrument table migration, detailed Dhan CSV master parser with dynamic segment discovery and schema drift tolerance, ON CONFLICT upsert, typed search, and FastAPI REST endpoints. 163/163 tests passing. |
-| F0.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
+| F0.8 | Ready for review | PostgreSQL `index_constituent` table migration, committed fallback snapshots for NIFTY 50/BANK/IT, point-in-time effective interval tracking `[valid_from, valid_to]`, reconstitution interval updates, manual overrides with visible provenance, and FastAPI endpoints. 176/176 tests passing. |
+| F0.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -430,4 +431,29 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_dhan_instruments_api.py`: 7 passed
 - Full repository test suite: 163 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (50 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `d5e4143`.
+
+### 2026-09-01 — F0.8 Index constituent ingestion and point-in-time membership completed
+
+- Created PostgreSQL table `index_constituent` with primary key `(index_name, symbol, valid_from)`, check constraint `valid_to IS NULL OR valid_to >= valid_from`, and interval index via Alembic migration `8b9c0d1e2f3a_create_index_constituent_table.py` (tested upgrade and downgrade reversibility).
+- Added committed fallback snapshots in `config/index_constituents_fallback.yaml` covering `NIFTY 50`, `NIFTY BANK`, and `NIFTY IT` with weights, sectors, and provenance.
+- Implemented `backend/app/marketdata/universe.py`:
+  - Typed Pydantic models `ConstituentInput`, `IndexConstituentRecord`, `IndexMembershipResult`, and `ManualOverrideRequest`.
+  - Effective interval tracking engine `ingest_index_snapshot` that closes dropped constituents with `valid_to = valid_from - 1 day` and inserts/updates active constituents with `valid_to = NULL`.
+  - `ingest_fallback_constituents` loader populating fallback configuration with explicit `source='fallback'` provenance.
+  - `apply_manual_override` for administrator/researcher constituent corrections with `source='manual'`.
+  - Date-aware point-in-time membership query `is_member_at_date` and constituent listing `get_constituents_at_date` filtering `valid_from <= as_of AND (valid_to IS NULL OR valid_to >= as_of)` without look-ahead or survivorship bias.
+  - Distinct index discovery `list_available_indices`.
+- Implemented REST endpoints in `backend/app/api/universe.py` and mounted router to FastAPI `app` in `backend/app/main.py`:
+  - `GET /api/v1/indices`: List available indices.
+  - `GET /api/v1/indices/{index_name}/constituents`: Date-aware constituent list with weights and provenance.
+  - `GET /api/v1/indices/{index_name}/membership`: Point-in-time stock membership verification.
+  - `POST /api/v1/indices/{index_name}/override`: Manual constituent addition/deletion override.
+  - `POST /api/v1/indices/seed-fallback`: Trigger committed fallback seeding.
+- Authored acceptance contract `docs/qa/acceptance/F0.8.md` and added 13 new test cases across unit, integration, and API suites:
+  - `backend/tests/unit/test_index_constituents_parser.py`: 4 passed
+  - `backend/tests/integration/test_index_constituents_db.py`: 3 passed (including full multi-period reconstitution and interval closing)
+  - `backend/tests/unit/test_index_constituents_api.py`: 6 passed
+- Full repository test suite: 176 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (57 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

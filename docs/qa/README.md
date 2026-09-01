@@ -24,5 +24,6 @@
 - [F0.5 — Typed Dhan REST wrapper and recorded cassettes](acceptance/F0.5.md)
 - [F0.6 — Dhan Rate Limiter with Redis Token Bucket](acceptance/F0.6.md)
 - [F0.7 — Detailed Dhan Instrument Master Ingestion and Typed Search](acceptance/F0.7.md)
+- [F0.8 — Index Constituent Ingestion and Point-in-Time Membership](acceptance/F0.8.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.

@@ -51,9 +51,7 @@ def test_api_search_instruments(client: TestClient) -> None:
 
 
 def test_api_search_with_filters(client: TestClient) -> None:
-    response = client.get(
-        "/api/v1/instruments/search?query=RELIANCE&exchange_segment=NSE_EQ"
-    )
+    response = client.get("/api/v1/instruments/search?query=RELIANCE&exchange_segment=NSE_EQ")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1

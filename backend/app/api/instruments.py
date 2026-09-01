@@ -36,9 +36,7 @@ def search(
     engine: DbEngineDep,
     query: Annotated[
         str | None,
-        Query(
-            description="Search prefix/substring against symbol, trading_symbol, or security_id"
-        ),
+        Query(description="Search prefix/substring against symbol, trading_symbol, or security_id"),
     ] = None,
     exchange_segment: Annotated[
         str | None, Query(description="Filter by exchange segment (e.g. NSE_EQ, NSE_FNO)")
@@ -52,15 +50,11 @@ def search(
     expiry_date: Annotated[
         str | None, Query(description="Filter by expiry date (YYYY-MM-DD)")
     ] = None,
-    strike_price: Annotated[
-        Decimal | None, Query(description="Filter by strike price")
-    ] = None,
+    strike_price: Annotated[Decimal | None, Query(description="Filter by strike price")] = None,
     option_type: Annotated[
         str | None, Query(description="Filter by option type (CE or PE)")
     ] = None,
-    is_active_only: Annotated[
-        bool, Query(description="Return only active instruments")
-    ] = True,
+    is_active_only: Annotated[bool, Query(description="Return only active instruments")] = True,
     limit: Annotated[int, Query(ge=1, le=500, description="Max results")] = 50,
     offset: Annotated[int, Query(ge=0, description="Result offset")] = 0,
 ) -> list[InstrumentRecord]:
@@ -91,9 +85,7 @@ def get_option_chain(
     engine: DbEngineDep,
     underlying_id: Annotated[str, Query(description="Underlying security ID (e.g. 13 for NIFTY)")],
     expiry_date: Annotated[str, Query(description="Expiry date (YYYY-MM-DD)")],
-    exchange_segment: Annotated[
-        str, Query(description="Exchange segment")
-    ] = "NSE_FNO",
+    exchange_segment: Annotated[str, Query(description="Exchange segment")] = "NSE_FNO",
 ) -> list[InstrumentRecord]:
     """Retrieve all strike option contracts for an underlying on a given expiry date."""
     return get_option_chain_instruments(
@@ -108,9 +100,7 @@ def get_option_chain(
 def get_expiries(
     engine: DbEngineDep,
     underlying_id: Annotated[str, Query(description="Underlying security ID")],
-    exchange_segment: Annotated[
-        str, Query(description="Exchange segment")
-    ] = "NSE_FNO",
+    exchange_segment: Annotated[str, Query(description="Exchange segment")] = "NSE_FNO",
 ) -> list[date]:
     """Retrieve distinct active expiry dates for an underlying security."""
     return get_expiries_for_underlying(

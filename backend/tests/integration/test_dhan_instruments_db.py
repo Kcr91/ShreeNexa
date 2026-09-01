@@ -136,7 +136,5 @@ def test_idempotent_reingest(db_engine: Engine) -> None:
     assert summary2.inserted_or_updated == 19
 
     # Total rows in DB should still be 19
-    all_rows = search_instruments(
-        db_engine, InstrumentSearchQuery(limit=100, is_active_only=False)
-    )
+    all_rows = search_instruments(db_engine, InstrumentSearchQuery(limit=100, is_active_only=False))
     assert len(all_rows) == 19

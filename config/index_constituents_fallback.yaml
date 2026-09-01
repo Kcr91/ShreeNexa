@@ -1,0 +1,134 @@
+# Committed fallback snapshots for key Indian index constituents
+# Used when upstream official sources (NSE/BSE) are unreachable.
+# All records carry explicit source='fallback' provenance.
+
+schema_version: 1
+as_of: "2026-08-01"
+source_notes: "Committed fallback snapshots for major NSE equity indices"
+
+indices:
+  - index_name: "NIFTY 50"
+    source_date: "2026-08-01"
+    valid_from: "2026-08-01"
+    constituents:
+      - symbol: "HDFCBANK"
+        weight: 11.45
+        sector: "Financial Services"
+      - symbol: "RELIANCE"
+        weight: 9.85
+        sector: "Oil Gas & Consumable Fuels"
+      - symbol: "ICICIBANK"
+        weight: 7.92
+        sector: "Financial Services"
+      - symbol: "INFY"
+        weight: 5.68
+        sector: "Information Technology"
+      - symbol: "ITC"
+        weight: 4.35
+        sector: "Fast Moving Consumer Goods"
+      - symbol: "TCS"
+        weight: 4.10
+        sector: "Information Technology"
+      - symbol: "LT"
+        weight: 3.95
+        sector: "Construction"
+      - symbol: "AXISBANK"
+        weight: 3.42
+        sector: "Financial Services"
+      - symbol: "KOTAKBANK"
+        weight: 2.85
+        sector: "Financial Services"
+      - symbol: "BHARTIARTL"
+        weight: 2.75
+        sector: "Telecommunication"
+      - symbol: "SBIN"
+        weight: 2.65
+        sector: "Financial Services"
+      - symbol: "HINDUNILVR"
+        weight: 2.45
+        sector: "Fast Moving Consumer Goods"
+      - symbol: "BAJFINANCE"
+        weight: 2.10
+        sector: "Financial Services"
+      - symbol: "M&M"
+        weight: 1.95
+        sector: "Automobile and Auto Components"
+      - symbol: "MARUTI"
+        weight: 1.85
+        sector: "Automobile and Auto Components"
+
+  - index_name: "NIFTY BANK"
+    source_date: "2026-08-01"
+    valid_from: "2026-08-01"
+    constituents:
+      - symbol: "HDFCBANK"
+        weight: 29.50
+        sector: "Financial Services"
+      - symbol: "ICICIBANK"
+        weight: 24.20
+        sector: "Financial Services"
+      - symbol: "SBIN"
+        weight: 10.80
+        sector: "Financial Services"
+      - symbol: "AXISBANK"
+        weight: 9.90
+        sector: "Financial Services"
+      - symbol: "KOTAKBANK"
+        weight: 9.50
+        sector: "Financial Services"
+      - symbol: "INDUSINDBK"
+        weight: 5.10
+        sector: "Financial Services"
+      - symbol: "BANKBARODA"
+        weight: 2.90
+        sector: "Financial Services"
+      - symbol: "PNB"
+        weight: 2.40
+        sector: "Financial Services"
+      - symbol: "AUBANK"
+        weight: 2.10
+        sector: "Financial Services"
+      - symbol: "FEDERALBNK"
+        weight: 1.90
+        sector: "Financial Services"
+      - symbol: "IDFCFIRSTB"
+        weight: 1.10
+        sector: "Financial Services"
+      - symbol: "BANDHANBNK"
+        weight: 0.60
+        sector: "Financial Services"
+
+  - index_name: "NIFTY IT"
+    source_date: "2026-08-01"
+    valid_from: "2026-08-01"
+    constituents:
+      - symbol: "TCS"
+        weight: 26.50
+        sector: "Information Technology"
+      - symbol: "INFY"
+        weight: 25.80
+        sector: "Information Technology"
+      - symbol: "HCLTECH"
+        weight: 11.20
+        sector: "Information Technology"
+      - symbol: "WIPRO"
+        weight: 8.90
+        sector: "Information Technology"
+      - symbol: "TECHM"
+        weight: 8.50
+        sector: "Information Technology"
+      - symbol: "LTIM"
+        weight: 7.80
+        sector: "Information Technology"
+      - symbol: "PERSISTENT"
+        weight: 4.50
+        sector: "Information Technology"
+      - symbol: "COFORGE"
+        weight: 3.80
+        sector: "Information Technology"
+      - symbol: "MPHASIS"
+        weight: 1.80
+        sector: "Information Technology"
+      - symbol: "LTTS"
+        weight: 1.20
+        sector: "Information Technology"
