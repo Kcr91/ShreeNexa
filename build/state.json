@@ -2,7 +2,7 @@
   "feature": "F0.8",
   "status": "review",
   "branch": "feature/F0.8-index-constituents",
-  "commit": null,
+  "commit": "2e9b319225caefeb1bc2ecfe9a80e152ff84ee2c",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -81,7 +81,7 @@
     "F0.8": {
       "status": "review",
       "branch": "feature/F0.8-index-constituents",
-      "commit": null,
+      "commit": "2e9b319225caefeb1bc2ecfe9a80e152ff84ee2c",
       "tests": {},
       "evidence": [],
       "verified_at": null,
