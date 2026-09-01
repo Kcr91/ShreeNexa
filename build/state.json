@@ -2,7 +2,7 @@
   "feature": "F1.8",
   "status": "review",
   "branch": "feature/F1.8-continuous-futures-generator",
-  "commit": null,
+  "commit": "aa1cea2fdf758aa1921319c80521e1d0df9f6261",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -162,7 +162,7 @@
     "F1.8": {
       "status": "review",
       "branch": "feature/F1.8-continuous-futures-generator",
-      "commit": null,
+      "commit": "aa1cea2fdf758aa1921319c80521e1d0df9f6261",
       "tests": {},
       "evidence": [],
       "verified_at": null,
