@@ -2,7 +2,7 @@
   "feature": "F1.7",
   "status": "review",
   "branch": "feature/F1.7-corporate-action-adjustment",
-  "commit": null,
+  "commit": "f1f19689408bcfc1f34eeeb965a9538a7cbb0299",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -153,7 +153,7 @@
     "F1.7": {
       "status": "review",
       "branch": "feature/F1.7-corporate-action-adjustment",
-      "commit": null,
+      "commit": "f1f19689408bcfc1f34eeeb965a9538a7cbb0299",
       "tests": {},
       "evidence": [],
       "verified_at": null,
