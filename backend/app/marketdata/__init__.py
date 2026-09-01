@@ -1,4 +1,4 @@
-"""Market data, universe, trading calendar, resampling, adjustments, and futures."""
+"""Market data, calendar, resampling, adjustments, continuous futures, and options analytics."""
 
 from app.marketdata.adjustments import (
     ActionType,
@@ -21,6 +21,14 @@ from app.marketdata.continuous_futures import (
     RollEvent,
     RollTrigger,
 )
+from app.marketdata.options_analytics import (
+    BlackScholesPricer,
+    ContinuousOptionSurface,
+    OptionGreeks,
+    OptionType,
+    norm_cdf,
+    norm_pdf,
+)
 from app.marketdata.resampler import (
     BarResampler,
     PartialBarPolicy,
@@ -33,10 +41,14 @@ __all__ = [
     "AdjustmentMethod",
     "AdjustmentPipeline",
     "BarResampler",
+    "BlackScholesPricer",
     "ContinuousFuturesGenerator",
+    "ContinuousOptionSurface",
     "ContractMetadata",
     "CorporateAction",
     "Holiday",
+    "OptionGreeks",
+    "OptionType",
     "PartialBarPolicy",
     "RollEvent",
     "RollTrigger",
@@ -45,6 +57,8 @@ __all__ = [
     "Timeframe",
     "TradingCalendar",
     "make_ist_datetime",
+    "norm_cdf",
+    "norm_pdf",
     "parse_timeframe",
     "to_ist",
     "to_utc",

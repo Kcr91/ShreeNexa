@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.7 | Done | Fast-forwarded into `main` at `cc8f3ce` after review. |
-| F1.8 | Ready for review | Continuous synthetic futures series generator (`NIFTY_F1`, `BANKNIFTY_F1`), calendar/volume/OI roll rules, difference (Panama) and ratio roll adjustments, and typed `RollEvent` audit metadata. 229/229 tests passing. |
-| F1.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F1.8 | Done | Fast-forwarded into `main` at `a7dd6a3` after review. |
+| F1.9 | Ready for review | Synthetic continuous option surface generator (fixed moneyness, constant maturity), BSM/Black-76 pricer, high-precision Newton-Raphson/bisection IV solver ($\le 10^{-5}$ tol), analytical Greeks ($\Delta, \Gamma, \Theta, \mathcal{V}, \rho$), and put-call parity validation. 233/233 tests passing. |
+| F2.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -625,4 +625,19 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_continuous_futures.py`: 5 passed
 - Full repository test suite: 229 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (87 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `a7dd6a3`.
+
+### 2026-09-01 — F1.9 Synthetic continuous option surface generator completed
+
+- Created independent mathematical reference test fixture `backend/tests/fixtures/sample_option_surface_greeks.json`.
+- Implemented `backend/app/marketdata/options_analytics.py`:
+  - Standard normal distribution functions `norm_cdf` and `norm_pdf`.
+  - `OptionType` (`CALL`, `PUT`) and `OptionGreeks` (`delta`, `gamma`, `theta`, `vega`, `rho`) data models.
+  - `BlackScholesPricer` implementing European Black-Scholes-Merton and Black-76 option pricing, exact 1-day calendar theta, 1% vega/rho, and high-precision Newton-Raphson / bisection IV inversion solver.
+  - `ContinuousOptionSurface` constructing constant moneyness grids ($K/S \in [0.90..1.10]$) with linear/quadratic volatility skew handling.
+- Exported option analytics services in `backend/app/marketdata/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F1.9.md` and added 4 new test cases across BSM pricing against hand fixture, exact put-call parity verification, high-precision IV solver recovery, and constant moneyness surface generation:
+  - `backend/tests/unit/test_options_analytics.py`: 4 passed
+- Full repository test suite: 233 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (89 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

@@ -84,8 +84,7 @@ class ContinuousFuturesGenerator:
         if len(sorted_contracts) == 1:
             # Single contract, no roll needed
             single_bars = [
-                self._clone_bar_with_symbol(b, continuous_symbol)
-                for b in sorted_contracts[0].bars
+                self._clone_bar_with_symbol(b, continuous_symbol) for b in sorted_contracts[0].bars
             ]
             return single_bars, []
 

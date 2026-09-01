@@ -1,0 +1,20 @@
+{
+  "test_cases": [
+    {
+      "spot": 25000.0,
+      "strike": 25000.0,
+      "dte_days": 30,
+      "rate": 0.065,
+      "dividend_yield": 0.0,
+      "volatility": 0.15,
+      "expected_call_price": 497.62,
+      "expected_put_price": 364.42,
+      "expected_call_delta": 0.5579,
+      "expected_put_delta": -0.4421,
+      "expected_gamma": 0.000367,
+      "expected_vega": 28.29,
+      "expected_call_theta": -9.47,
+      "expected_put_theta": -5.04
+    }
+  ]
+}
