@@ -3,7 +3,12 @@ name = "shreenexa-backend"
 version = "0.0.0"
 description = "ShreeNexa Terminal backend — not yet implemented"
 requires-python = ">=3.14,<3.15"
-dependencies = []
+dependencies = [
+    "psycopg[binary]>=3.2,<4.0",
+    "sqlalchemy>=2.0,<3.0",
+    "alembic>=1.14,<2.0",
+    "redis>=5.2,<6.0",
+]
 
 [dependency-groups]
 dev = [
@@ -24,7 +29,7 @@ packages = ["backend/app"]
 [tool.ruff]
 target-version = "py314"
 line-length = 100
-src = ["backend/app", "backend/tests", "build"]
+src = ["backend/app", "backend/tests", "backend/alembic", "build"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "RUF"]

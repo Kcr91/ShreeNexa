@@ -1,0 +1,42 @@
+name: shreenexa
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shreenexa
+      POSTGRES_PASSWORD: shreenexa_local_dev_only
+      POSTGRES_DB: shreenexa
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ../data/services/postgres:/var/lib/postgresql/data
+    mem_limit: "512m"
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shreenexa -d shreenexa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  valkey:
+    # Redis-protocol-compatible, BSD-3-Clause-licensed fork. Upstream Redis
+    # 7.4+ moved to a non-OSI license; see docs/qa/acceptance/F0.2.md for why
+    # this substitution was made. Any redis-py/redis-cli-speaking client
+    # works against it unchanged.
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ../data/services/redis:/data
+    mem_limit: "256m"
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
