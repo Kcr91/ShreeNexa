@@ -7,8 +7,8 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W1 — Stable backend foundation (in progress) |
-| Current feature | F0.1 — Review passed; merge authorization requested |
-| Current branch | `feature/F0.1-repo-standardization` |
+| Current feature | F0.2 — Review passed; merged |
+| Current branch | `main` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -23,8 +23,9 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.4 | Done | Repository guidance and Codex/QA configuration passed independent review; fast-forwarded into `main` at `0c86d5e` after user merge authorization. |
 | M0.5 | Done | Manifest, validator, and state helper pass all tests; F2.6 dependency fix applied (C11). Fast-forwarded into `main` at `22334e8` after user merge authorization. |
 | M0.6 | Done | First green baseline proven via real fresh-clone bootstrap; fixtures frozen by hash. Fast-forwarded into `main` at `fef0814` after user merge authorization. **W0 (M0.1–M0.6) complete.** |
-| F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Not yet merged — awaiting user merge authorization. |
-| F0.2–F13.5 | Pending | F0.2 (Postgres/Redis via Docker Compose) is next; blocked on Docker Desktop installation. |
+| F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Fast-forwarded into `main` at `996a55b` after user merge authorization. |
+| F0.2 | Done | Postgres + Valkey (Redis-compatible) via Docker Compose, resource-limited and health-checked; Alembic scaffold proven; 33/33 tests pass with the stack up, 29 passed + 4 correctly skipped with it down. Fast-forwarded into `main`. |
+| F0.3–F13.5 | Pending | F0.3 (api/engine/feedd/worker process skeletons) is next. |
 
 ## Major-task log
 
@@ -246,6 +247,28 @@ This file is the human-readable project progress log. It is updated after each m
 - No product code, live-trading path, or credential was introduced. `git diff --check` clean; no secret-shaped content.
 - F0.1 is approved for fast-forward merge; no schema or runtime-data impact.
 
+### 2026-09-01 — F0.1 merged; Docker Desktop installed and F0.2 started
+
+- User authorized the merge. Fast-forwarded `feature/F0.1-repo-standardization` into `main` at `996a55b`. Re-verified directly on `main`: ruff/mypy/pytest/manifest/fixtures all green.
+- User instructed that going forward, each reviewed feature is merged automatically and work continues to the next feature, without a separate per-feature merge-authorization pause (still subject to every other stop condition in `AGENTS.md`).
+- Docker Desktop was not installed, blocking F0.2. Installed it via `winget install Docker.DockerDesktop` (user's chosen path over manual install or skipping ahead). This needed three more manual steps no automation could complete: approving a UAC elevation prompt, restarting Windows to activate the newly-enabled WSL2 feature, and manually launching Docker Desktop after restart (it does not auto-start). Also found and worked around a `wsl --status` exit-50 failure — the WSL2 platform component itself was missing even after the Windows optional feature was enabled; `wsl --update` installed it. `docker info`/`docker compose version` confirmed working after these steps.
+- Created `feature/F0.2-postgres-redis-compose` from the merged `main`. Recorded the F0.2 acceptance contract, including the Valkey-over-Redis licensing decision (upstream Redis 7.4+ is not OSI-licensed; this repo's spec claims free/open-source infrastructure) and the resource-limit/data-root/CI-scope decisions, before implementation.
+
+### 2026-09-01 — F0.2 implementation and verification completed
+
+- Added `infra/docker-compose.yml`: `postgres:17-alpine` (1 CPU/512 MiB) and `valkey/valkey:8-alpine` (0.5 CPU/256 MiB), both health-checked and bind-mounted into `data/services/{postgres,redis}` per the M0.3 data-lifecycle ADR.
+- `docker compose up -d` brought both to `healthy`; `docker inspect` confirmed the exact configured limits are applied (536,870,912 / 268,435,456 bytes; 1.0 / 0.5 CPUs), not merely written and ignored.
+- Added a minimal Alembic scaffold (`backend/alembic.ini`, `env.py` reading `DATABASE_URL` from the environment, one empty bootstrap revision) and `backend/tests/integration/test_docker_services.py` (Postgres connectivity, `alembic upgrade head` run twice to prove idempotency, Valkey connectivity, a SQLAlchemy-engine-level check). Added real runtime dependencies this feature needs (`psycopg`, `sqlalchemy`, `alembic`, `redis`) — all resolved to `cp314` wheels, no source builds.
+- Found and fixed two bugs while verifying, before committing: a `REPO_ROOT` path miscalculation that pointed `alembic.ini` at the wrong location, and a ~150x slowdown (153s → 10s) caused by Windows resolving `localhost` to the IPv6 loopback first, which nothing listens on since Compose binds only `127.0.0.1` — switched the test defaults to `127.0.0.1` explicitly.
+- Verified both directions: 33/33 pass with the stack up; 29 passed + 4 correctly **skipped** (not silently passed) with named reasons when the stack is down. `ruff`/`mypy --strict`/`pre-commit run --all-files` all clean.
+- Noted as a follow-up, not solved here: CI (`windows-latest`) does not yet run these Linux containers, so the integration tests always skip there for now.
+
+### 2026-09-01 — F0.2 independent review passed; merged
+
+- Reviewed the complete branch against `main`: only `backend/alembic/`, `backend/tests/integration/`, `infra/docker-compose.yml`, `pyproject.toml`/`uv.lock`, and `docs/qa/acceptance/F0.2.md` changed — no protected path, no product schema, no secret (the local dev Postgres password is a clearly-labeled non-secret, reachable only inside the Docker network on `127.0.0.1`).
+- Re-ran the full suite with the stack both up and down: all green.
+- Fast-forwarded `feature/F0.2-postgres-redis-compose` into `main`. **F0.2 done.**
+
 ## Known prerequisites and blockers
 
-- Docker Desktop is selected but not installed; its installation remains a separately approved prerequisite before F0.2. WSL has no registered distribution and remains only the documented fallback.
+- None currently blocking. Docker Desktop is installed and verified working.

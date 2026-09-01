@@ -1,10 +1,10 @@
 {
-  "feature": "F0.1",
+  "feature": "F0.2",
   "status": "done",
-  "branch": "feature/F0.1-repo-standardization",
-  "commit": "6ed790b",
+  "branch": "feature/F0.2-postgres-redis-compose",
+  "commit": null,
   "tests": {},
-  "started_at": "2026-08-31",
-  "finished_at": "2026-08-31",
+  "started_at": "2026-09-01",
+  "finished_at": "2026-09-01",
   "blockers": []
 }
