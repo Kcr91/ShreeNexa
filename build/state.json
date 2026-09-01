@@ -2,7 +2,7 @@
   "feature": "F1.2",
   "status": "review",
   "branch": "feature/F1.2-dhan-daily-backfill",
-  "commit": null,
+  "commit": "d84faee627341ea29eb2c5957b4916a44ca70b5a",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -108,7 +108,7 @@
     "F1.2": {
       "status": "review",
       "branch": "feature/F1.2-dhan-daily-backfill",
-      "commit": null,
+      "commit": "d84faee627341ea29eb2c5957b4916a44ca70b5a",
       "tests": {},
       "evidence": [],
       "verified_at": null,
