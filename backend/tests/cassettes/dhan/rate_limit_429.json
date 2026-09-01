@@ -1,0 +1,7 @@
+{
+  "status": "failure",
+  "remarks": "Too many requests. Rate limit exceeded for IP/Token.",
+  "errorType": "RateLimitError",
+  "errorCode": "DH-429",
+  "data": null
+}

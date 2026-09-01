@@ -20,5 +20,6 @@
 - [F0.3 — Process skeletons and durable heartbeat contract](acceptance/F0.3.md)
 - [Development autopilot pilot setup](acceptance/dev-autopilot-pilot.md)
 - [F0.4 — Central settings, secret redaction, and Dhan token health](acceptance/F0.4.md)
+- [F0.5 — Typed Dhan REST wrapper and recorded cassettes](acceptance/F0.5.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.

@@ -1,0 +1,7 @@
+{
+  "status": "failure",
+  "remarks": "Invalid Token or Token Expired",
+  "errorType": "AuthenticationError",
+  "errorCode": "RS-9005",
+  "data": null
+}

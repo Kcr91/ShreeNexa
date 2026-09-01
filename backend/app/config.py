@@ -13,9 +13,9 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 SECRET_PATTERNS = [
     re.compile(r"(?i)bearer\s+['\"]?([^\s'\"]+)['\"]?"),
-    re.compile(r"(?i)authorization[\s:=]+(?:bearer\s+)?['\"]?([^\s'\"]+)['\"]?"),
+    re.compile(r"(?i)authorization\s*[:=]\s*(?:bearer\s+)?['\"]?([^\s'\"]+)['\"]?"),
     re.compile(
-        r"(?i)(?:access_token|refresh_token|api_secret|client_secret|password|passwd|pwd)[\s:=]+['\"]?([^\s'\"]+)['\"]?"
+        r"(?i)(?:access_token|refresh_token|api_secret|client_secret|secret_key|private_key|token|secret|password|passwd|pwd)[\s:=]+['\"]?([^\s'\"]+)['\"]?"
     ),
     re.compile(r"postgresql(?:\+psycopg)?://[^:]+:([^@]+)@"),
 ]
@@ -60,9 +60,7 @@ class Settings(BaseModel):
 
     # Authoritative and cache storage URLs
     database_url: SecretStr = Field(
-        default=SecretStr(
-            "postgresql+psycopg://shreenexa:shreenexa_dev@127.0.0.1:5432/shreenexa"
-        )
+        default=SecretStr("postgresql+psycopg://shreenexa:shreenexa_dev@127.0.0.1:5432/shreenexa")
     )
     redis_url: SecretStr = Field(default=SecretStr("redis://127.0.0.1:6379/0"))
 

@@ -1,0 +1,7 @@
+{
+  "status": "failure",
+  "remarks": "Service temporarily unavailable. Upstream gateway busy.",
+  "errorType": "ServerError",
+  "errorCode": "DH-503",
+  "data": null
+}

@@ -113,7 +113,7 @@ def resolve_dhan_credentials(
                     expires_at=expires_at,
                     source="dpapi",
                 )
-        except (DPAPIError, json.JSONDecodeError, UnicodeDecodeError, OSError):
+        except DPAPIError, json.JSONDecodeError, UnicodeDecodeError, OSError:
             # Fail closed if encrypted file cannot be read/decrypted
             return None
 

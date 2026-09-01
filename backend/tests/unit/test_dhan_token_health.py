@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from app.config import get_settings
 from app.dhan.credentials import DhanCredentials, parse_iso_datetime
 from app.dhan.health import check_token_health
 from app.main import app, get_dhan_token_health
@@ -124,6 +125,7 @@ async def test_dhan_token_health_api_endpoint(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setenv("DHAN_CLIENT_ID", "1100223344")
     monkeypatch.setenv("DHAN_ACCESS_TOKEN", "SUPER_SECRET_TOKEN_DO_NOT_EXPOSE")
     monkeypatch.setenv("DHAN_TOKEN_EXPIRES_AT", "2026-09-02T12:00:00+00:00")
+    get_settings.cache_clear()
 
     # Direct function test
     result = get_dhan_token_health()

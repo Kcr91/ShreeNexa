@@ -7,8 +7,8 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W1 — Stable backend foundation (in progress) |
-| Current feature | F0.4 — Central settings, secret redaction, and Dhan token health (completed and verified) |
-| Current branch | `feature/F0.4-central-settings` |
+| Current feature | F0.5 — Typed Dhan REST wrapper and recorded cassettes (completed and verified) |
+| Current branch | `feature/F0.5-dhan-rest-wrapper` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -27,8 +27,9 @@ This file is the human-readable project progress log. It is updated after each m
 | F0.2 | Done | Postgres + Valkey (Redis-compatible) via Docker Compose, resource-limited and health-checked; Alembic scaffold proven; 33/33 tests pass with the stack up, 29 passed + 4 correctly skipped with it down. Fast-forwarded into `main`. |
 | F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor. Implementation and independent-review findings fixed; 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Fast-forwarded into `main`. |
 | dev-autopilot-pilot | Done | Local development controller, policy, and independent review validation pass 28 safety tests; verified and fast-forwarded into `main` at `584fc93`. |
-| F0.4 | Done | Type-safe central settings, .env.example, SecretStr redaction in str/repr/logs/payloads, Windows DPAPI local credential storage with no plaintext fallback, 24-hour Dhan Web token health calculations, and GET /api/v1/dhan/token-health endpoint. 89/89 tests passing, all gates green. |
-| F0.5–F13.5 | Pending | Next feature in dependency order is F0.5 (Logging, audit trail, structured JSON, Loguru, and log rotation). |
+| F0.4 | Done | Type-safe central settings, .env.example, SecretStr redaction in str/repr/logs/payloads, Windows DPAPI local credential storage with no plaintext fallback, 24-hour Dhan Web token health calculations, and GET /api/v1/dhan/token-health endpoint. 89/89 tests passing, all gates green. Fast-forwarded into `main` at `96eab70`. |
+| F0.5 | Done | Fully typed DhanHQ v2 REST API client, injectable transport layer (HTTP, Cassette, Mock), explicit error hierarchy with retryability classifications, typed Pydantic models, and offline tests against 7 recorded sanitized JSON cassettes. 105/105 tests passing, all gates green. |
+| F0.6–F13.5 | Pending | Next feature in dependency order is F0.6 (Verify current Dhan limits, store dated limits in YAML, and implement Redis token bucket with jittered backoff). |
 
 ## Major-task log
 
@@ -343,3 +344,13 @@ This file is the human-readable project progress log. It is updated after each m
 - Exposed `GET /api/v1/dhan/token-health` in `backend/app/main.py` returning non-secret token health metadata for UI dashboard banners.
 - Created unit test suites (`backend/tests/unit/test_config.py`, `backend/tests/unit/test_dpapi.py`, `backend/tests/unit/test_dhan_token_health.py`) adding 23 new test cases.
 - All 89 pytest tests pass, ruff clean, mypy strict clean (30 source files), frontend checks clean, and pre-commit clean.
+- Fast-forwarded F0.4 into `main` at `96eab70`.
+
+### 2026-09-01 — F0.5 Dhan REST wrapper, injectable transport, and cassettes completed
+
+- Implemented fully typed DhanHQ v2 REST API client in `backend/app/dhan/client.py` with methods for fund limits, profile, daily historical chart bars, intraday minute chart bars, quotes, holdings, and positions.
+- Designed injectable transport architecture (`backend/app/dhan/transport.py`): `HTTPTransport` (standard network with timeouts), `CassetteTransport` (deterministic offline replay from recorded JSON files), and `MockTransport` (programmatic failure and edge case simulation).
+- Implemented typed exception hierarchy (`backend/app/dhan/exceptions.py`) with explicit retryability: `DhanAuthenticationError` (non-retryable), `DhanRateLimitError` (retryable), `DhanServerError` (retryable), `DhanTimeoutError` (retryable), `DhanClientError` (non-retryable), and `DhanMalformedResponseError` (non-retryable).
+- Added 7 authentic, sanitized recorded response cassettes under `backend/tests/cassettes/dhan/` (`profile_success.json`, `historical_daily_success.json`, `historical_intraday_success.json`, `auth_failure_401.json`, `rate_limit_429.json`, `server_error_503.json`, `malformed_response.json`).
+- Added unit tests in `backend/tests/unit/test_dhan_client.py` and `backend/tests/unit/test_dhan_cassettes.py` adding 16 new test cases.
+- All 105 pytest tests pass, ruff clean, mypy strict clean (36 source files), frontend checks clean, and pre-commit clean.

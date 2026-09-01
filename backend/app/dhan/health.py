@@ -49,9 +49,7 @@ def check_token_health(
         masked = mask_client_id(credentials.client_id) if credentials else "[NONE]"
         src = credentials.source if credentials else "none"
         exp = (
-            credentials.expires_at.isoformat()
-            if (credentials and credentials.expires_at)
-            else None
+            credentials.expires_at.isoformat() if (credentials and credentials.expires_at) else None
         )
         return DhanTokenHealth(
             status="revoked",
