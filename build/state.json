@@ -2,7 +2,7 @@
   "feature": "F0.6",
   "status": "review",
   "branch": "feature/F0.6-dhan-rate-limiter",
-  "commit": null,
+  "commit": "286ec04663c6395fbce26162ae5cf2f4be3c1626",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -63,7 +63,7 @@
     "F0.6": {
       "status": "review",
       "branch": "feature/F0.6-dhan-rate-limiter",
-      "commit": null,
+      "commit": "286ec04663c6395fbce26162ae5cf2f4be3c1626",
       "tests": {},
       "evidence": [],
       "verified_at": null,
