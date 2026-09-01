@@ -1,8 +1,8 @@
 {
-  "feature": "F2.9",
+  "feature": "F2.5",
   "status": "review",
-  "branch": "feature/F2.9-indicator-catalog-api",
-  "commit": "b4764e0486c91a03006bbd92484fa2d9d936081e",
+  "branch": "feature/F2.5-strategy-ir-schema",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -215,8 +215,8 @@
     },
     "F2.5": {
       "status": "review",
-      "branch": "feature/F2.5-incremental-graph-engine",
-      "commit": "ffb960e659be432724fe9234bcf9db751bf873c9",
+      "branch": "feature/F2.5-strategy-ir-schema",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

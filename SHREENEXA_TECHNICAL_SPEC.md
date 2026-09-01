@@ -1574,9 +1574,7 @@ Built on top: indicator panes with drag-to-reorder, drawing tools with persisten
 
 ```python
 class AIProvider(Protocol):
-    def generate_structured(
-        self, prompt: str, *, schema: dict, timeout_s: int
-    ) -> AIResult: ...
+    def generate_structured(self, prompt: str, *, schema: dict, timeout_s: int) -> AIResult: ...
 ```
 
 | Implementation | Default | Use |

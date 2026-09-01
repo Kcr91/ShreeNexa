@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.8 | Done | Fast-forwarded into `main` at `bfda7ef` after review. |
-| F2.9 | Ready for review | FastAPI metadata catalog discovery endpoints (`GET /api/v1/indicators`, `GET /api/v1/indicators/{name}`) and AST formula syntax/security validation endpoint (`POST /api/v1/indicators/validate-formula`). 289/289 tests passing. |
-| F3.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.9 | Done | Fast-forwarded into `main` at `ed96fd6` after review. |
+| F2.5 | Ready for review | Versioned Pydantic StrategyIR specification with separate `horizon` and `strategy_type`, recursive signal AST nodes, option legs and strike selectors, version migration, and JSON Schema export. 295/295 tests passing. |
+| F2.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -791,4 +791,21 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_indicators_api.py`: 6 passed
 - Full repository test suite: 289 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (116 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `ed96fd6`.
+
+### 2026-09-01 — F2.5 Versioned StrategyIR Pydantic schema and JSON Schema export completed
+
+- Implemented `backend/app/strategy/ir.py`:
+  - Enums: `StrategyKind` (`stock`, `option`, `investing`, `composite`), `StrategyHorizon` (`intraday`, `swing`, `positional`, `investing`), `StrategyType` (`trend_following`, `swing_trading`, `mean_reversion`, `option_selling`, `other`), `OrderSide`, `OptionType`, `CompareOp`.
+  - Universe selectors: `StaticUniverse`, `WatchlistUniverse`, `ScreenerUniverse`, `IndexUniverse`, `OptionLegsUniverse`.
+  - Option leg strike models: `ATMStrike`, `DeltaStrike`, `PremiumStrike`, `AbsoluteStrike`.
+  - Recursive signal grammar AST: `AndNode`, `OrNode`, `NotNode`, `PriceLevelBreakNode` (with optional `after` condition gating), `SequenceNode`, `TimeWindowNode`, `IndicatorCompareNode`, `CrossOverNode`, `CrossUnderNode`, `PctChangeNode`, `PersistNode`, `StrategySignalNode`, `RegimeNode`, `CustomPythonNode`.
+  - Rules and execution limits: `EntryRule`, `ExitRule`, `SizingRule`, `RiskRule`.
+  - Top-level `StrategyIR` model with `to_dict()`, `to_json()`, `from_dict()`, `from_json()`, and `export_strategy_ir_json_schema()`.
+- Implemented `backend/app/strategy/migration.py` with `migrate_strategy_ir` for upgrading legacy strategy dictionaries to target versions.
+- Exported strategy domain in `backend/app/strategy/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.5.md` and added 6 new unit tests covering worked example round-trip, option legs and strikes, signal grammar AST variants, validation rejections, schema migration, and JSON Schema export:
+  - `backend/tests/unit/test_strategy_ir_schema.py`: 6 passed
+- Full repository test suite: 295 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (120 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
