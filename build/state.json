@@ -1,8 +1,8 @@
 {
-  "feature": "F1.5",
+  "feature": "F1.6",
   "status": "review",
-  "branch": "feature/F1.5-trading-calendar-sessions",
-  "commit": "14d6be0ae38d17ba9cfda9feebf1604a43a0e671",
+  "branch": "feature/F1.6-session-aware-resampling",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -136,6 +136,15 @@
       "status": "review",
       "branch": "feature/F1.5-trading-calendar-sessions",
       "commit": "14d6be0ae38d17ba9cfda9feebf1604a43a0e671",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F1.6": {
+      "status": "review",
+      "branch": "feature/F1.6-session-aware-resampling",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

@@ -1,4 +1,4 @@
-"""Market data, universe management, and trading calendar for ShreeNexa."""
+"""Market data, universe management, trading calendar, and session-aware resampling."""
 
 from app.marketdata.calendar import (
     Holiday,
@@ -9,13 +9,23 @@ from app.marketdata.calendar import (
     to_ist,
     to_utc,
 )
+from app.marketdata.resampler import (
+    BarResampler,
+    PartialBarPolicy,
+    Timeframe,
+    parse_timeframe,
+)
 
 __all__ = [
+    "BarResampler",
     "Holiday",
+    "PartialBarPolicy",
     "SessionBounds",
     "SpecialSession",
+    "Timeframe",
     "TradingCalendar",
     "make_ist_datetime",
+    "parse_timeframe",
     "to_ist",
     "to_utc",
 ]

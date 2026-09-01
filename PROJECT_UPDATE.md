@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.4 | Done | Fast-forwarded into `main` at `80e28f1` after review. |
-| F1.5 | Ready for review | Per-segment Indian market trading sessions, versioned holiday calendar registry, deterministic IST/UTC timezone normalization, special session handling (Muhurat trading), and session boundary bar validation. 215/215 tests passing. |
-| F1.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F1.5 | Done | Fast-forwarded into `main` at `ccd009e` after review. |
+| F1.6 | Ready for review | Session-aware OHLCV bar resampling across `3m`, `5m`, `15m`, `25m`, `30m`, `60m`, `1d`, `1w`, strict 09:15 IST session opening alignment, mathematical volume/OI conservation invariants, partial bar policies (`EMIT_PARTIAL`, `DROP_INCOMPLETE`), and PyArrow vector support. 219/219 tests passing. |
+| F1.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -578,4 +578,20 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_trading_calendar.py`: 5 passed
 - Full repository test suite: 215 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (81 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `ccd009e`.
+
+### 2026-09-01 — F1.6 Session-aware resampling and partial-bar policy completed
+
+- Created independent reference test fixture `backend/tests/fixtures/sample_1m_bars.json`.
+- Implemented `backend/app/marketdata/resampler.py`:
+  - `Timeframe` and `PartialBarPolicy` enumerations with `parse_timeframe` normalization.
+  - `BarResampler` implementing session-aligned intraday bucketing (`09:15` IST session opening), daily (`1d`), and weekly (`1w`) aggregations.
+  - Invariant preservation: `high = max(high)`, `low = min(low)`, `open = first(open)`, `close = last(close)`, $\sum \text{volume}_{1m} = \sum \text{volume}_{\text{resampled}}$, and $\text{oi} = \text{last(oi)}$.
+  - `EMIT_PARTIAL` vs `DROP_INCOMPLETE` handling for end-of-session partial buckets (e.g. 15:15–15:30 on 60m).
+  - `resample_table` for direct PyArrow Table vector resampling.
+- Exported resampler services in `backend/app/marketdata/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F1.6.md` and added 4 new test cases across timeframe parsing, fixture aggregations, full session (375-bar) resampling, volume conservation, and PyArrow integration:
+  - `backend/tests/unit/test_bar_resampler.py`: 4 passed
+- Full repository test suite: 219 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (83 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

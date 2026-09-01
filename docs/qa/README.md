@@ -31,5 +31,6 @@
 - [F1.3 — Resumable Dhan 1-Minute Backfill in 90-Day Windows](acceptance/F1.3.md)
 - [F1.4 — Expired-Option 30-Day Backfill and ATM Limits](acceptance/F1.4.md)
 - [F1.5 — Trading Sessions, Holidays, and Calendar Versions](acceptance/F1.5.md)
+- [F1.6 — Session-Aware Bar Resampling](acceptance/F1.6.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.
