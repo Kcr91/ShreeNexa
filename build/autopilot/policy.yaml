@@ -24,6 +24,14 @@ control_plane:
   - docs/qa/gates.md
   - docs/qa/protected-paths.md
   - SHREENEXA_TECHNICAL_SPEC.md
+  - pyproject.toml
+  - uv.lock
+  - frontend/package.json
+  - frontend/package-lock.json
+  - .pre-commit-config.yaml
+  - build/manifest.yaml
+  - build/update_state.py
+  - build/state_schema.py
 protected_paths:
   - backend/app/engine/risk.py
   - backend/app/engine/broker.py
@@ -67,15 +75,13 @@ features:
   F0.4:
     dependencies: [F0.1, F0.2, F0.3]
     branch: feature/F0.4-central-settings
+    acceptance_path: docs/qa/acceptance/F0.4.md
     allowed_paths:
       - .env.example
       - backend/app/config.py
       - backend/app/dhan/
       - backend/app/main.py
       - backend/tests/
-      - docs/qa/acceptance/F0.4.md
-      - pyproject.toml
-      - uv.lock
     non_goals:
       - No real Dhan credentials or authentication calls.
       - No PIN, password, TOTP seed, browser cookie, API key, or API secret storage.
@@ -84,76 +90,93 @@ features:
       - Fake-only DPAPI adapter tests and Windows current-user integration proof.
       - Expiry, unknown-expiry, timezone, restart, revocation, and auth-rejection tests.
       - Secret redaction and frontend-payload tests.
+    official_sources:
+      - https://dhanhq.co/docs/v2/authentication/
+      - https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata
+    evidence_checks:
+      required_changed_globs: [backend/app/*.py, backend/tests/**/*.py]
+      required_terms: [dpapi, expiry, redac, revoked, authentication]
   F0.5:
     dependencies: [F0.4]
     branch: feature/F0.5-dhan-rest-wrapper
+    acceptance_path: docs/qa/acceptance/F0.5.md
     allowed_paths:
       - backend/app/dhan/
       - backend/tests/
-      - docs/qa/acceptance/F0.5.md
-      - pyproject.toml
-      - uv.lock
     non_goals:
       - No real credential retrieval, token generation, renewal, orders, or live calls.
       - Synthetic fixtures may not be described as recorded responses.
     evidence:
       - Authentic sanitized recorded cassettes or an explicit blocker; never fabricated cassettes.
       - Offline success, auth-failure, malformed, timeout, and retryable-error tests.
+    official_sources: [https://dhanhq.co/docs/v2/]
+    evidence_checks:
+      required_changed_globs: [backend/app/dhan/**/*.py, backend/tests/**/*.py]
+      required_terms: [authentication, malformed, timeout, retryable]
+      recorded_json_glob: backend/tests/cassettes/dhan/*.json
   F0.6:
     dependencies: [F0.2, F0.5]
     branch: feature/F0.6-dhan-rate-limits
+    acceptance_path: docs/qa/acceptance/F0.6.md
     allowed_paths:
       - backend/app/dhan/
       - backend/tests/
       - config/dhan_limits.yaml
-      - docs/qa/acceptance/F0.6.md
-      - pyproject.toml
-      - uv.lock
     non_goals:
       - No undocumented limit assumptions or REST bypass.
     evidence:
       - Dated official limits evidence.
       - Concurrency/property proof and no-bypass architecture test.
+    official_sources: [https://dhanhq.co/docs/v2/]
+    evidence_checks:
+      required_changed_globs: [config/dhan_limits.yaml, backend/tests/**/*.py]
+      required_terms: [verified_at, source_url, concurrency, bypass]
   F0.7:
     dependencies: [F0.5, F0.6]
     branch: feature/F0.7-instrument-master
+    acceptance_path: docs/qa/acceptance/F0.7.md
     allowed_paths:
       - backend/app/dhan/
       - backend/app/marketdata/
       - backend/tests/
-      - docs/qa/acceptance/F0.7.md
-      - pyproject.toml
-      - uv.lock
     non_goals:
       - No hard-coded segment count or real account access.
     evidence:
       - Provenanced official sample/snapshot and schema-drift tests.
+    official_sources: [https://dhanhq.co/docs/v2/instruments/]
+    evidence_checks:
+      required_changed_globs: [backend/app/marketdata/**/*.py, backend/tests/**/*.py]
+      required_terms: [provenance, segment, inactive, duplicate, schema]
   F0.8:
     dependencies: [M0.3, F0.7]
     branch: feature/F0.8-index-membership
+    acceptance_path: docs/qa/acceptance/F0.8.md
     allowed_paths:
       - backend/app/marketdata/
       - backend/tests/
       - config/
-      - docs/qa/acceptance/F0.8.md
-      - pyproject.toml
-      - uv.lock
     non_goals:
       - No survivorship-biased current-only substitution.
     evidence:
       - Dated official source snapshot/fallback provenance and interval tests.
+    official_sources: [https://www.nseindia.com/]
+    evidence_checks:
+      required_changed_globs: [backend/app/marketdata/**/*.py, backend/tests/**/*.py]
+      required_terms: [effective, provenance, fallback, stale, override]
   F0.9:
     dependencies: [F0.3, F0.4, F0.5]
     branch: feature/F0.9-connection-budget
+    acceptance_path: docs/qa/acceptance/F0.9.md
     allowed_paths:
       - backend/app/feedd/
       - backend/app/dhan/
       - backend/tests/
       - config/
-      - docs/qa/acceptance/F0.9.md
-      - pyproject.toml
-      - uv.lock
     non_goals:
       - No market socket connection or live feed activation.
     evidence:
       - Property proof that socket six never opens and exhaustion is explicit.
+    official_sources: [https://dhanhq.co/docs/v2/live-market-feed/]
+    evidence_checks:
+      required_changed_globs: [backend/app/feedd/**/*.py, backend/tests/**/*.py]
+      required_terms: [five, sixth, exhaustion, independent]

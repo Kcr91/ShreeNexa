@@ -1,10 +1,10 @@
 {
   "feature": "dev-autopilot-pilot",
-  "status": "review",
+  "status": "done",
   "branch": "feature/dev-autopilot-pilot",
   "commit": null,
   "tests": {},
   "started_at": "2026-09-01",
-  "finished_at": null,
+  "finished_at": "2026-09-01",
   "blockers": []
 }

@@ -92,21 +92,6 @@ def _row_with_pid(engine: Engine, process_name: str, pid: int) -> hb.HeartbeatRo
     return None
 
 
-def _heartbeat_times(
-    engine: Engine,
-    process_name: str,
-    after: datetime,
-    count: int,
-) -> list[datetime]:
-    times: list[datetime] = []
-    last = after
-    for _ in range(count):
-        row = _wait_for(partial(_row_advanced, engine, process_name, last))
-        times.append(row.last_heartbeat_at)
-        last = row.last_heartbeat_at
-    return times
-
-
 def _gone(pid: int) -> bool | None:
     return True if not is_alive(pid) else None
 
@@ -121,17 +106,18 @@ def test_kill_api_does_not_affect_engine(process_env: dict[str, str]) -> None:
         engine_started_at = engine_row.started_at
         assert engine_row.pid == engine_pid
 
-        # Prove both processes sustain 3+ heartbeats before the kill, not just
-        # that their startup upsert produced one static row.
-        engine_beats = _heartbeat_times(engine, "engine", engine_row.last_heartbeat_at, count=3)
-
         _, api_pid = _spawn("api", process_env)
         real_pids.append(api_pid)
         api_row = _wait_for(lambda: _row(engine, "api"))
         api_last_heartbeat = api_row.last_heartbeat_at
+
+        current_engine_row = _wait_for(lambda: _row(engine, "engine"))
+        observed_engine_beats = [current_engine_row.last_heartbeat_at]
+
+        # Prove both processes sustain 3+ heartbeats before the kill, not just
+        # that their startup upsert produced one static row.
         api_beat_count = 0
-        observed_engine_beats = [engine_beats[-1]]
-        while api_beat_count < 3:
+        while api_beat_count < 3 or len(observed_engine_beats) < 4:
             current_engine = hb.read(engine, "engine")
             assert current_engine is not None
             if current_engine.last_heartbeat_at > observed_engine_beats[-1]:
@@ -160,11 +146,14 @@ def test_kill_api_does_not_affect_engine(process_env: dict[str, str]) -> None:
                 observed_engine_beats.append(current_engine.last_heartbeat_at)
             time.sleep(POLL_INTERVAL_S)
 
-        all_engine_beats = [*engine_beats[:-1], *observed_engine_beats]
         gaps = [
-            (current - previous).total_seconds() for previous, current in pairwise(all_engine_beats)
+            (current - previous).total_seconds()
+            for previous, current in pairwise(observed_engine_beats)
         ]
         assert max(gaps) <= 2.5, f"engine heartbeat gap exceeded two intervals: {gaps}"
+        assert len(observed_engine_beats) >= 8, (
+            f"insufficient observed heartbeats: {len(observed_engine_beats)}"
+        )
 
         after = hb.read(engine, "engine")
         assert after is not None

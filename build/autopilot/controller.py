@@ -30,13 +30,13 @@ TEST_SUMMARY_RE = re.compile(
 SECRET_PATTERNS = (
     re.compile(r"(?i)bearer\s+[a-z0-9._~+/=-]{8,}"),
     re.compile(
-        r"(?i)(access[-_ ]?token|authorization|api[-_ ]?secret|password|totp|pin)"
+        r"(?i)(access[-_ ]?token|authorization|api[-_ ]?secret|client[-_ ]?id|password|totp|pin)"
         r"\s*[:=]\s*[^\s,;]+"
     ),
     re.compile(r"\beyJ[a-zA-Z0-9_-]{12,}\.[a-zA-Z0-9_-]{8,}(?:\.[a-zA-Z0-9_-]+)?\b"),
 )
 SECRET_SCAN_ASSIGNMENT_RE = re.compile(
-    r"(?i)(access[-_ ]?token|authorization|api[-_ ]?secret|password|totp|pin)"
+    r"(?i)(access[-_ ]?token|authorization|api[-_ ]?secret|client[-_ ]?id|password|totp|pin)"
     r"\s*[:=]\s*['\"]?([^'\"\s,;]+)"
 )
 SAFE_TEST_VALUE_RE = re.compile(r"(?i)^(fake|test|dummy|example|placeholder|changeme|redacted)")
@@ -44,6 +44,18 @@ SAFE_TEST_VALUE_RE = re.compile(r"(?i)^(fake|test|dummy|example|placeholder|chan
 
 class AutopilotError(RuntimeError):
     """A fail-closed pilot blocker."""
+
+
+class RepairableError(AutopilotError):
+    """A candidate-code or confirmed-review finding eligible for a repair cycle."""
+
+
+class GateFailureError(RepairableError):
+    """A controller-defined gate failed without an infrastructure skip."""
+
+
+class ReviewFindingsError(RepairableError):
+    """A well-formed exact-SHA review contains findings."""
 
 
 @dataclass(frozen=True)
@@ -65,6 +77,7 @@ class RuntimeState:
     phase: str = "idle"
     setup_sha: str | None = None
     remote_fingerprint: str | None = None
+    acceptance_sha256: str | None = None
     feature: str | None = None
     base_sha: str | None = None
     candidate_sha: str | None = None
@@ -124,11 +137,46 @@ class RuntimeStore:
         allowed = set(RuntimeState.__dataclass_fields__)
         if set(raw) - allowed:
             raise AutopilotError("runtime state contains unknown fields")
-        return RuntimeState(**raw)
+        state = RuntimeState(**raw)
+        validate_runtime_state(state)
+        return state
 
     def save(self, state: RuntimeState) -> None:
+        validate_runtime_state(state)
         state.updated_at = utc_now()
         atomic_write_json(self.path, asdict(state))
+
+
+def validate_runtime_state(state: RuntimeState) -> None:
+    if state.phase not in {
+        "idle",
+        "implementing",
+        "testing",
+        "repairing",
+        "approved",
+        "merged",
+        "blocked",
+        "stopped",
+        "complete",
+    }:
+        raise AutopilotError("runtime state phase is unknown")
+    completed_ids = list(state.completed)
+    if completed_ids != list(ALLOWLIST[: len(completed_ids)]):
+        raise AutopilotError("runtime completed features are not an ordered allowlist prefix")
+    if any(not SHA_RE.fullmatch(sha) for sha in state.completed.values()):
+        raise AutopilotError("runtime completed feature contains an invalid SHA")
+    for field_name in ("setup_sha", "base_sha", "candidate_sha"):
+        value = getattr(state, field_name)
+        if value is not None and not SHA_RE.fullmatch(value):
+            raise AutopilotError(f"runtime {field_name} is not a full Git SHA")
+    if state.acceptance_sha256 is not None and not re.fullmatch(
+        r"[0-9a-f]{64}", state.acceptance_sha256
+    ):
+        raise AutopilotError("runtime acceptance hash is invalid")
+    if not isinstance(state.repair_cycle, int) or not 0 <= state.repair_cycle <= 3:
+        raise AutopilotError("runtime repair cycle is outside the bounded range")
+    if state.feature is not None and state.feature not in ALLOWLIST:
+        raise AutopilotError("runtime current feature is not allowlisted")
 
 
 class InstanceLock:
@@ -282,6 +330,19 @@ def git_sha(repo: Path, revision: str) -> str:
     return sha
 
 
+def git_is_ancestor(repo: Path, ancestor: str, descendant: str) -> bool:
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+        cwd=repo,
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+    if result.returncode not in {0, 1}:
+        raise AutopilotError("Git ancestry check failed")
+    return result.returncode == 0
+
+
 def changed_paths(repo: Path, base_sha: str, candidate_sha: str) -> list[str]:
     output = run_git(repo, "diff", "--name-only", f"{base_sha}..{candidate_sha}")
     return [_normalized_repo_path(line) for line in output.splitlines() if line.strip()]
@@ -358,8 +419,10 @@ def validate_review(document: Any, base_sha: str, candidate_sha: str) -> dict[st
             raise AutopilotError("review finding has invalid blocking/message fields")
     if not all(isinstance(item, str) and item for item in evidence):
         raise AutopilotError("review evidence entries are malformed")
-    if document["verdict"] != "safe_to_merge" or any(item["blocking"] for item in findings):
-        raise AutopilotError("independent review contains a blocking result")
+    if document["verdict"] != "safe_to_merge" or findings:
+        raise ReviewFindingsError(
+            "independent review is blocked or contains unresolved blocking findings"
+        )
     return document
 
 
@@ -387,7 +450,7 @@ def validate_gate_evidence(
         if item.candidate_sha != candidate_sha:
             raise AutopilotError("gate evidence was produced for a different candidate SHA")
         if item.exit_code != 0 or item.failed:
-            raise AutopilotError(f"gate {item.gate_id} failed")
+            raise GateFailureError(f"gate {item.gate_id} failed")
         if item.gate_id == "pytest" and item.skipped:
             raise AutopilotError("required pytest run contains skipped tests")
     if required_gate_ids is not None and ids != set(required_gate_ids):
@@ -514,14 +577,14 @@ class CodexAdapter:
             "workspace-write",
             "--ephemeral",
             "--json",
-            "-o",
-            str(output),
             "-C",
             str(worktree),
             "-",
         ]
         self._validate_argv(argv)
-        return self._invoke(argv, worktree, prompt)
+        event_stream = self._invoke(argv, worktree, prompt)
+        output.write_text(event_stream, encoding="utf-8", newline="\n")
+        return event_stream
 
     def review(
         self,
@@ -534,25 +597,28 @@ class CodexAdapter:
         argv = [
             self.executable,
             "exec",
-            "review",
-            "--base",
-            base_sha,
-            "-c",
-            'sandbox_mode="read-only"',
+            "--sandbox",
+            "read-only",
             "--ephemeral",
             "--output-schema",
             str(schema),
             "--json",
-            "-o",
-            str(output),
+            "-C",
+            str(worktree),
             "-",
         ]
         self._validate_argv(argv)
-        self._invoke(argv, worktree, prompt)
+        event_stream = self._invoke(argv, worktree, prompt)
         try:
-            document = json.loads(output.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
+            final_message = extract_final_agent_message(event_stream)
+            document = json.loads(final_message)
+        except (AutopilotError, json.JSONDecodeError) as exc:
             raise AutopilotError("review output is missing or malformed") from exc
+        output.write_text(
+            json.dumps(document, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
         return document
 
     def _invoke(self, argv: Sequence[str], cwd: Path, prompt: str) -> str:
@@ -568,6 +634,26 @@ class CodexAdapter:
         if exit_code != 0:
             raise AutopilotError(redact(f"Codex invocation failed after {duration:.1f}s: {output}"))
         return redact(output)
+
+
+def extract_final_agent_message(event_stream: str) -> str:
+    final_message: str | None = None
+    for line in event_stream.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        item = event.get("item") if isinstance(event, dict) else None
+        if (
+            event.get("type") == "item.completed"
+            and isinstance(item, dict)
+            and item.get("type") == "agent_message"
+            and isinstance(item.get("text"), str)
+        ):
+            final_message = item["text"]
+    if final_message is None:
+        raise AutopilotError("Codex event stream has no final agent message")
+    return final_message
 
 
 def sanitized_child_environment() -> dict[str, str]:
@@ -634,8 +720,9 @@ def feature_prompt(feature_id: str, feature: dict[str, Any], base_sha: str) -> s
     non_goals = "\n".join(f"- {item}" for item in feature["non_goals"])
     evidence = "\n".join(f"- {item}" for item in feature["evidence"])
     return f"""Implement only ShreeNexa {feature_id} from base {base_sha}.
-Read AGENTS.md and the repository source-of-truth documents first. Write the
-feature acceptance contract before code. Do not access any unrelated project.
+Read AGENTS.md, the controller-pinned feature acceptance contract, and the
+repository source-of-truth documents first. Do not modify the acceptance
+contract and do not access any unrelated project.
 
 Allowed product paths:
 {allowed}
@@ -772,6 +859,12 @@ class PilotController:
                 raise AutopilotError("main moved before the preserved candidate could resume")
             if git_sha(worktree, branch) != git_sha(worktree, "HEAD"):
                 raise AutopilotError("preserved feature branch moved away from its worktree HEAD")
+            if state.acceptance_sha256 is None:
+                state.acceptance_sha256 = self._recover_acceptance_contract(
+                    worktree, feature, base_sha
+                )
+                self.store.save(state)
+            self._verify_acceptance_contract(state, worktree, feature)
         else:
             base_sha = git_sha(self.repo, "main")
             branch = feature["branch"]
@@ -788,6 +881,11 @@ class PilotController:
             state.repair_cycle = 0
             state.phase = "implementing"
             state.evidence = []
+            state.acceptance_sha256 = None
+            self.store.save(state)
+            state.acceptance_sha256 = self._prepare_acceptance_contract(
+                worktree, feature_id, feature, base_sha
+            )
             self.store.save(state)
         report_dir = self.runtime_root / "reports" / feature_id
         report_dir.mkdir(parents=True, exist_ok=True)
@@ -809,8 +907,17 @@ class PilotController:
                             f"{state.blocker or 'previous evidence failed'}. All evidence will be "
                             "rerun for the new commit.\n"
                         )
+                    worker_head = git_sha(worktree, "HEAD")
                     self.codex.implement(worktree, prompt, worker_output)
-                    self._commit_candidate(state, worktree, feature_id, feature, report_dir)
+                    self._verify_acceptance_contract(state, worktree, feature)
+                    self._commit_candidate(
+                        state,
+                        worktree,
+                        feature_id,
+                        feature,
+                        report_dir,
+                        expected_worker_head=worker_head,
+                    )
                 candidate_sha = state.candidate_sha
                 assert candidate_sha is not None
                 try:
@@ -845,7 +952,7 @@ class PilotController:
                     self.store.save(state)
                     run_git(self.repo, "worktree", "remove", str(worktree))
                     return
-                except AutopilotError as exc:
+                except RepairableError as exc:
                     if state.repair_cycle >= int(self.policy.raw["max_repair_cycles"]):
                         raise AutopilotError(
                             f"{feature_id} exhausted three repair cycles: {exc}"
@@ -860,6 +967,78 @@ class PilotController:
             self.store.save(state)
             raise
 
+    def _prepare_acceptance_contract(
+        self, worktree: Path, feature_id: str, feature: dict[str, Any], base_sha: str
+    ) -> str:
+        relative = _normalized_repo_path(str(feature["acceptance_path"]))
+        path = worktree / relative
+        if path.exists():
+            raise AutopilotError(f"acceptance contract already exists unexpectedly: {relative}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        allowed = "\n".join(f"- `{item}`" for item in feature["allowed_paths"])
+        non_goals = "\n".join(f"- {item}" for item in feature["non_goals"])
+        evidence = "\n".join(f"- {item}" for item in feature["evidence"])
+        sources = "\n".join(f"- {item}" for item in feature.get("official_sources", []))
+        content = f"""# {feature_id} Acceptance Contract
+
+## Controller pin
+
+- Feature: {feature_id}
+- Integration base: `{base_sha}`
+- Manifest dependencies: {", ".join(feature["dependencies"])}
+- This contract is controller-owned. The worker may not edit it or its thresholds.
+
+## Allowed product paths
+
+{allowed}
+
+## Acceptance evidence
+
+{evidence}
+
+## Official sources requiring dated verification
+
+{sources}
+
+## Non-goals
+
+{non_goals}
+
+## Mandatory gates
+
+Every pinned controller gate, feature-specific evidence check, exact-SHA fresh
+review, clean scope/protected/control-plane diff, unchanged remote and main
+base, zero required test skips, and fast-forward-only integration must pass.
+"""
+        path.write_text(content, encoding="utf-8", newline="\n")
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        run_git(worktree, "add", "--", relative)
+        run_git(worktree, "commit", "-m", f"docs({feature_id}): pin acceptance contract")
+        return digest
+
+    def _verify_acceptance_contract(
+        self, state: RuntimeState, worktree: Path, feature: dict[str, Any]
+    ) -> None:
+        path = worktree / _normalized_repo_path(str(feature["acceptance_path"]))
+        if not path.is_file() or state.acceptance_sha256 is None:
+            raise AutopilotError("controller-pinned acceptance contract is missing")
+        if hashlib.sha256(path.read_bytes()).hexdigest() != state.acceptance_sha256:
+            raise AutopilotError("controller-pinned acceptance contract was modified")
+
+    def _recover_acceptance_contract(
+        self, worktree: Path, feature: dict[str, Any], base_sha: str
+    ) -> str:
+        relative = _normalized_repo_path(str(feature["acceptance_path"]))
+        head = git_sha(worktree, "HEAD")
+        if run_git(worktree, "rev-list", "--count", f"{base_sha}..{head}") != "1":
+            raise AutopilotError("cannot safely recover the acceptance-contract commit")
+        if changed_paths(worktree, base_sha, head) != [relative]:
+            raise AutopilotError("acceptance recovery found unexpected committed paths")
+        path = worktree / relative
+        if not path.is_file() or run_git(worktree, "status", "--porcelain"):
+            raise AutopilotError("acceptance recovery worktree is missing or dirty")
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
     def _commit_candidate(
         self,
         state: RuntimeState,
@@ -867,9 +1046,13 @@ class PilotController:
         feature_id: str,
         feature: dict[str, Any],
         report_dir: Path,
+        *,
+        expected_worker_head: str,
     ) -> None:
         base_sha = state.base_sha
         assert base_sha is not None
+        if git_sha(worktree, "HEAD") != expected_worker_head:
+            raise AutopilotError("worker created or moved commits; candidate history is untrusted")
         status = run_git(worktree, "status", "--porcelain")
         if not status:
             raise AutopilotError("worker produced no candidate changes")
@@ -916,6 +1099,7 @@ class PilotController:
             raise AutopilotError("validated project-state helper rejected the candidate update")
         self._update_project_progress(worktree, feature_id, feature)
         allowed.extend(self.policy.raw["controller_owned_progress"])
+        allowed.append(str(feature["acceptance_path"]))
         run_git(worktree, "add", "--all")
         run_git(worktree, "commit", "-m", f"feat({feature_id}): complete bounded feature")
         candidate_sha = git_sha(worktree, "HEAD")

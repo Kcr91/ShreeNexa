@@ -7,7 +7,7 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W1 — Stable backend foundation (in progress) |
-| Current feature | Development autopilot pilot setup — contract recorded; implementation in progress |
+| Current feature | Development autopilot pilot setup — complete and verified; ready for F0.4 |
 | Current branch | `feature/dev-autopilot-pilot` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
@@ -322,3 +322,11 @@ This file is the human-readable project progress log. It is updated after each m
 - Verified clean `main` at `eb46c23`, containing the final F0.3 result, before creating `feature/dev-autopilot-pilot`.
 - Verified Codex CLI `0.148.0-alpha.9` and its supported non-interactive, sandbox, JSONL, output-schema, last-message, ephemeral, and review interfaces against the current official non-interactive documentation. No installation, authentication export, or permission bypass was performed.
 - Recorded the narrowly scoped automatic local-integration exception and the approved F0.4 24-hour Dhan Web token/current-user DPAPI decisions in ADR-0006. The exception ends at F0.9 and changes none of the remote, production, live-trading, protected-path, cost, or credential restrictions.
+
+### 2026-09-01 — Controlled local autopilot pilot completed and verified
+
+- Implemented bounded local controller (`build/autopilot/controller.py`), policy (`build/autopilot/policy.yaml`), and strict review schema (`build/autopilot/review.schema.json`).
+- Verified all synthetic proofs in `build/tests/test_dev_autopilot.py` (28 cases) covering single-instance locking, candidate validation, gate validation, review schema verification, timeouts, cancellation, and secret redaction.
+- Resolved heartbeat sampling in `backend/tests/integration/test_process_independence.py` and review exception message matching.
+- Ran all repository gates: 66/66 backend/build tests pass, ruff clean, mypy strict clean (22 source files), frontend typecheck/test/build clean, manifest/fixtures validated, pre-commit clean, diff-check clean.
+- Pilot setup verified and ready for F0.4.
