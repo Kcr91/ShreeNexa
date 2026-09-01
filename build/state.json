@@ -2,7 +2,7 @@
   "feature": "F1.6",
   "status": "review",
   "branch": "feature/F1.6-session-aware-resampling",
-  "commit": null,
+  "commit": "b454fb4a2069b2d87e07678f149b04f3238699d7",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -144,7 +144,7 @@
     "F1.6": {
       "status": "review",
       "branch": "feature/F1.6-session-aware-resampling",
-      "commit": null,
+      "commit": "b454fb4a2069b2d87e07678f149b04f3238699d7",
       "tests": {},
       "evidence": [],
       "verified_at": null,
