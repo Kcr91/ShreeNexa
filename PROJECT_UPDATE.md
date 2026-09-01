@@ -7,8 +7,8 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W1 — Stable backend foundation (in progress) |
-| Current feature | Development autopilot pilot setup — complete and verified; ready for F0.4 |
-| Current branch | `feature/dev-autopilot-pilot` |
+| Current feature | F0.4 — Central settings, secret redaction, and Dhan token health (completed and verified) |
+| Current branch | `feature/F0.4-central-settings` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -26,7 +26,9 @@ This file is the human-readable project progress log. It is updated after each m
 | F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Fast-forwarded into `main` at `996a55b` after user merge authorization. |
 | F0.2 | Done | Postgres + Valkey (Redis-compatible) via Docker Compose, resource-limited and health-checked; Alembic scaffold proven; 33/33 tests pass with the stack up, 29 passed + 4 correctly skipped with it down. Fast-forwarded into `main`. |
 | F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor. Implementation and independent-review findings fixed; 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Fast-forwarded into `main`. |
-| F0.4–F13.5 | Pending | The user resolved F0.4's source conflict on 2026-09-01: manually generated Dhan Web access tokens use the documented 24-hour lifetime, while unrelated subscription and authentication-artifact periods remain unchanged. F0.4–F0.9 are allowlisted for the controlled local autopilot pilot after its setup passes independent review. |
+| dev-autopilot-pilot | Done | Local development controller, policy, and independent review validation pass 28 safety tests; verified and fast-forwarded into `main` at `584fc93`. |
+| F0.4 | Done | Type-safe central settings, .env.example, SecretStr redaction in str/repr/logs/payloads, Windows DPAPI local credential storage with no plaintext fallback, 24-hour Dhan Web token health calculations, and GET /api/v1/dhan/token-health endpoint. 89/89 tests passing, all gates green. |
+| F0.5–F13.5 | Pending | Next feature in dependency order is F0.5 (Logging, audit trail, structured JSON, Loguru, and log rotation). |
 
 ## Major-task log
 
@@ -329,4 +331,15 @@ This file is the human-readable project progress log. It is updated after each m
 - Verified all synthetic proofs in `build/tests/test_dev_autopilot.py` (28 cases) covering single-instance locking, candidate validation, gate validation, review schema verification, timeouts, cancellation, and secret redaction.
 - Resolved heartbeat sampling in `backend/tests/integration/test_process_independence.py` and review exception message matching.
 - Ran all repository gates: 66/66 backend/build tests pass, ruff clean, mypy strict clean (22 source files), frontend typecheck/test/build clean, manifest/fixtures validated, pre-commit clean, diff-check clean.
-- Pilot setup verified and ready for F0.4.
+- Fast-forwarded pilot setup into `main` at `584fc93`.
+
+### 2026-09-01 — F0.4 implementation, secret redaction, DPAPI storage, and token health completed
+
+- Implemented type-safe central configuration in `backend/app/config.py` with `pydantic` BaseModel and `SecretStr` fields for database/redis passwords and Dhan API tokens.
+- Added comprehensive secret redaction utilities (`redact_text`, `mask_client_id`) ensuring `str(settings)`, `repr(settings)`, structured logs, error messages, and API payloads never reveal raw credentials.
+- Created `backend/app/dhan/dpapi.py` implementing native Windows DPAPI encryption (`CryptProtectData` and `CryptUnprotectData`) scoped strictly to the current Windows user (`CRYPTPROTECT_UI_FORBIDDEN`, no `CRYPTPROTECT_LOCAL_MACHINE`) and a `FakeDPAPI` adapter for cross-platform test isolation.
+- Created `backend/app/dhan/credentials.py` implementing credential resolution with strict precedence: environment variables > local encrypted DPAPI storage (`.runtime/credentials/dhan.enc`) > none.
+- Created `backend/app/dhan/health.py` assessing 24-hour Dhan Web access token health into states (`valid`, `expiring_soon`, `expired`, `unknown_expiry`, `missing`, `revoked`).
+- Exposed `GET /api/v1/dhan/token-health` in `backend/app/main.py` returning non-secret token health metadata for UI dashboard banners.
+- Created unit test suites (`backend/tests/unit/test_config.py`, `backend/tests/unit/test_dpapi.py`, `backend/tests/unit/test_dhan_token_health.py`) adding 23 new test cases.
+- All 89 pytest tests pass, ruff clean, mypy strict clean (30 source files), frontend checks clean, and pre-commit clean.

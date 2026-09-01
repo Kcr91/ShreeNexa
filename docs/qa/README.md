@@ -15,6 +15,10 @@
 - [M0.4 — Repository guidance and QA rules](acceptance/M0.4.md)
 - [M0.5 — Feature manifest and validated state helper](acceptance/M0.5.md)
 - [M0.6 — First green baseline and hashed reference fixtures](acceptance/M0.6.md)
+- [F0.1 — Repository standardization and fresh-clone baseline](acceptance/F0.1.md)
+- [F0.2 — Local Postgres and Redis services via Docker Compose](acceptance/F0.2.md)
+- [F0.3 — Process skeletons and durable heartbeat contract](acceptance/F0.3.md)
 - [Development autopilot pilot setup](acceptance/dev-autopilot-pilot.md)
+- [F0.4 — Central settings, secret redaction, and Dhan token health](acceptance/F0.4.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.

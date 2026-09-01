@@ -1,7 +1,7 @@
 {
-  "feature": "dev-autopilot-pilot",
+  "feature": "F0.4",
   "status": "done",
-  "branch": "feature/dev-autopilot-pilot",
+  "branch": "feature/F0.4-central-settings",
   "commit": null,
   "tests": {},
   "started_at": "2026-09-01",

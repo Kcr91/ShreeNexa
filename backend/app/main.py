@@ -17,6 +17,8 @@ from fastapi import FastAPI
 
 from app.contracts import heartbeat as hb
 from app.contracts.process_loop import HEARTBEAT_INTERVAL_S
+from app.dhan.credentials import resolve_dhan_credentials
+from app.dhan.health import DhanTokenHealth, check_token_health
 
 PROCESS_NAME = "api"
 
@@ -73,6 +75,13 @@ def healthz() -> dict[str, object]:
             for r in rows
         ],
     }
+
+
+@app.get("/api/v1/dhan/token-health", response_model=DhanTokenHealth)
+def get_dhan_token_health() -> DhanTokenHealth:
+    """Return non-secret Dhan token health and expiry metadata for dashboard banners."""
+    creds = resolve_dhan_credentials()
+    return check_token_health(creds)
 
 
 def run() -> None:
