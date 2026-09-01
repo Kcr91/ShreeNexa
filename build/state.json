@@ -2,7 +2,7 @@
   "feature": "F1.4",
   "status": "review",
   "branch": "feature/F1.4-expired-options-backfill",
-  "commit": null,
+  "commit": "287b66c5e2ec8b264b2dca97210e470875a50e9a",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -126,7 +126,7 @@
     "F1.4": {
       "status": "review",
       "branch": "feature/F1.4-expired-options-backfill",
-      "commit": null,
+      "commit": "287b66c5e2ec8b264b2dca97210e470875a50e9a",
       "tests": {},
       "evidence": [],
       "verified_at": null,
