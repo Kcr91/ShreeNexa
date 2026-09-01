@@ -1,3 +1,17 @@
-"""worker: owns backfills, corrections, backtests, screeners, parameter
-sweeps, scheduled/queued jobs (per ADR-0002). Not yet implemented -- see
-backend/app/worker/core.py and Epic 1+."""
+"""Worker process services, daily backfill, and batch ingestion tasks."""
+
+from app.worker.daily_backfill import (
+    AdjustmentStatus,
+    DailyBackfillManager,
+    DailyBackfillTask,
+    parse_dhan_daily_candles,
+    save_raw_ingest,
+)
+
+__all__ = [
+    "AdjustmentStatus",
+    "DailyBackfillManager",
+    "DailyBackfillTask",
+    "parse_dhan_daily_candles",
+    "save_raw_ingest",
+]

@@ -46,18 +46,20 @@ class BarRecord(BaseModel):
         }
 
 
-BAR_SCHEMA_PYARROW = pa.schema([
-    ("timestamp", pa.timestamp("ms", tz="UTC")),
-    ("exchange_segment", pa.string()),
-    ("security_id", pa.string()),
-    ("symbol", pa.string()),
-    ("open", pa.float64()),
-    ("high", pa.float64()),
-    ("low", pa.float64()),
-    ("close", pa.float64()),
-    ("volume", pa.int64()),
-    ("open_interest", pa.int64()),
-])
+BAR_SCHEMA_PYARROW = pa.schema(
+    [
+        ("timestamp", pa.timestamp("ms", tz="UTC")),
+        ("exchange_segment", pa.string()),
+        ("security_id", pa.string()),
+        ("symbol", pa.string()),
+        ("open", pa.float64()),
+        ("high", pa.float64()),
+        ("low", pa.float64()),
+        ("close", pa.float64()),
+        ("volume", pa.int64()),
+        ("open_interest", pa.int64()),
+    ]
+)
 
 
 def bars_to_arrow_table(bars: list[BarRecord]) -> pa.Table:

@@ -1,8 +1,8 @@
 {
-  "feature": "F1.1",
+  "feature": "F1.2",
   "status": "review",
-  "branch": "feature/F1.1-duckdb-parquet-warehouse",
-  "commit": "aea1c66cf17fbbcae9a0397505a76985a9df61c7",
+  "branch": "feature/F1.2-dhan-daily-backfill",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -100,6 +100,15 @@
       "status": "review",
       "branch": "feature/F1.1-duckdb-parquet-warehouse",
       "commit": "aea1c66cf17fbbcae9a0397505a76985a9df61c7",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F1.2": {
+      "status": "review",
+      "branch": "feature/F1.2-dhan-daily-backfill",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

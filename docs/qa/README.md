@@ -27,5 +27,6 @@
 - [F0.8 — Index Constituent Ingestion and Point-in-Time Membership](acceptance/F0.8.md)
 - [F0.9 — Connection Budget Manager](acceptance/F0.9.md)
 - [F1.1 — Immutable DuckDB/Parquet Bar Store](acceptance/F1.1.md)
+- [F1.2 — Dhan Daily Backfill Since Inception](acceptance/F1.2.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.

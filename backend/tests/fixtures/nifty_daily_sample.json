@@ -1,0 +1,35 @@
+{
+  "symbol": "NIFTY 50",
+  "security_id": "13",
+  "exchange_segment": "IDX_I",
+  "instrument_type": "INDEX",
+  "candles": [
+    {
+      "timestamp": "2026-08-03T03:45:00+00:00",
+      "open": 24800.50,
+      "high": 24950.25,
+      "low": 24780.00,
+      "close": 24920.75,
+      "volume": 0,
+      "open_interest": 0
+    },
+    {
+      "timestamp": "2026-08-04T03:45:00+00:00",
+      "open": 24930.00,
+      "high": 25010.80,
+      "low": 24890.10,
+      "close": 24995.50,
+      "volume": 0,
+      "open_interest": 0
+    },
+    {
+      "timestamp": "2026-08-05T03:45:00+00:00",
+      "open": 25000.00,
+      "high": 25080.00,
+      "low": 24940.50,
+      "close": 25050.20,
+      "volume": 0,
+      "open_interest": 0
+    }
+  ]
+}
