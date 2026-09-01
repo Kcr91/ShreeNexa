@@ -1,8 +1,8 @@
 {
-  "feature": "F1.9",
+  "feature": "F1.7",
   "status": "review",
-  "branch": "feature/F1.9-continuous-option-surface",
-  "commit": "b3acc1fe58e5f5643485038f8319f07fe71578ff",
+  "branch": "feature/F1.7-data-quality-reporting",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -152,8 +152,8 @@
     },
     "F1.7": {
       "status": "review",
-      "branch": "feature/F1.7-corporate-action-adjustment",
-      "commit": "f1f19689408bcfc1f34eeeb965a9538a7cbb0299",
+      "branch": "feature/F1.7-data-quality-reporting",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

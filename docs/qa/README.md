@@ -32,7 +32,7 @@
 - [F1.4 — Expired-Option 30-Day Backfill and ATM Limits](acceptance/F1.4.md)
 - [F1.5 — Trading Sessions, Holidays, and Calendar Versions](acceptance/F1.5.md)
 - [F1.6 — Session-Aware Bar Resampling](acceptance/F1.6.md)
-- [F1.7 — Corporate Action Adjustment Pipeline](acceptance/F1.7.md)
+- [F1.7 — Data-Quality Reporting for Gaps, Duplicates, and Outliers](acceptance/F1.7.md)
 - [F1.8 — Continuous Synthetic Futures Series Generator](acceptance/F1.8.md)
 - [F1.9 — Synthetic Continuous Option Surface Generator](acceptance/F1.9.md)
 

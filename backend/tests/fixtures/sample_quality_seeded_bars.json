@@ -1,0 +1,67 @@
+{
+  "symbol": "TCS",
+  "exchange_segment": "NSE_EQ",
+  "seeded_defects": {
+    "gap_at": "2026-08-03T04:30:00+00:00",
+    "duplicate_at": "2026-08-03T04:45:00+00:00",
+    "outlier_at": "2026-08-03T05:00:00+00:00",
+    "zero_volume_at": "2026-08-03T05:15:00+00:00",
+    "holiday_bar_at": "2026-08-08T04:00:00+00:00"
+  },
+  "bars": [
+    {
+      "timestamp": "2026-08-03T03:45:00+00:00",
+      "open": 4200.0,
+      "high": 4210.0,
+      "low": 4195.0,
+      "close": 4205.0,
+      "volume": 5000,
+      "open_interest": 0
+    },
+    {
+      "timestamp": "2026-08-03T04:45:00+00:00",
+      "open": 4205.0,
+      "high": 4215.0,
+      "low": 4200.0,
+      "close": 4210.0,
+      "volume": 3000,
+      "open_interest": 0
+    },
+    {
+      "timestamp": "2026-08-03T04:45:00+00:00",
+      "open": 4205.0,
+      "high": 4215.0,
+      "low": 4200.0,
+      "close": 4210.0,
+      "volume": 3000,
+      "open_interest": 0
+    },
+    {
+      "timestamp": "2026-08-03T05:00:00+00:00",
+      "open": 4210.0,
+      "high": 5500.0,
+      "low": 4205.0,
+      "close": 5450.0,
+      "volume": 8000,
+      "open_interest": 0
+    },
+    {
+      "timestamp": "2026-08-03T05:15:00+00:00",
+      "open": 4215.0,
+      "high": 4215.0,
+      "low": 4215.0,
+      "close": 4215.0,
+      "volume": 0,
+      "open_interest": 0
+    },
+    {
+      "timestamp": "2026-08-08T04:00:00+00:00",
+      "open": 4220.0,
+      "high": 4230.0,
+      "low": 4215.0,
+      "close": 4225.0,
+      "volume": 1000,
+      "open_interest": 0
+    }
+  ]
+}

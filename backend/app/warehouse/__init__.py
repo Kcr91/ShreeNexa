@@ -1,4 +1,4 @@
-"""Immutable DuckDB/Parquet historical warehouse package."""
+"""Immutable DuckDB/Parquet historical warehouse and data quality reporting package."""
 
 from app.warehouse.manifest import (
     CorrectionMetadata,
@@ -7,6 +7,14 @@ from app.warehouse.manifest import (
     WarehouseManifest,
 )
 from app.warehouse.publisher import WarehousePublisher
+from app.warehouse.quality import (
+    CoverageSummary,
+    DataQualityAnalyzer,
+    DataQualityReport,
+    DefectRecord,
+    DefectType,
+    OriginCategory,
+)
 from app.warehouse.reader import WarehouseReader
 from app.warehouse.schema import (
     BAR_SCHEMA_PYARROW,
@@ -22,8 +30,14 @@ __all__ = [
     "OPTION_BAR_SCHEMA_PYARROW",
     "BarRecord",
     "CorrectionMetadata",
+    "CoverageSummary",
     "CurrentPointer",
+    "DataQualityAnalyzer",
+    "DataQualityReport",
+    "DefectRecord",
+    "DefectType",
     "OptionBarRecord",
+    "OriginCategory",
     "PartitionMetadata",
     "WarehouseManifest",
     "WarehousePublisher",

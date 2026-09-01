@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.8 | Done | Fast-forwarded into `main` at `a7dd6a3` after review. |
-| F1.9 | Ready for review | Synthetic continuous option surface generator (fixed moneyness, constant maturity), BSM/Black-76 pricer, high-precision Newton-Raphson/bisection IV solver ($\le 10^{-5}$ tol), analytical Greeks ($\Delta, \Gamma, \Theta, \mathcal{V}, \rho$), and put-call parity validation. 233/233 tests passing. |
+| F1.9 | Done | Fast-forwarded into `main` at `efc592f` after review. |
+| F1.7 | Ready for review | Data-quality reporting engine for gaps, duplicates, price outliers, zero volume, unexpected dates/holidays, stale partitions, and universe/date coverage metrics, with distinct classification of upstream source gaps vs warehouse integrity errors. 236/236 tests passing. |
 | F2.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -640,4 +640,19 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_options_analytics.py`: 4 passed
 - Full repository test suite: 233 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (89 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `efc592f`.
+
+### 2026-09-01 — F1.7 Data-quality reporting engine completed
+
+- Created independent reference test fixture with seeded defects `backend/tests/fixtures/sample_quality_seeded_bars.json`.
+- Implemented `backend/app/warehouse/quality.py`:
+  - `DefectType` (`TIMESTAMP_GAP`, `DUPLICATE_TIMESTAMP`, `PRICE_OUTLIER`, `ZERO_VOLUME_ACTIVE`, `UNEXPECTED_SESSION_DATE`, `STALE_PARTITION`).
+  - `OriginCategory` (`UPSTREAM_SOURCE`, `WAREHOUSE_INTEGRITY`).
+  - `DefectRecord`, `CoverageSummary`, and `DataQualityReport` data models.
+  - `DataQualityAnalyzer` evaluating bar sequences against trading calendar session bounds, duplicate timestamps, $>20\%$ price jumps, zero-volume candles, and intraday gaps.
+- Exported data quality reporting services in `backend/app/warehouse/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F1.7.md` and added 3 new test cases verifying 100% seeded defect detection, origin classification, and multi-symbol report generation:
+  - `backend/tests/unit/test_data_quality_analyzer.py`: 3 passed
+- Full repository test suite: 236 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (91 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
