@@ -8,7 +8,17 @@ dependencies = [
     "sqlalchemy>=2.0,<3.0",
     "alembic>=1.14,<2.0",
     "redis>=5.2,<6.0",
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.34,<1.0",
+    "psutil>=6.1,<7.0",
 ]
+
+[project.scripts]
+api = "app.cli:run_api"
+engine = "app.cli:run_engine"
+feedd = "app.cli:run_feedd"
+worker = "app.cli:run_worker"
+supervisor = "app.cli:run_supervisor"
 
 [dependency-groups]
 dev = [
@@ -17,6 +27,7 @@ dev = [
     "pytest>=8.4,<9.0",
     "pre-commit>=4.0,<5.0",
     "pyyaml>=6.0,<7.0",
+    "types-psutil>=6.1,<7.0",
 ]
 
 [build-system]

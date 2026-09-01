@@ -1,7 +1,7 @@
 {
-  "feature": "F0.2",
+  "feature": "F0.3",
   "status": "done",
-  "branch": "feature/F0.2-postgres-redis-compose",
+  "branch": "feature/F0.3-process-skeletons",
   "commit": null,
   "tests": {},
   "started_at": "2026-09-01",

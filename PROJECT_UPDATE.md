@@ -7,8 +7,8 @@ This file is the human-readable project progress log. It is updated after each m
 | Item | Status |
 |---|---|
 | Current release wave | W1 — Stable backend foundation (in progress) |
-| Current feature | F0.2 — Review passed; merged |
-| Current branch | `main` |
+| Current feature | F0.3 — Review passed; ready to merge |
+| Current branch | `feature/F0.3-process-skeletons` |
 | Product runtime | Not implemented |
 | Live trading | Not implemented and not authorized |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
@@ -25,7 +25,8 @@ This file is the human-readable project progress log. It is updated after each m
 | M0.6 | Done | First green baseline proven via real fresh-clone bootstrap; fixtures frozen by hash. Fast-forwarded into `main` at `fef0814` after user merge authorization. **W0 (M0.1–M0.6) complete.** |
 | F0.1 | Done | uv-managed Python env, frontend Node workspace, pre-commit, and CI skeleton all pass; fresh-clone bootstrap re-verified. Fast-forwarded into `main` at `996a55b` after user merge authorization. |
 | F0.2 | Done | Postgres + Valkey (Redis-compatible) via Docker Compose, resource-limited and health-checked; Alembic scaffold proven; 33/33 tests pass with the stack up, 29 passed + 4 correctly skipped with it down. Fast-forwarded into `main`. |
-| F0.3–F13.5 | Pending | F0.3 (api/engine/feedd/worker process skeletons) is next. |
+| F0.3 | Done | Four process skeletons + durable heartbeat contract + local-dev supervisor; found and fixed a real Windows/uv trampoline process-supervision bug. 38/38 tests pass with the stack up, 31 passed + 7 correctly skipped with it down. Ready to merge. |
+| F0.4–F13.5 | Pending | F0.4 (central settings, `.env.example`, secret redaction, Dhan token-expiry banner) is next. |
 
 ## Major-task log
 
@@ -268,6 +269,30 @@ This file is the human-readable project progress log. It is updated after each m
 - Reviewed the complete branch against `main`: only `backend/alembic/`, `backend/tests/integration/`, `infra/docker-compose.yml`, `pyproject.toml`/`uv.lock`, and `docs/qa/acceptance/F0.2.md` changed — no protected path, no product schema, no secret (the local dev Postgres password is a clearly-labeled non-secret, reachable only inside the Docker network on `127.0.0.1`).
 - Re-ran the full suite with the stack both up and down: all green.
 - Fast-forwarded `feature/F0.2-postgres-redis-compose` into `main`. **F0.2 done.**
+
+### 2026-09-01 — F0.3 started
+
+- Created `feature/F0.3-process-skeletons` from the merged `main`. Reviewed ADR-0002 (four-process runtime) before implementation. Recorded the F0.3 acceptance contract, including new namespace decisions (`app.feedd`, `app.worker`), the local-dev-only custom supervisor (not NSSM/a Windows Service), and the durable-heartbeat-not-in-memory design.
+
+### 2026-09-01 — F0.3 process skeletons and heartbeat contract completed
+
+- Added `backend/app/contracts/heartbeat.py` (SQLAlchemy Core `process_heartbeat` table: `process_name` PK, `pid`, `status`, `started_at`, `last_heartbeat_at`) and the first real product Alembic migration creating it.
+- Added the four process entry points (`app/main.py` for `api` with a `/healthz` route, `app/engine/core.py`, `app/feedd/core.py`, `app/worker/core.py`), each doing nothing but write a durable heartbeat — no capability logic, per the acceptance contract's scope decisions. Wired console scripts `api`, `engine`, `feedd`, `worker` via `app.cli`, matching ADR-0004's exact command names.
+- Added `app/cli/supervisor.py`: a minimal local-dev supervisor that starts all four and restarts one that exits unexpectedly, console-scripted as `supervisor`.
+- Added `backend/tests/unit/test_process_import_boundaries.py`: a static (AST-based, not runtime-import-based) proof that no process entry module imports another's.
+
+### 2026-09-01 — F0.3 found and fixed a real Windows/uv process-supervision bug
+
+- The literal proof test (kill `api`, confirm `engine`'s heartbeat is unaffected) was badly flaky at first — investigated rather than papering over it with retries. Root cause: **uv's Windows venv `python.exe` is a "trampoline"** that re-spawns the real CPython interpreter as a *child* process rather than exec-replacing itself (Windows has no POSIX `exec`). `subprocess.Popen([sys.executable, ...]).pid` is therefore the trampoline's pid, not the actual process's — and killing only the trampoline (`Popen.kill()`) left the real `engine`/`api` process running as an **orphan**, which then kept writing heartbeats and collided with whatever the next test spawned for the same `process_name` row. This also broke the supervisor's own crash detection: the trampoline could report an exit independently of its real child's lifetime, causing false-positive "restarts" of a perfectly healthy process.
+- Fixed properly, not worked around: added `app/contracts/proc_utils.py` (`resolve_real_pid` via `psutil` child-process discovery, `is_alive`, `kill_tree`) and rewired the supervisor and all three process-independence tests to track and kill the *real* descendant pid, never the trampoline's. Added `psutil`/`types-psutil` as dependencies (real, since the supervisor is product code, not test-only).
+- Re-verified after the fix: all three tests pass reliably across repeated runs; confirmed zero orphaned processes remain after each run via `Get-CimInstance Win32_Process`.
+
+### 2026-09-01 — F0.3 verification completed
+
+- `uv run alembic -c backend/alembic.ini downgrade -1` cleanly drops `process_heartbeat`; `upgrade head` recreates it — both directions proven, not just upgrade.
+- Full suite with the stack up: 38 passed. With it down: 31 passed + 7 correctly **skipped** (named reasons), matching F0.2's established pattern.
+- `ruff check .`, `mypy backend --strict`, and `pre-commit run --all-files` all clean (mypy strict now covers 22 source files including tests, since `mypy backend --strict`'s CLI argument overrides the `[tool.mypy] files` config — found and fixed several real strict-mode gaps in the new test code, not just suppressed them).
+- Scope check: no protected path exists yet (`engine/risk.py`, `engine/broker.py` are not created by this feature), no Dhan connection, no real job/strategy logic.
 
 ## Known prerequisites and blockers
 
