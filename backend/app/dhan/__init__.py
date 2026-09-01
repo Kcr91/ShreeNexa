@@ -17,6 +17,20 @@ from app.dhan.exceptions import (
     DhanTimeoutError,
 )
 from app.dhan.health import DhanTokenHealth, check_token_health
+from app.dhan.instruments import (
+    IngestSummary,
+    InstrumentRecord,
+    InstrumentSearchQuery,
+    get_distinct_segments,
+    get_expiries_for_underlying,
+    get_instrument,
+    get_option_chain_instruments,
+    ingest_instruments,
+    instrument_table,
+    parse_scrip_master_csv,
+    resolve_exchange_segment,
+    search_instruments,
+)
 from app.dhan.limiter import (
     InMemoryTokenBucket,
     RedisTokenBucket,
@@ -72,6 +86,9 @@ __all__ = [
     "DhanTransport",
     "HTTPTransport",
     "InMemoryTokenBucket",
+    "IngestSummary",
+    "InstrumentRecord",
+    "InstrumentSearchQuery",
     "MockTransport",
     "RateLimitSpec",
     "RedisTokenBucket",
@@ -80,7 +97,16 @@ __all__ = [
     "clear_dhan_credentials_dpapi",
     "get_category_for_endpoint",
     "get_dhan_rate_limiter",
+    "get_distinct_segments",
+    "get_expiries_for_underlying",
+    "get_instrument",
+    "get_option_chain_instruments",
+    "ingest_instruments",
+    "instrument_table",
     "load_dhan_limits",
+    "parse_scrip_master_csv",
     "resolve_dhan_credentials",
+    "resolve_exchange_segment",
+    "search_instruments",
     "store_dhan_credentials_dpapi",
 ]

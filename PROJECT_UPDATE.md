@@ -34,8 +34,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | dev-autopilot-pilot | Recovered | Autopilot evidence controls and state reconciliation hardened; fast-forwarded into `main` at `4ada9ca`. |
 | F0.4 | Blocked after retrospective revalidation | Implementation is present at `96eab70`. An unchanged rerun reached 89/89 tests, but the exact SHA fails the current pre-commit formatting gate; the first test attempt also had one process-startup timeout. No historical review report existed. |
 | F0.5 | Blocked pending evidence | Implementation is present at `c6fd219`. The seven current fixtures are generated/synthetic and do not satisfy the recorded-cassette acceptance contract. |
-| F0.6 | Ready for review | Dated rate limits in YAML, atomic Lua Redis token bucket, in-memory fallback, jittered backoff, Dhan client integration, and 147/147 tests passing (including Hypothesis property and concurrency proofs). |
-| F0.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
+| F0.7 | Ready for review | PostgreSQL instrument table migration, detailed Dhan CSV master parser with dynamic segment discovery and schema drift tolerance, ON CONFLICT upsert, typed search, and FastAPI REST endpoints. 163/163 tests passing. |
+| F0.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -406,4 +407,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_dhan_architecture_no_bypass.py`: 2 passed (AST check verifying zero un-rate-limited HTTP calls in `backend/app`)
 - Full repository test suite: 147 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (43 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `d4d89d8`.
+
+### 2026-09-01 — F0.7 Dhan detailed instrument master ingestion, PostgreSQL migration, and typed search completed
+
+- Created PostgreSQL table `instrument` with composite primary key `(exchange_segment, security_id)` and indexes via Alembic migration `7a8b9c0d1e2f_create_instrument_table.py` (tested upgrade and downgrade reversibility).
+- Implemented `backend/app/dhan/instruments.py`:
+  - Typed models `InstrumentRecord`, `InstrumentSearchQuery`, and `IngestSummary`.
+  - Dynamic segment mapper `resolve_exchange_segment` supporting all Indian exchange codes (`IDX_I`, `NSE_EQ`, `NSE_FNO`, `NSE_CURRENCY`, `BSE_EQ`, `MCX_COMM`, `BSE_CURRENCY`, `BSE_FNO`) and unannounced future codes without hardcoding numeric assumptions.
+  - CSV parser with alias/header mapping supporting Dhan's detailed `SEM_*` headers and simplified headers with schema drift tolerance.
+  - PostgreSQL batch upsert via `ON CONFLICT (exchange_segment, security_id) DO UPDATE` for idempotent daily syncing.
+  - Typed search, option chain lookup sorted by strike, distinct segments listing, and underlying expiry discovery.
+- Implemented REST endpoints in `backend/app/api/instruments.py` and mounted router to FastAPI `app` in `backend/app/main.py`:
+  - `GET /api/v1/instruments/search`
+  - `GET /api/v1/instruments/segments`
+  - `GET /api/v1/instruments/options/chain`
+  - `GET /api/v1/instruments/options/expiries`
+  - `GET /api/v1/instruments/{exchange_segment}/{security_id}`
+- Authored acceptance contract `docs/qa/acceptance/F0.7.md` and added 16 new test cases across unit, integration, and API suites:
+  - `backend/tests/unit/test_dhan_instruments_parser.py`: 6 passed
+  - `backend/tests/integration/test_dhan_instruments_db.py`: 3 passed
+  - `backend/tests/unit/test_dhan_instruments_api.py`: 7 passed
+- Full repository test suite: 163 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (50 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

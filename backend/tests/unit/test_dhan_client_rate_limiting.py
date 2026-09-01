@@ -88,9 +88,7 @@ def test_client_raises_rate_limit_error_on_limiter_exhaustion() -> None:
     limiter = InMemoryTokenBucket(config)
     transport = CassetteTransport(cassette_dir=CASSETTES_DIR)
     creds = DhanCredentials(client_id="1000000001", access_token=SecretStr("mock_valid_token"))
-    client = DhanRestClient(
-        credentials=creds, transport=transport, limiter=limiter, timeout=0.05
-    )
+    client = DhanRestClient(credentials=creds, transport=transport, limiter=limiter, timeout=0.05)
 
     # 1st call consumes the single token
     client.get_fund_limits()

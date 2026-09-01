@@ -1,8 +1,8 @@
 {
-  "feature": "F0.6",
+  "feature": "F0.7",
   "status": "review",
-  "branch": "feature/F0.6-dhan-rate-limiter",
-  "commit": "286ec04663c6395fbce26162ae5cf2f4be3c1626",
+  "branch": "feature/F0.7-dhan-instrument-master",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -64,6 +64,15 @@
       "status": "review",
       "branch": "feature/F0.6-dhan-rate-limiter",
       "commit": "286ec04663c6395fbce26162ae5cf2f4be3c1626",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F0.7": {
+      "status": "review",
+      "branch": "feature/F0.7-dhan-instrument-master",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
