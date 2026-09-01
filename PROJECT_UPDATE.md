@@ -37,8 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F0.9 | Ready for review | Central connection-budget manager for Dhan feed and depth WebSocket sockets, conservative shared 5-socket ceiling (3 feed / 2 depth), independent pool mode switch, typed lease lifecycle, FastAPI monitoring endpoint, and Hypothesis property proofs. 187/187 tests passing. **W1 (F0.1–F0.9) backend foundation complete.** |
-| F1.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F0.9 | Done | Fast-forwarded into `main` at `f7c0d3d` after review. **W1 (F0.1–F0.9) backend foundation complete.** |
+| F1.1 | Ready for review | Immutable DuckDB/Parquet bar store with typed schema, partition manifest, atomic staging and promotion, `current.json` pointer replacement, partition-pruned DuckDB queries, correction lineage, and rollback. 195/195 tests passing. |
+| F1.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -476,4 +477,33 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_feed_budget_api.py`: 1 passed
 - Full repository test suite: 187 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (62 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `f7c0d3d`. **W1 (F0.1–F0.9) complete.**
+
+### 2026-09-01 — F1.1 Immutable DuckDB/Parquet bar store completed
+
+- Implemented `backend/app/warehouse/schema.py`:
+  - `BarRecord` Pydantic model with UTC-normalized timestamp conversions.
+  - `BAR_SCHEMA_PYARROW` standardized PyArrow schema (`timestamp` ms UTC, `exchange_segment`, `security_id`, `symbol`, `open`, `high`, `low`, `close`, `volume`, `open_interest`).
+  - `bars_to_arrow_table` vector converter.
+- Implemented `backend/app/warehouse/manifest.py`:
+  - `PartitionMetadata`, `CorrectionMetadata`, and `WarehouseManifest` with deterministic `to_canonical_json` and SHA-256 computation.
+  - `CurrentPointer` contract for `warehouse/current.json` with generation tracking.
+- Implemented `backend/app/warehouse/publisher.py`:
+  - `WarehousePublisher` with data root initialization (`.shreenexa-data-root.json` marker).
+  - Staging area writes in `staging/<warehouse_version>/`, partition hashing, and metadata generation.
+  - Atomic directory promotion from staging into `warehouse/versions/<warehouse_version>/`.
+  - Canonical manifest generation and frozen storage in `warehouse/manifests/manifest-<warehouse_version>.json`.
+  - Atomic pointer replacement (`current.json.tmp` -> `current.json`) with incremented pointer generation.
+  - Validated rollback workflow `rollback_to` updating generation without mutating partitions.
+- Implemented `backend/app/warehouse/reader.py`:
+  - `WarehouseReader` reading `current.json` and pinning warehouse version and manifest digest.
+  - Partition pruning engine `prune_partitions` filtering by exchange segment, symbols, and ISO timestamp intervals before executing scans.
+  - Analytical DuckDB query engine `query_bars` reading pruned Parquet files and applying SQL predicates.
+- Exported all warehouse symbols in `backend/app/warehouse/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F1.1.md` and added 8 new test cases across schema, manifest, and integration suites:
+  - `backend/tests/unit/test_warehouse_schema.py`: 3 passed
+  - `backend/tests/unit/test_warehouse_manifest.py`: 2 passed
+  - `backend/tests/integration/test_warehouse_atomic_writes.py`: 3 passed (end-to-end write and DuckDB query round-trip, partition pruning, interrupted write safety, corrections, and rollback)
+- Full repository test suite: 195 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (70 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
