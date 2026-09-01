@@ -2,7 +2,7 @@
   "feature": "F1.1",
   "status": "review",
   "branch": "feature/F1.1-duckdb-parquet-warehouse",
-  "commit": null,
+  "commit": "aea1c66cf17fbbcae9a0397505a76985a9df61c7",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -99,7 +99,7 @@
     "F1.1": {
       "status": "review",
       "branch": "feature/F1.1-duckdb-parquet-warehouse",
-      "commit": null,
+      "commit": "aea1c66cf17fbbcae9a0397505a76985a9df61c7",
       "tests": {},
       "evidence": [],
       "verified_at": null,
