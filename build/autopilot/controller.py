@@ -46,6 +46,9 @@ SECRET_SCAN_ASSIGNMENT_RE = re.compile(
     r"\s*[:=]\s*['\"]?([^'\"\s,;]+)"
 )
 SAFE_TEST_VALUE_RE = re.compile(r"(?i)^(fake|test|dummy|example|placeholder|changeme|redacted)")
+DHAN_CLIENT_ID_RE = re.compile(
+    r"(?i)['\"]?(?:dhan[-_ ]?)?client[-_ ]?id['\"]?\s*[:=]\s*['\"]?(\d{10})"
+)
 
 
 class AutopilotError(RuntimeError):
@@ -105,6 +108,12 @@ class RuntimeState:
     active_pid: int | None = None
     blocker: str | None = None
     implementation_session_id: str | None = None
+    expected_main_sha: str | None = None
+    review_session_id: str | None = None
+    review_sha256: str | None = None
+    gate_manifest_sha256: str | None = None
+    feature_evidence_sha256: str | None = None
+    secret_scan_sha256: str | None = None
     updated_at: str | None = None
 
 
@@ -139,6 +148,32 @@ def atomic_write_json(path: Path, value: Any) -> None:
     finally:
         with contextlib.suppress(FileNotFoundError):
             temp.unlink()
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load_bound_json(
+    repo: Path, document: dict[str, Any], path_key: str, hash_key: str, label: str
+) -> tuple[Path, object]:
+    raw = document[path_key]
+    if not isinstance(raw, str):
+        raise AutopilotError(f"recovery-needed: {label} path is malformed")
+    path = (repo / _normalized_repo_path(raw)).resolve()
+    expected_hash = document[hash_key]
+    if (
+        repo.resolve() not in path.parents
+        or not path.is_file()
+        or not isinstance(expected_hash, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", expected_hash)
+        or sha256_file(path) != expected_hash
+    ):
+        raise AutopilotError(f"recovery-needed: {label} is missing or changed")
+    try:
+        return path, json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise AutopilotError(f"recovery-needed: {label} is malformed") from exc
 
 
 class RuntimeStore:
@@ -189,7 +224,7 @@ def validate_runtime_state(state: RuntimeState) -> None:
         raise AutopilotError("runtime implemented feature contains an invalid SHA")
     if any(state.implemented.get(key) != value for key, value in state.completed.items()):
         raise AutopilotError("verified runtime completion is not present in implemented Git state")
-    for field_name in ("setup_sha", "base_sha", "candidate_sha"):
+    for field_name in ("setup_sha", "base_sha", "candidate_sha", "expected_main_sha"):
         value = getattr(state, field_name)
         if value is not None and not SHA_RE.fullmatch(value):
             raise AutopilotError(f"runtime {field_name} is not a full Git SHA")
@@ -197,6 +232,15 @@ def validate_runtime_state(state: RuntimeState) -> None:
         r"[0-9a-f]{64}", state.acceptance_sha256
     ):
         raise AutopilotError("runtime acceptance hash is invalid")
+    for field_name in (
+        "review_sha256",
+        "gate_manifest_sha256",
+        "feature_evidence_sha256",
+        "secret_scan_sha256",
+    ):
+        value = getattr(state, field_name)
+        if value is not None and not re.fullmatch(r"[0-9a-f]{64}", value):
+            raise AutopilotError(f"runtime {field_name} is invalid")
     if not isinstance(state.repair_cycle, int) or not 0 <= state.repair_cycle <= 3:
         raise AutopilotError("runtime repair cycle is outside the bounded range")
     if state.feature is not None and state.feature not in ALLOWLIST:
@@ -379,9 +423,37 @@ def git_ref_exists(repo: Path, ref: str) -> bool:
     return result.returncode == 0
 
 
+def discover_merged_feature_commit(repo: Path, feature_id: str) -> str | None:
+    marker = f"feat({feature_id}): complete bounded feature"
+    for line in run_git(repo, "log", "main", "--format=%H%x00%s").splitlines():
+        sha, separator, subject = line.partition("\0")
+        if separator and subject == marker and SHA_RE.fullmatch(sha):
+            return sha
+    return None
+
+
 def changed_paths(repo: Path, base_sha: str, candidate_sha: str) -> list[str]:
     output = run_git(repo, "diff", "--name-only", f"{base_sha}..{candidate_sha}")
     return [_normalized_repo_path(line) for line in output.splitlines() if line.strip()]
+
+
+def _tree_modes(repo: Path, revision: str) -> dict[str, str]:
+    modes: dict[str, str] = {}
+    for line in run_git(repo, "ls-tree", "-r", revision).splitlines():
+        metadata, separator, raw_path = line.partition("\t")
+        if not separator:
+            raise AutopilotError("Git tree output is malformed")
+        modes[_normalized_repo_path(raw_path)] = metadata.split(" ", 1)[0]
+    return modes
+
+
+def _glob_matches(path: str, pattern: str) -> bool:
+    candidate = PurePosixPath(path)
+    if candidate.match(pattern):
+        return True
+    # pathlib treats ``**/`` as requiring at least one directory. Policy globs
+    # intentionally use it as zero-or-more directories, matching Git-style use.
+    return "**/" in pattern and candidate.match(pattern.replace("**/", ""))
 
 
 def validate_candidate_paths(
@@ -402,13 +474,17 @@ def validate_candidate_paths(
             raise AutopilotError(f"candidate changes protected/control-plane path: {path}")
         if not any(path_matches(path, rule) for rule in allowed):
             raise AutopilotError(f"candidate changes out-of-scope path: {path}")
-    tree = run_git(repo, "ls-tree", "-r", candidate_sha)
-    for line in tree.splitlines():
-        metadata, _, raw_path = line.partition("\t")
-        mode = metadata.split(" ", 1)[0]
-        path = _normalized_repo_path(raw_path)
-        if path in paths and mode in {"120000", "160000"}:
+    base_modes = _tree_modes(repo, base_sha)
+    candidate_modes = _tree_modes(repo, candidate_sha)
+    for path in paths:
+        base_mode = base_modes.get(path)
+        candidate_mode = candidate_modes.get(path)
+        if candidate_mode in {"120000", "160000"}:
             raise AutopilotError(f"candidate introduces a symlink or submodule: {path}")
+        if base_mode is not None and candidate_mode is not None and base_mode != candidate_mode:
+            raise AutopilotError(f"candidate changes the tracked file mode: {path}")
+        if base_mode is None and candidate_mode not in {None, "100644"}:
+            raise AutopilotError(f"candidate introduces an unsafe file mode: {path}")
     return paths
 
 
@@ -419,6 +495,7 @@ def validate_review(
     *,
     expected_review_session_id: str | None = None,
     implementer_session_id: str | None = None,
+    enforce_freshness: bool = True,
 ) -> dict[str, Any]:
     if not isinstance(document, dict):
         raise AutopilotError("review output is missing or not a JSON object")
@@ -455,7 +532,7 @@ def validate_review(
         raise AutopilotError("implementer self-review is not independent review")
     reviewed_at = parse_utc(document["reviewed_at"], "reviewed_at")
     age = (datetime.now(UTC) - reviewed_at).total_seconds()
-    if age < -300 or age > 86_400:
+    if age < -300 or (enforce_freshness and age > 86_400):
         raise AutopilotError("independent review is stale or has an invalid timestamp")
     findings = document["findings"]
     evidence = document["evidence_checked"]
@@ -583,9 +660,12 @@ def validate_fixture_metadata(document: object) -> str:
             raise AutopilotError("recorded cassette metadata contradicts its classification")
         if not all(
             isinstance(metadata[key], str) and metadata[key].strip()
-            for key in ("recorded_at", "broker_origin", "sanitization")
+            for key in recorded_required - required
         ):
             raise AutopilotError("recorded cassette provenance is incomplete")
+        parse_utc(metadata["recorded_at"], "cassette recorded_at")
+        if metadata["broker_origin"] != "Dhan API v2":
+            raise AutopilotError("recorded cassette broker origin is not approved")
         return "recorded_sanitized"
     raise AutopilotError("cassette fixture classification is unknown")
 
@@ -595,11 +675,13 @@ def validate_feature_evidence(
     base_sha: str,
     candidate_sha: str,
     feature: dict[str, Any],
+    *,
+    approved_recorded_manifest: object | None = None,
 ) -> dict[str, Any]:
     checks = feature.get("evidence_checks", {})
     paths = changed_paths(worktree, base_sha, candidate_sha)
     for pattern in checks.get("required_changed_globs", []):
-        if not any(PurePosixPath(path).match(pattern) for path in paths):
+        if not any(_glob_matches(path, str(pattern)) for path in paths):
             raise AutopilotError(f"feature evidence is missing required changed path: {pattern}")
     allowed_paths = list(feature.get("allowed_paths", []))
     searchable_paths = [
@@ -631,6 +713,43 @@ def validate_feature_evidence(
             raise AutopilotError(
                 "synthetic fixtures cannot satisfy the recorded-cassette evidence requirement"
             )
+        if not isinstance(approved_recorded_manifest, dict):
+            raise AutopilotError("approved recorded-cassette capture evidence is missing")
+        required_manifest = {
+            "feature_id",
+            "candidate_sha",
+            "classification",
+            "broker_origin",
+            "captured_at",
+            "capture_mode",
+            "authorization_id",
+            "sanitization_review_session_id",
+            "fixture_sha256",
+        }
+        if set(approved_recorded_manifest) != required_manifest:
+            raise AutopilotError("approved recorded-cassette capture evidence is malformed")
+        if (
+            approved_recorded_manifest["feature_id"] != "F0.5"
+            or approved_recorded_manifest["candidate_sha"] != candidate_sha
+            or approved_recorded_manifest["classification"] != "recorded_sanitized"
+            or approved_recorded_manifest["broker_origin"] != "Dhan API v2"
+            or approved_recorded_manifest["capture_mode"] != "approved_read_only"
+        ):
+            raise AutopilotError(
+                "approved recorded-cassette capture evidence is wrong-SHA or unapproved"
+            )
+        parse_utc(approved_recorded_manifest["captured_at"], "recorded capture captured_at")
+        for key in ("authorization_id", "sanitization_review_session_id"):
+            if (
+                not isinstance(approved_recorded_manifest[key], str)
+                or not approved_recorded_manifest[key].strip()
+            ):
+                raise AutopilotError("approved recorded-cassette capture evidence is incomplete")
+        expected_hashes = {fixture.name: sha256_file(fixture) for fixture in fixtures}
+        if approved_recorded_manifest["fixture_sha256"] != expected_hashes:
+            raise AutopilotError(
+                "approved recorded-cassette capture evidence does not bind every fixture"
+            )
     return {
         "base_sha": base_sha,
         "candidate_sha": candidate_sha,
@@ -650,6 +769,7 @@ def validate_gate_evidence(
     controller_version: int | None = None,
     policy_digest: str | None = None,
     repo: Path | None = None,
+    enforce_freshness: bool = True,
 ) -> None:
     if not evidence:
         raise AutopilotError("no gate evidence was supplied")
@@ -676,7 +796,7 @@ def validate_gate_evidence(
             age = (
                 datetime.now(UTC) - parse_utc(item.finished_at, "gate finished_at")
             ).total_seconds()
-            if age < -300 or age > 86_400:
+            if age < -300 or (enforce_freshness and age > 86_400):
                 raise AutopilotError(f"gate evidence for {item.gate_id} is stale")
         elif repo is not None:
             raise AutopilotError(f"gate evidence for {item.gate_id} has no timestamp")
@@ -727,6 +847,8 @@ def promote_fast_forward(
     policy_digest: str | None = None,
     review_file: Path | None = None,
     review_sha256: str | None = None,
+    expected_review_session_id: str | None = None,
+    implementer_session_id: str | None = None,
 ) -> str:
     validate_gate_evidence(
         evidence,
@@ -737,7 +859,13 @@ def promote_fast_forward(
         policy_digest=policy_digest,
         repo=repo if controller_version is not None else None,
     )
-    validate_review(review, base_sha, candidate_sha)
+    validate_review(
+        review,
+        base_sha,
+        candidate_sha,
+        expected_review_session_id=expected_review_session_id,
+        implementer_session_id=implementer_session_id,
+    )
     if review_file is not None:
         resolved_review = review_file.resolve()
         if repo.resolve() not in resolved_review.parents or not resolved_review.is_file():
@@ -1127,6 +1255,14 @@ class PilotController:
             raise AutopilotError("recovery-needed: tracked feature state is invalid") from exc
         tracked_features = tracked.get("features", {})
         main_sha = git_sha(self.repo, "main")
+        if (
+            state.expected_main_sha
+            and not state.candidate_sha
+            and main_sha != state.expected_main_sha
+        ):
+            raise AutopilotError(
+                "recovery-needed: integration base moved after the durable controller pin"
+            )
         implemented: dict[str, str] = {}
         for feature_id in ALLOWLIST:
             branch = str(self.policy.feature(feature_id)["branch"])
@@ -1148,11 +1284,33 @@ class PilotController:
                         f"recovery-needed: branch and tracked commit disagree for {feature_id}"
                     )
                 candidate = branch_candidate
+            if candidate is None and isinstance(record, dict):
+                candidate = discover_merged_feature_commit(self.repo, feature_id)
             if candidate is None:
                 break
             if not git_is_ancestor(self.repo, candidate, main_sha):
                 break
             implemented[feature_id] = candidate
+        if implemented and state.expected_main_sha is None:
+            latest_candidate = next(reversed(implemented.values()))
+            tail = [
+                item
+                for item in run_git(
+                    self.repo, "rev-list", "--first-parent", f"{latest_candidate}..main"
+                ).splitlines()
+                if item
+            ]
+            if len(tail) > 1:
+                raise AutopilotError(
+                    "recovery-needed: integration history advanced beyond the latest "
+                    "tracked feature"
+                )
+            if tail:
+                changed = changed_paths(self.repo, latest_candidate, main_sha)
+                if changed != ["build/state.json"]:
+                    raise AutopilotError(
+                        "recovery-needed: integration tip is not a controller state-only commit"
+                    )
         if state.implemented and state.implemented != implemented:
             raise AutopilotError(
                 "recovery-needed: durable journal disagrees with merged Git feature history"
@@ -1170,16 +1328,6 @@ class PilotController:
                 )
                 self.store.save(state)
                 raise AutopilotError(state.blocker)
-            try:
-                tracked_commit = git_sha(self.repo, str(record.get("commit")))
-            except AutopilotError as exc:
-                raise AutopilotError(
-                    f"recovery-needed: tracked commit for {feature_id} is invalid"
-                ) from exc
-            if tracked_commit != candidate_sha:
-                raise AutopilotError(
-                    f"recovery-needed: Git and tracked commit disagree for {feature_id}"
-                )
             if record.get("status") != "done":
                 if (
                     state.feature == feature_id
@@ -1197,6 +1345,20 @@ class PilotController:
                 )
                 self.store.save(state)
                 raise AutopilotError(state.blocker)
+            if not record.get("commit"):
+                raise AutopilotError(
+                    f"recovery-needed: verified {feature_id} has no tracked commit"
+                )
+            try:
+                tracked_commit = git_sha(self.repo, str(record["commit"]))
+            except AutopilotError as exc:
+                raise AutopilotError(
+                    f"recovery-needed: tracked commit for {feature_id} is invalid"
+                ) from exc
+            if tracked_commit != candidate_sha:
+                raise AutopilotError(
+                    f"recovery-needed: Git and tracked commit disagree for {feature_id}"
+                )
             self._validate_tracked_evidence(feature_id, candidate_sha, record)
             verified[feature_id] = candidate_sha
         if pending_finalize:
@@ -1232,6 +1394,8 @@ class PilotController:
                 self.store.save(state)
         elif state.base_sha and git_sha(self.repo, "main") != state.base_sha:
             raise AutopilotError("main moved while an unfinished feature was recorded")
+        if state.expected_main_sha is None:
+            state.expected_main_sha = main_sha
         self.store.save(state)
 
     def _resume_merged_candidate(self, state: RuntimeState) -> None:
@@ -1249,6 +1413,35 @@ class PilotController:
             review = json.loads(review_file.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             raise AutopilotError("recovery-needed: merged review evidence is unavailable") from exc
+        gate_file = report_dir / f"gates-{candidate_sha}.json"
+        feature_file = report_dir / f"feature-evidence-{candidate_sha}.json"
+        secret_file = report_dir / f"secret-scan-{candidate_sha}.json"
+        bindings = (
+            (gate_file, state.gate_manifest_sha256, "gate manifest"),
+            (feature_file, state.feature_evidence_sha256, "feature evidence"),
+            (secret_file, state.secret_scan_sha256, "secret scan"),
+            (review_file, state.review_sha256, "independent review"),
+        )
+        for path, expected_hash, label in bindings:
+            if not path.is_file() or not expected_hash or sha256_file(path) != expected_hash:
+                raise AutopilotError(f"recovery-needed: {label} binding is missing or changed")
+        try:
+            gate_document = json.loads(gate_file.read_text(encoding="utf-8"))
+            feature_document = json.loads(feature_file.read_text(encoding="utf-8"))
+            secret_document = json.loads(secret_file.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise AutopilotError("recovery-needed: merged evidence is malformed") from exc
+        if gate_document != [asdict(item) for item in evidence]:
+            raise AutopilotError("recovery-needed: gate manifest disagrees with durable journal")
+        if (
+            not isinstance(feature_document, dict)
+            or feature_document.get("base_sha") != base_sha
+            or feature_document.get("candidate_sha") != candidate_sha
+            or feature_document.get("result") != "passed"
+        ):
+            raise AutopilotError("recovery-needed: feature evidence is wrong-SHA or failed")
+        if secret_document != []:
+            raise AutopilotError("recovery-needed: secret scan is missing or contains findings")
         promote_fast_forward(
             self.repo,
             base_sha=base_sha,
@@ -1260,7 +1453,9 @@ class PilotController:
             controller_version=CONTROLLER_VERSION,
             policy_digest=self.policy.digest,
             review_file=review_file,
-            review_sha256=hashlib.sha256(review_file.read_bytes()).hexdigest(),
+            review_sha256=state.review_sha256,
+            expected_review_session_id=state.review_session_id,
+            implementer_session_id=state.implementation_session_id,
         )
         self._persist_verified_completion(
             state, feature_id, feature, candidate_sha, evidence, review_file
@@ -1273,8 +1468,14 @@ class PilotController:
         state.worktree = None
         state.acceptance_sha256 = None
         state.evidence = []
+        state.review_session_id = None
+        state.review_sha256 = None
+        state.gate_manifest_sha256 = None
+        state.feature_evidence_sha256 = None
+        state.secret_scan_sha256 = None
         state.blocker = None
         state.phase = "merged"
+        state.expected_main_sha = git_sha(self.repo, "main")
         self.store.save(state)
 
     def _validate_tracked_evidence(
@@ -1283,6 +1484,10 @@ class PilotController:
         evidence_paths = record.get("evidence")
         if not isinstance(evidence_paths, list) or not evidence_paths:
             raise AutopilotError(f"recovery-needed: verified {feature_id} has no evidence paths")
+        if len(evidence_paths) != 1:
+            raise AutopilotError(
+                f"recovery-needed: verified {feature_id} must bind one completion manifest"
+            )
         for raw_path in evidence_paths:
             relative = _normalized_repo_path(str(raw_path))
             report = (self.repo / relative).resolve()
@@ -1294,14 +1499,106 @@ class PilotController:
                 raise AutopilotError(
                     f"recovery-needed: evidence for {feature_id} is malformed"
                 ) from exc
+            filename_match = re.fullmatch(
+                rf"completion-{candidate_sha}-([0-9a-f]{{64}})\.json", report.name
+            )
+            if not filename_match or sha256_file(report) != filename_match.group(1):
+                raise AutopilotError(
+                    f"recovery-needed: evidence for {feature_id} is not immutably bound"
+                )
+            required = {
+                "feature_id",
+                "base_sha",
+                "candidate_sha",
+                "result",
+                "controller_version",
+                "policy_digest",
+                "gate_ids",
+                "gate_manifest",
+                "gate_manifest_sha256",
+                "feature_evidence",
+                "feature_evidence_sha256",
+                "secret_scan",
+                "secret_scan_sha256",
+                "review",
+                "review_sha256",
+                "review_session_id",
+                "implementation_session_id",
+                "tests",
+                "verified_at",
+            }
+            if not isinstance(document, dict) or set(document) != required:
+                raise AutopilotError(f"recovery-needed: evidence for {feature_id} is malformed")
             if (
-                not isinstance(document, dict)
-                or document.get("candidate_sha") != candidate_sha
-                or document.get("result") != "passed"
+                document["feature_id"] != feature_id
+                or document["candidate_sha"] != candidate_sha
+                or document["result"] != "passed"
+                or document["controller_version"] != CONTROLLER_VERSION
+                or document["policy_digest"] != self.policy.digest
+                or document["gate_ids"] != [item["id"] for item in self.policy.raw["gate_commands"]]
+                or document["tests"] != record.get("tests")
+                or document["verified_at"] != record.get("verified_at")
             ):
                 raise AutopilotError(
                     f"recovery-needed: evidence for {feature_id} is wrong-SHA or failed"
                 )
+            base_sha = document["base_sha"]
+            if not isinstance(base_sha, str) or not SHA_RE.fullmatch(base_sha):
+                raise AutopilotError(f"recovery-needed: evidence for {feature_id} has invalid base")
+            parse_utc(document["verified_at"], "completion verified_at")
+
+            _gate_path, gate_document = load_bound_json(
+                self.repo, document, "gate_manifest", "gate_manifest_sha256", "gate manifest"
+            )
+            feature_path, feature_document = load_bound_json(
+                self.repo,
+                document,
+                "feature_evidence",
+                "feature_evidence_sha256",
+                "feature evidence",
+            )
+            _secret_path, secret_document = load_bound_json(
+                self.repo, document, "secret_scan", "secret_scan_sha256", "secret scan"
+            )
+            review_path, review_document = load_bound_json(
+                self.repo, document, "review", "review_sha256", "independent review"
+            )
+            if not isinstance(gate_document, list):
+                raise AutopilotError("recovery-needed: gate manifest is malformed")
+            try:
+                gate_evidence = [GateEvidence(**item) for item in gate_document]
+            except (TypeError, ValueError) as exc:
+                raise AutopilotError("recovery-needed: gate manifest is malformed") from exc
+            validate_gate_evidence(
+                gate_evidence,
+                candidate_sha,
+                document["gate_ids"],
+                base_sha=base_sha,
+                controller_version=CONTROLLER_VERSION,
+                policy_digest=self.policy.digest,
+                repo=self.repo,
+                enforce_freshness=False,
+            )
+            if (
+                not isinstance(feature_document, dict)
+                or feature_document.get("base_sha") != base_sha
+                or feature_document.get("candidate_sha") != candidate_sha
+                or feature_document.get("result") != "passed"
+            ):
+                raise AutopilotError("recovery-needed: feature evidence is wrong-SHA or failed")
+            parse_utc(feature_document.get("validated_at"), "feature evidence validated_at")
+            if secret_document != []:
+                raise AutopilotError("recovery-needed: secret scan contains findings")
+            validate_review(
+                review_document,
+                base_sha,
+                candidate_sha,
+                expected_review_session_id=document["review_session_id"],
+                implementer_session_id=document["implementation_session_id"],
+                enforce_freshness=False,
+            )
+            if review_path == feature_path:
+                raise AutopilotError("recovery-needed: independent evidence artifacts are aliased")
 
     def _run_feature(self, state: RuntimeState, feature_id: str) -> None:
         feature = self.policy.feature(feature_id)
@@ -1347,6 +1644,12 @@ class PilotController:
             state.phase = "implementing"
             state.evidence = []
             state.acceptance_sha256 = None
+            state.expected_main_sha = base_sha
+            state.review_session_id = None
+            state.review_sha256 = None
+            state.gate_manifest_sha256 = None
+            state.feature_evidence_sha256 = None
+            state.secret_scan_sha256 = None
             self.store.save(state)
             state.acceptance_sha256 = self._prepare_acceptance_contract(
                 worktree, feature_id, feature, base_sha
@@ -1410,9 +1713,10 @@ class PilotController:
                     ):
                         raise AutopilotError("candidate changed after gates/review")
                     state.evidence = [asdict(item) for item in evidence]
+                    state.review_session_id = reviewer_session_id
+                    state.review_sha256 = sha256_file(review_file)
                     state.phase = "approved"
                     self.store.save(state)
-                    review_sha256 = hashlib.sha256(review_file.read_bytes()).hexdigest()
                     promote_fast_forward(
                         self.repo,
                         base_sha=base_sha,
@@ -1424,7 +1728,9 @@ class PilotController:
                         controller_version=CONTROLLER_VERSION,
                         policy_digest=self.policy.digest,
                         review_file=review_file,
-                        review_sha256=review_sha256,
+                        review_sha256=state.review_sha256,
+                        expected_review_session_id=state.review_session_id,
+                        implementer_session_id=state.implementation_session_id,
                     )
                     state.phase = "merged"
                     self.store.save(state)
@@ -1441,6 +1747,12 @@ class PilotController:
                     state.evidence = []
                     state.blocker = None
                     state.implementation_session_id = None
+                    state.review_session_id = None
+                    state.review_sha256 = None
+                    state.gate_manifest_sha256 = None
+                    state.feature_evidence_sha256 = None
+                    state.secret_scan_sha256 = None
+                    state.expected_main_sha = git_sha(self.repo, "main")
                     self.store.save(state)
                     run_git(self.repo, "worktree", "remove", str(worktree))
                     return
@@ -1598,6 +1910,11 @@ base, zero required test skips, and fast-forward-only integration must pass.
         state.phase = "testing"
         state.blocker = None
         state.evidence = []
+        state.review_session_id = None
+        state.review_sha256 = None
+        state.gate_manifest_sha256 = None
+        state.feature_evidence_sha256 = None
+        state.secret_scan_sha256 = None
         self.store.save(state)
         atomic_write_json(
             report_dir / f"candidate-{state.repair_cycle}.json",
@@ -1624,22 +1941,57 @@ base, zero required test skips, and fast-forward-only integration must pass.
             if item.test_required
         }
         gate_manifest = self.runtime_root / "reports" / feature_id / f"gates-{candidate_sha}.json"
+        feature_manifest = (
+            self.runtime_root / "reports" / feature_id / f"feature-evidence-{candidate_sha}.json"
+        )
+        secret_manifest = (
+            self.runtime_root / "reports" / feature_id / f"secret-scan-{candidate_sha}.json"
+        )
         completion_manifest = (
             self.runtime_root / "reports" / feature_id / f"completion-{candidate_sha}.json"
         )
+        if not all(
+            (
+                state.review_session_id,
+                state.review_sha256,
+                state.gate_manifest_sha256,
+                state.feature_evidence_sha256,
+                state.secret_scan_sha256,
+                state.implementation_session_id,
+            )
+        ):
+            raise AutopilotError("verified completion bindings are incomplete")
+        verified_at = utc_now()
         atomic_write_json(
             completion_manifest,
             {
+                "feature_id": feature_id,
                 "base_sha": state.base_sha,
                 "candidate_sha": candidate_sha,
                 "result": "passed",
                 "controller_version": CONTROLLER_VERSION,
                 "policy_digest": self.policy.digest,
-                "gates_sha256": hashlib.sha256(gate_manifest.read_bytes()).hexdigest(),
-                "review_sha256": hashlib.sha256(review_file.read_bytes()).hexdigest(),
-                "verified_at": utc_now(),
+                "gate_ids": [item["id"] for item in self.policy.raw["gate_commands"]],
+                "gate_manifest": str(gate_manifest.relative_to(self.repo)).replace("\\", "/"),
+                "gate_manifest_sha256": state.gate_manifest_sha256,
+                "feature_evidence": str(feature_manifest.relative_to(self.repo)).replace("\\", "/"),
+                "feature_evidence_sha256": state.feature_evidence_sha256,
+                "secret_scan": str(secret_manifest.relative_to(self.repo)).replace("\\", "/"),
+                "secret_scan_sha256": state.secret_scan_sha256,
+                "review": str(review_file.relative_to(self.repo)).replace("\\", "/"),
+                "review_sha256": state.review_sha256,
+                "review_session_id": state.review_session_id,
+                "implementation_session_id": state.implementation_session_id,
+                "tests": tests,
+                "verified_at": verified_at,
             },
         )
+        completion_sha256 = sha256_file(completion_manifest)
+        bound_completion_manifest = completion_manifest.with_name(
+            f"completion-{candidate_sha}-{completion_sha256}.json"
+        )
+        os.replace(completion_manifest, bound_completion_manifest)
+        completion_manifest = bound_completion_manifest
         evidence_paths = [str(completion_manifest.relative_to(self.repo)).replace("\\", "/")]
         update_state(
             self.repo / "build/state.json",
@@ -1648,10 +2000,10 @@ base, zero required test skips, and fast-forward-only integration must pass.
             branch=str(feature["branch"]),
             commit=candidate_sha,
             tests=tests,
-            finished_at=utc_now(),
+            finished_at=verified_at,
             blockers=[],
             evidence=evidence_paths,
-            verified_at=utc_now(),
+            verified_at=verified_at,
         )
         run_git(self.repo, "add", "--", "build/state.json")
         run_git(self.repo, "commit", "-m", f"chore: record verified {feature_id} evidence")
@@ -1761,17 +2113,45 @@ base, zero required test skips, and fast-forward-only integration must pass.
         assert base_sha is not None
         feature_id = self.store.load().feature
         assert feature_id is not None
+        feature = self.policy.feature(feature_id)
+        approved_recorded_manifest: object | None = None
+        if feature.get("evidence_checks", {}).get("recorded_json_glob"):
+            approved_path = (
+                self.repo
+                / str(self.policy.raw["approved_recorded_evidence_dir"])
+                / f"{feature_id}.json"
+            )
+            if approved_path.is_file():
+                try:
+                    approved_recorded_manifest = json.loads(
+                        approved_path.read_text(encoding="utf-8")
+                    )
+                except json.JSONDecodeError as exc:
+                    raise AutopilotError(
+                        "approved recorded-cassette capture evidence is malformed"
+                    ) from exc
         feature_report = validate_feature_evidence(
-            worktree, base_sha, candidate_sha, self.policy.feature(feature_id)
+            worktree,
+            base_sha,
+            candidate_sha,
+            feature,
+            approved_recorded_manifest=approved_recorded_manifest,
         )
-        atomic_write_json(report_dir / f"feature-evidence-{candidate_sha}.json", feature_report)
-        self._scan_candidate_for_secrets(worktree, candidate_sha, report_dir)
-        atomic_write_json(report_dir / f"gates-{candidate_sha}.json", [asdict(x) for x in evidence])
+        feature_path = report_dir / f"feature-evidence-{candidate_sha}.json"
+        atomic_write_json(feature_path, feature_report)
+        secret_path = self._scan_candidate_for_secrets(worktree, candidate_sha, report_dir)
+        gate_path = report_dir / f"gates-{candidate_sha}.json"
+        atomic_write_json(gate_path, [asdict(x) for x in evidence])
+        state = self.store.load()
+        state.feature_evidence_sha256 = sha256_file(feature_path)
+        state.secret_scan_sha256 = sha256_file(secret_path)
+        state.gate_manifest_sha256 = sha256_file(gate_path)
+        self.store.save(state)
         return evidence
 
     def _scan_candidate_for_secrets(
         self, worktree: Path, candidate_sha: str, report_dir: Path
-    ) -> None:
+    ) -> Path:
         base_sha = self.store.load().base_sha
         assert base_sha is not None
         findings: list[dict[str, Any]] = []
@@ -1792,12 +2172,16 @@ base, zero required test skips, and fast-forward-only integration must pass.
                     and not SAFE_TEST_VALUE_RE.match(assignment_value)
                     and not assignment_value.startswith(("os.", "self.", "credentials.", "$"))
                 )
+                client_id = DHAN_CLIENT_ID_RE.search(line)
+                client_id_is_unsafe = bool(client_id and client_id.group(1) != "0000000000")
                 jwt_or_key = bool(SECRET_PATTERNS[2].search(line) or "BEGIN PRIVATE KEY" in line)
-                if assignment_is_unsafe or jwt_or_key:
+                if assignment_is_unsafe or client_id_is_unsafe or jwt_or_key:
                     findings.append({"path": path, "line": number, "category": "secret-shaped"})
-        atomic_write_json(report_dir / f"secret-scan-{candidate_sha}.json", findings)
+        report = report_dir / f"secret-scan-{candidate_sha}.json"
+        atomic_write_json(report, findings)
         if findings:
             raise AutopilotError("secret-shaped values detected; see redacted secret-scan report")
+        return report
 
 
 def remove_runtime_worktree(repo: Path, worktree: Path) -> None:

@@ -6,6 +6,7 @@ runtime_root: .runtime/dev-autopilot
 command_timeout_seconds: 1800
 codex_timeout_seconds: 3600
 evidence_max_age_seconds: 86400
+approved_recorded_evidence_dir: .runtime/dev-autopilot/approved-recorded-evidence
 allowlist: [F0.4, F0.5, F0.6, F0.7, F0.8, F0.9]
 forbidden_codex_arguments:
   - --yolo
@@ -114,7 +115,7 @@ features:
       - Offline success, auth-failure, malformed, timeout, and retryable-error tests.
     official_sources: [https://dhanhq.co/docs/v2/]
     evidence_checks:
-      required_changed_globs: [backend/app/dhan/**/*.py, backend/tests/**/*.py]
+      required_changed_globs: [backend/app/dhan/*.py, backend/tests/**/*.py]
       required_terms: [authentication, malformed, timeout, retryable]
       recorded_json_glob: backend/tests/cassettes/dhan/*.json
   F0.6:

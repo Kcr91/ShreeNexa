@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
 import sys
 import uuid
+from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -80,7 +82,7 @@ def init_repo(path: Path) -> tuple[str, str]:
     run_git(path, "switch", "-c", "feature/F0.4-test")
     (path / "feature.txt").write_text("candidate\n", encoding="utf-8")
     run_git(path, "add", "feature.txt")
-    run_git(path, "commit", "-m", "candidate")
+    run_git(path, "commit", "-m", "feat(F0.4): complete bounded feature")
     return base, git_sha(path, "HEAD")
 
 
@@ -104,7 +106,7 @@ def init_merged_feature_repo(
     product.parent.mkdir(parents=True)
     product.write_text("RECOVERY_TEST = True\n", encoding="utf-8")
     run_git(path, "add", ".")
-    run_git(path, "commit", "-m", "candidate")
+    run_git(path, "commit", "-m", "feat(F0.4): complete bounded feature")
     candidate = git_sha(path, "HEAD")
     run_git(path, "switch", "main")
     run_git(path, "merge", "--ff-only", candidate)
@@ -166,6 +168,110 @@ def passing_gate(
         finished_at=datetime.now(UTC).isoformat(),
         test_required=test_required,
     )
+
+
+def write_bound_completion(
+    controller: PilotController, base: str, candidate: str
+) -> tuple[Path, dict[str, object]]:
+    report_dir = controller.repo / ".runtime/dev-autopilot/reports/F0.4"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(UTC).isoformat()
+    evidence: list[GateEvidence] = []
+    tests: dict[str, object] = {}
+    for gate in controller.policy.raw["gate_commands"]:
+        gate_id = str(gate["id"])
+        output = report_dir / f"gate-{gate_id}-{candidate}.log"
+        output.write_text("controller executed gate: passed\n", encoding="utf-8")
+        test_required = bool(gate.get("requires_tests", False))
+        test_report_file = None
+        test_report_sha256 = ""
+        passed = 1 if test_required else 0
+        if gate_id == "pytest":
+            junit = report_dir / f"pytest-{candidate}.xml"
+            junit.write_text(
+                '<testsuites><testsuite tests="1" failures="0" errors="0" skipped="0" />'
+                "</testsuites>\n",
+                encoding="utf-8",
+            )
+            test_report_file = str(junit.relative_to(controller.repo)).replace("\\", "/")
+            test_report_sha256 = hashlib.sha256(junit.read_bytes()).hexdigest()
+        item = GateEvidence(
+            gate_id=gate_id,
+            candidate_sha=candidate,
+            argv=("controller-owned-test-gate", gate_id),
+            exit_code=0,
+            duration_seconds=0.01,
+            passed=passed,
+            output_file=str(output.relative_to(controller.repo)).replace("\\", "/"),
+            base_sha=base,
+            controller_version=controller_module.CONTROLLER_VERSION,
+            policy_digest=controller.policy.digest,
+            started_at=now,
+            finished_at=now,
+            output_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
+            test_required=test_required,
+            test_report_file=test_report_file,
+            test_report_sha256=test_report_sha256,
+        )
+        evidence.append(item)
+        if test_required:
+            tests[gate_id] = {"passed": 1, "failed": 0, "skipped": 0, "exit_code": 0}
+    gates = report_dir / f"gates-{candidate}.json"
+    gates.write_text(json.dumps([asdict(item) for item in evidence]), encoding="utf-8")
+    feature = report_dir / f"feature-evidence-{candidate}.json"
+    feature.write_text(
+        json.dumps(
+            {
+                "base_sha": base,
+                "candidate_sha": candidate,
+                "result": "passed",
+                "validated_at": now,
+            }
+        ),
+        encoding="utf-8",
+    )
+    secret = report_dir / f"secret-scan-{candidate}.json"
+    secret.write_text("[]\n", encoding="utf-8")
+    review = report_dir / "review-0.json"
+    review_document = safe_review(base, candidate)
+    review.write_text(json.dumps(review_document), encoding="utf-8")
+    completion_document: dict[str, object] = {
+        "feature_id": "F0.4",
+        "base_sha": base,
+        "candidate_sha": candidate,
+        "result": "passed",
+        "controller_version": controller_module.CONTROLLER_VERSION,
+        "policy_digest": controller.policy.digest,
+        "gate_ids": [item["id"] for item in controller.policy.raw["gate_commands"]],
+        "gate_manifest": str(gates.relative_to(controller.repo)).replace("\\", "/"),
+        "gate_manifest_sha256": hashlib.sha256(gates.read_bytes()).hexdigest(),
+        "feature_evidence": str(feature.relative_to(controller.repo)).replace("\\", "/"),
+        "feature_evidence_sha256": hashlib.sha256(feature.read_bytes()).hexdigest(),
+        "secret_scan": str(secret.relative_to(controller.repo)).replace("\\", "/"),
+        "secret_scan_sha256": hashlib.sha256(secret.read_bytes()).hexdigest(),
+        "review": str(review.relative_to(controller.repo)).replace("\\", "/"),
+        "review_sha256": hashlib.sha256(review.read_bytes()).hexdigest(),
+        "review_session_id": review_document["reviewer_session_id"],
+        "implementation_session_id": "different-implementer-session",
+        "tests": tests,
+        "verified_at": now,
+    }
+    serialized = json.dumps(completion_document, sort_keys=True).encode()
+    completion_hash = hashlib.sha256(serialized).hexdigest()
+    completion = report_dir / f"completion-{candidate}-{completion_hash}.json"
+    completion.write_bytes(serialized)
+    update_state(
+        controller.repo / "build/state.json",
+        feature="F0.4",
+        status="done",
+        branch="feature/F0.4-central-settings",
+        commit=candidate,
+        tests=tests,
+        blockers=[],
+        evidence=[str(completion.relative_to(controller.repo)).replace("\\", "/")],
+        verified_at=now,
+    )
+    return completion, completion_document
 
 
 def test_policy_is_exactly_bounded_to_authorized_features() -> None:
@@ -522,7 +628,7 @@ def test_synthetic_fixture_metadata_fails_recorded_requirement(tmp_path: Path) -
     run_git(repo, "add", ".")
     run_git(repo, "commit", "-m", "base")
     base = git_sha(repo, "HEAD")
-    app_file = repo / "backend/app/dhan/client/recovery.py"
+    app_file = repo / "backend/app/dhan/recovery.py"
     test_file = repo / "backend/tests/unit/test_recovery.py"
     fixture = repo / "backend/tests/cassettes/dhan/profile.json"
     for path in (app_file, test_file, fixture):
@@ -575,7 +681,7 @@ def test_conflicting_git_state_evidence_stops_selection(tmp_path: Path) -> None:
         status="done",
         evidence_document={"candidate_sha": wrong_sha, "result": "passed"},
     )
-    with pytest.raises(AutopilotError, match="wrong-SHA"):
+    with pytest.raises(AutopilotError, match="not immutably bound"):
         controller._reconcile(state)
 
 
@@ -585,12 +691,7 @@ def test_resume_after_merge_state_persistence_does_not_duplicate_merge(
     repo_path = tmp_path / "repo"
     controller, _fresh_state, candidate = init_merged_feature_repo(
         repo_path,
-        status="done",
-        evidence_document={"candidate_sha": "placeholder", "result": "passed"},
-    )
-    evidence_path = repo_path / ".runtime/recovery/F0.4.json"
-    evidence_path.write_text(
-        json.dumps({"candidate_sha": candidate, "result": "passed"}), encoding="utf-8"
+        status="merged_unverified",
     )
     before_count = run_git(repo_path, "rev-list", "--count", "main")
     state = RuntimeState(
@@ -600,9 +701,8 @@ def test_resume_after_merge_state_persistence_does_not_duplicate_merge(
         candidate_sha=candidate,
         branch="feature/F0.4-central-settings",
     )
-    controller._reconcile(state)
-    assert state.completed == {"F0.4": candidate}
-    assert state.candidate_sha is None
+    with pytest.raises(AutopilotError, match="merged_unverified"):
+        controller._reconcile(state)
     assert run_git(repo_path, "rev-list", "--count", "main") == before_count
 
 
@@ -628,3 +728,154 @@ def test_resume_keeps_unfinished_runtime_identity(tmp_path: Path) -> None:
     assert resumed.feature == state.feature
     assert resumed.branch == state.branch
     assert resumed.worktree == state.worktree
+
+
+def test_bound_completion_validates_all_controller_artifacts(tmp_path: Path) -> None:
+    controller, state, candidate = init_merged_feature_repo(
+        tmp_path / "repo", status="merged_unverified"
+    )
+    base = git_sha(controller.repo, f"{candidate}^")
+    _completion, _document = write_bound_completion(controller, base, candidate)
+
+    controller._reconcile(state)
+
+    assert state.completed == {"F0.4": candidate}
+    review = controller.repo / ".runtime/dev-autopilot/reports/F0.4/review-0.json"
+    review.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(AutopilotError, match="independent review is missing or changed"):
+        controller._reconcile(RuntimeState())
+
+
+def test_missing_branch_and_commit_still_discovers_merged_implementation(tmp_path: Path) -> None:
+    controller, state, candidate = init_merged_feature_repo(tmp_path / "repo", status="review")
+    tracked_path = controller.repo / "build/state.json"
+    tracked = json.loads(tracked_path.read_text(encoding="utf-8"))
+    tracked["commit"] = None
+    tracked["features"]["F0.4"]["commit"] = None
+    tracked_path.write_text(json.dumps(tracked), encoding="utf-8")
+    run_git(controller.repo, "branch", "-D", "feature/F0.4-central-settings")
+
+    with pytest.raises(AutopilotError, match="merged with status 'review'"):
+        controller._reconcile(state)
+
+    assert state.implemented == {"F0.4": candidate}
+    assert state.completed == {}
+
+
+def test_idle_runtime_rejects_moved_integration_tip(tmp_path: Path) -> None:
+    controller, state, candidate = init_merged_feature_repo(
+        tmp_path / "repo", status="merged_unverified"
+    )
+    state.expected_main_sha = git_sha(controller.repo, "main")
+    unrelated = controller.repo / "unrelated.txt"
+    unrelated.write_text("unexpected integration change\n", encoding="utf-8")
+    run_git(controller.repo, "add", "unrelated.txt")
+    run_git(controller.repo, "commit", "-m", "unrelated integration change")
+
+    with pytest.raises(AutopilotError, match="integration base moved"):
+        controller._reconcile(state)
+    assert candidate not in state.completed
+
+
+def test_candidate_file_mode_change_is_rejected(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    run_git(repo, "init", "-b", "main")
+    run_git(repo, "config", "user.name", "Autopilot Test")
+    run_git(repo, "config", "user.email", "autopilot@example.invalid")
+    target = repo / "backend/app/config.py"
+    target.parent.mkdir(parents=True)
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "-m", "base")
+    base = git_sha(repo, "HEAD")
+    run_git(repo, "update-index", "--chmod=+x", "backend/app/config.py")
+    run_git(repo, "commit", "-m", "mode only")
+
+    with pytest.raises(AutopilotError, match="file mode"):
+        validate_candidate_paths(
+            repo,
+            base,
+            git_sha(repo, "HEAD"),
+            ["backend/app/config.py"],
+            Policy.load(POLICY_PATH),
+        )
+
+
+def test_ten_digit_dhan_client_id_is_redacted_and_blocks(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "build").mkdir()
+    shutil.copy2(REPO_ROOT / "build/manifest.yaml", repo / "build/manifest.yaml")
+    run_git(repo, "init", "-b", "main")
+    run_git(repo, "config", "user.name", "Autopilot Test")
+    run_git(repo, "config", "user.email", "autopilot@example.invalid")
+    (repo / "README.md").write_text("base\n", encoding="utf-8")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "-m", "base")
+    base = git_sha(repo, "HEAD")
+    target = repo / "backend/app/dhan/example.py"
+    target.parent.mkdir(parents=True)
+    target.write_text('dhanClientId = "1234567890"\n', encoding="utf-8")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "-m", "secret shaped candidate")
+    candidate = git_sha(repo, "HEAD")
+    controller = PilotController(repo, Policy.load(POLICY_PATH), codex_executable="fake")
+    controller.store.save(RuntimeState(base_sha=base, candidate_sha=candidate, feature="F0.4"))
+    report_dir = repo / ".runtime/dev-autopilot/reports/F0.4"
+    report_dir.mkdir(parents=True)
+
+    with pytest.raises(AutopilotError, match="secret-shaped"):
+        controller._scan_candidate_for_secrets(repo, candidate, report_dir)
+    report_text = (report_dir / f"secret-scan-{candidate}.json").read_text(encoding="utf-8")
+    assert "1234567890" not in report_text
+
+
+def test_self_asserted_recorded_fixture_cannot_satisfy_capture_requirement(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    run_git(repo, "init", "-b", "main")
+    run_git(repo, "config", "user.name", "Autopilot Test")
+    run_git(repo, "config", "user.email", "autopilot@example.invalid")
+    (repo / "base.txt").write_text("base\n", encoding="utf-8")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "-m", "base")
+    base = git_sha(repo, "HEAD")
+    app_file = repo / "backend/app/dhan/recovery.py"
+    test_file = repo / "backend/tests/unit/test_recovery.py"
+    fixture = repo / "backend/tests/cassettes/dhan/profile.json"
+    for path in (app_file, test_file, fixture):
+        path.parent.mkdir(parents=True, exist_ok=True)
+    app_file.write_text(
+        "authentication = malformed = timeout = retryable = True\n", encoding="utf-8"
+    )
+    test_file.write_text("def test_recovery():\n    assert True\n", encoding="utf-8")
+    fixture.write_text(
+        json.dumps(
+            {
+                "_fixture": {
+                    "classification": "recorded_sanitized",
+                    "source": "claimed_capture",
+                    "recorded_broker_response": True,
+                    "account_id": "0000000000",
+                    "credential_profile": "invalid_test_only",
+                    "recorded_at": datetime.now(UTC).isoformat(),
+                    "broker_origin": "Dhan API v2",
+                    "sanitization": "claimed",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "-m", "self asserted recording")
+
+    with pytest.raises(AutopilotError, match="approved recorded-cassette capture evidence"):
+        validate_feature_evidence(
+            repo,
+            base,
+            git_sha(repo, "HEAD"),
+            Policy.load(POLICY_PATH).feature("F0.5"),
+        )
