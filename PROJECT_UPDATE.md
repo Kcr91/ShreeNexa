@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.1 | Done | Fast-forwarded into `main` at `3ec0d37` after review. |
-| F2.2 | Ready for review | Stateful incremental indicator engine for all 12 primitives with G1 vector/incremental parity property verification, state checkpointing/restoration, and reset lifecycle. 244/244 tests passing. |
-| F2.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.2 | Done | Fast-forwarded into `main` at `4401668` after review. |
+| F2.3 | Ready for review | Safe formula expression engine with strict AST node allowlisting, attribute/import/lambda/eval sandbox blocking, lookahead shift prevention, mathematical crossover/crossunder/shift/highest/lowest/if_else evaluation, and 21 adversarial security fuzz test cases. 265/265 tests passing. |
+| F2.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -692,4 +692,18 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_incremental_indicators.py`: 3 passed
 - Full repository test suite: 244 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (103 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `4401668`.
+
+### 2026-09-01 — F2.3 Safe formula parser, AST validator, and compiler completed
+
+- Implemented `backend/app/indicators/formula.py`:
+  - `FormulaCompiler` with AST security sandboxing.
+  - `FormulaASTValidator` enforcing strict node allowlists (`Expression`, `BinOp`, `UnaryOp`, `BoolOp`, `Compare`, `IfExp`, `Call`, `Name`, `Constant`), explicit rejection of `Attribute` access (`.attr`), `Import`, `ImportFrom`, `Lambda`, comprehensions, and negative indexing / shift lookahead.
+  - Signal and mathematical helpers: `crossover`, `crossunder`, `cross`, `shift`, `highest`, `lowest`, `if_else`, `abs`, `min`, `max`.
+  - `CompiledFormula` and recursive `_FormulaEvaluator` supporting PyArrow Tables and dictionaries with safe `None` propagation across series.
+- Exported formula compilation services in `backend/app/indicators/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.3.md` and added 21 test cases verifying AST sandbox security, lookahead rejection, syntax errors, compound indicator signals, shift/highest/lowest, and ternary evaluation:
+  - `backend/tests/unit/test_formula_compiler.py`: 21 passed
+- Full repository test suite: 265 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (105 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

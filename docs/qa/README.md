@@ -37,5 +37,6 @@
 - [F1.9 — Synthetic Continuous Option Surface Generator](acceptance/F1.9.md)
 - [F2.1 — Vectorized Technical Indicator Registry](acceptance/F2.1.md)
 - [F2.2 — Incremental Indicator Implementation and G1 Parity](acceptance/F2.2.md)
+- [F2.3 — Safe Formula Parser, AST Validator, and Compiler](acceptance/F2.3.md)
 
 Acceptance is written before implementation. A feature is not complete because it has a commit; all applicable proof and review must be green.

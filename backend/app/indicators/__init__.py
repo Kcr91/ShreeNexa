@@ -1,5 +1,14 @@
-"""Vectorized and streaming technical indicators registry and primitives."""
+"""Vectorized and streaming technical indicators registry, primitives, and formula compiler."""
 
+from app.indicators.formula import (
+    CompiledFormula,
+    FormulaASTValidator,
+    FormulaCompiler,
+    FormulaError,
+    FormulaEvaluationError,
+    FormulaSecurityError,
+    FormulaSyntaxError,
+)
 from app.indicators.incremental import (
     IncrementalIndicator,
     create_incremental_indicator,
@@ -47,7 +56,14 @@ from app.indicators.registry import (
 __all__ = [
     "ATRIndicator",
     "BollingerBandsIndicator",
+    "CompiledFormula",
     "EMAIndicator",
+    "FormulaASTValidator",
+    "FormulaCompiler",
+    "FormulaError",
+    "FormulaEvaluationError",
+    "FormulaSecurityError",
+    "FormulaSyntaxError",
     "IncrementalATR",
     "IncrementalBollingerBands",
     "IncrementalEMA",
