@@ -1,8 +1,8 @@
 {
-  "feature": "F1.6",
+  "feature": "F1.7",
   "status": "review",
-  "branch": "feature/F1.6-session-aware-resampling",
-  "commit": "b454fb4a2069b2d87e07678f149b04f3238699d7",
+  "branch": "feature/F1.7-corporate-action-adjustment",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -145,6 +145,15 @@
       "status": "review",
       "branch": "feature/F1.6-session-aware-resampling",
       "commit": "b454fb4a2069b2d87e07678f149b04f3238699d7",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F1.7": {
+      "status": "review",
+      "branch": "feature/F1.7-corporate-action-adjustment",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

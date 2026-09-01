@@ -113,9 +113,7 @@ def test_full_session_intraday_resampling_and_partial_policy() -> None:
     assert sum(b.volume for b in bars_60m_emit) == total_vol
 
     # 60m bars with DROP_INCOMPLETE: drops the 15:15-15:30 incomplete 15m bar = 6 bars
-    bars_60m_drop = resampler.resample_bars(
-        bars_1m, "60m", policy=PartialBarPolicy.DROP_INCOMPLETE
-    )
+    bars_60m_drop = resampler.resample_bars(bars_1m, "60m", policy=PartialBarPolicy.DROP_INCOMPLETE)
     assert len(bars_60m_drop) == 6
 
 

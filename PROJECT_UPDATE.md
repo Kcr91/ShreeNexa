@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F1.5 | Done | Fast-forwarded into `main` at `ccd009e` after review. |
-| F1.6 | Ready for review | Session-aware OHLCV bar resampling across `3m`, `5m`, `15m`, `25m`, `30m`, `60m`, `1d`, `1w`, strict 09:15 IST session opening alignment, mathematical volume/OI conservation invariants, partial bar policies (`EMIT_PARTIAL`, `DROP_INCOMPLETE`), and PyArrow vector support. 219/219 tests passing. |
-| F1.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F1.6 | Done | Fast-forwarded into `main` at `d50bcdf` after review. |
+| F1.7 | Ready for review | Corporate action adjustment pipeline (splits, bonuses, dividends, rights), point-in-time preservation, compounded multi-action cumulative factors, inverse volume/OI scaling, and unadjusted data immutability. 224/224 tests passing. |
+| F1.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -594,4 +594,19 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_bar_resampler.py`: 4 passed
 - Full repository test suite: 219 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (83 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `d50bcdf`.
+
+### 2026-09-01 — F1.7 Corporate action adjustment pipeline completed
+
+- Created independent reference test fixture `backend/tests/fixtures/sample_corporate_actions.json`.
+- Implemented `backend/app/marketdata/adjustments.py`:
+  - `ActionType` (`SPLIT`, `BONUS`, `DIVIDEND`, `RIGHTS`) and `CorporateAction` models.
+  - Price and volume multiplier factor formulations for splits ($A/B$), bonuses ($B/(A+B)$), dividends, and rights.
+  - `AdjustmentPipeline` computing compounded multi-event cumulative adjustment factors prior to ex-dates.
+  - `adjust_bars` and `adjust_table` applying price scaling and inverse volume/OI scaling while preserving unadjusted source immutability.
+- Exported corporate action services in `backend/app/marketdata/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F1.7.md` and added 5 new test cases across split math, bonus issue fixture parity, multi-event compounding, dividend calculation, and unadjusted data immutability:
+  - `backend/tests/unit/test_corporate_adjustments.py`: 5 passed
+- Full repository test suite: 224 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (85 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

@@ -1,5 +1,10 @@
-"""Market data, universe management, trading calendar, and session-aware resampling."""
+"""Market data, universe management, trading calendar, resampling, and adjustments."""
 
+from app.marketdata.adjustments import (
+    ActionType,
+    AdjustmentPipeline,
+    CorporateAction,
+)
 from app.marketdata.calendar import (
     Holiday,
     SessionBounds,
@@ -17,7 +22,10 @@ from app.marketdata.resampler import (
 )
 
 __all__ = [
+    "ActionType",
+    "AdjustmentPipeline",
     "BarResampler",
+    "CorporateAction",
     "Holiday",
     "PartialBarPolicy",
     "SessionBounds",
