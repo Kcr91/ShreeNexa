@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.3 | Done | Fast-forwarded into `main` at `006b9e4` after review. |
-| F2.4 | Ready for review | Compound indicator dependency graph resolver with Kahn's topological sort, circular dependency detection and error reporting, multi-node compound execution plan, and memoized shared subexpressions. 270/270 tests passing. |
-| F2.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.4 | Done | Fast-forwarded into `main` at `1b83a9e` after review. |
+| F2.5 | Ready for review | Real-time streaming compound indicator execution engine with topological DAG node updates, G1 compound graph mathematical parity against batch vector execution, state checkpointing/restoration, and reset lifecycle. 273/273 tests passing. |
+| F2.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -721,4 +721,19 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_indicator_graph.py`: 5 passed
 - Full repository test suite: 270 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (107 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `1b83a9e`.
+
+### 2026-09-01 — F2.5 Incremental compound indicator engine completed
+
+- Implemented `backend/app/indicators/incremental_graph.py`:
+  - `IncrementalGraphEngine` streaming compound topological DAGs on a bar-by-bar basis.
+  - `_IncrementalNodeEvaluator` managing stateful sub-indicator instances and rolling buffers for streaming evaluation of AST expressions (`sma`, `ema`, `rsi`, `crossover`, `crossunder`, `cross`, `shift`, `highest`, `lowest`, `if_else`).
+  - Dynamic inter-node series propagation across topological levels for current bar execution.
+  - Complete state checkpointing, serialization, and restoration across multi-node DAGs.
+  - Full reset lifecycle.
+- Exported streaming graph engine in `backend/app/indicators/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.5.md` and added 3 new test cases verifying streaming G1 compound graph parity against batch vectorized execution, state checkpointing/restoration, and buffer reset:
+  - `backend/tests/unit/test_incremental_graph_engine.py`: 3 passed
+- Full repository test suite: 273 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (109 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

@@ -21,6 +21,7 @@ from app.indicators.incremental import (
     create_incremental_indicator,
     register_incremental,
 )
+from app.indicators.incremental_graph import IncrementalGraphEngine
 from app.indicators.incremental_primitives import (
     IncrementalATR,
     IncrementalBollingerBands,
@@ -57,6 +58,7 @@ from app.indicators.registry import (
     IndicatorRegistry,
     VectorIndicator,
     extract_series,
+    extract_series_nullable,
     registry,
 )
 
@@ -77,6 +79,7 @@ __all__ = [
     "IncrementalATR",
     "IncrementalBollingerBands",
     "IncrementalEMA",
+    "IncrementalGraphEngine",
     "IncrementalIndicator",
     "IncrementalMACD",
     "IncrementalOBV",
@@ -106,6 +109,7 @@ __all__ = [
     "ZScoreIndicator",
     "create_incremental_indicator",
     "extract_series",
+    "extract_series_nullable",
     "register_incremental",
     "registry",
 ]
