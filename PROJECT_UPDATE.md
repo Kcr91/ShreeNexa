@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.6 | Done | Fast-forwarded into `main` at `da8c5cf` after review. |
-| F4.7 | Ready for review | Interactive Indian market option chain widget with dual-sided (Calls / Puts) strike ladder, real-time Black-Scholes Greeks (Delta, Gamma, Theta, Vega), Implied Volatility (IV), Open Interest (OI) metrics, Put-Call Ratio (PCR), Max Pain analysis, and one-click strike selection into order legs. 353 Python tests & 52 frontend tests passing. |
+| F4.7 | Done | Fast-forwarded into `main` at `14b6c82` after review. |
+| F4.8 | Ready for review | Comprehensive backtest visualizer widget presenting institutional quantitative analytics: performance tear sheet scorecards (Sharpe, Sortino, CAGR, Max Drawdown, Win Rate, Profit Factor, Calmar), cumulative equity curve vs benchmark, drawdown underwater chart, monthly return calendar heatmap, and trade PnL distribution histogram. 353 Python tests & 60 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1203,5 +1203,24 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 52 passed / 0 failed across 18 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 52 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `14b6c82`.
+
+### 2026-09-02 — F4.8 Backtest analytics visualizer completed
+
+- Implemented `frontend/src/analytics/types.ts`:
+  - `PerformanceScorecard`, `EquityCurvePoint`, `MonthlyReturnCell`, `TradePnlDistribution`, `BacktestReport`, and `AnalyticsWidgetSettings`.
+- Implemented `frontend/src/analytics/metrics.ts`:
+  - Peak-to-trough drawdown curve calculation and maximum drawdown duration.
+  - Year-by-month return matrix aggregation with compounded annual returns.
+  - Heatmap color intensity function mapping positive and negative return scales.
+  - Realistic mock backtest report generator with Grade A strategy scorecards.
+- Implemented `frontend/src/widgets/builtin/BacktestAnalyticsWidget.tsx`:
+  - Multi-tab visualizer: `Tear Sheet` scorecard grid, `Equity Curve` vs benchmark, `Underwater DD` profile, `Monthly Heatmap` matrix, and `Trade Distribution` histogram.
+  - Registered in `widgetRegistry` under category `analytics`.
+- Authored acceptance contract `docs/qa/acceptance/F4.8.md` and added unit tests in `frontend/src/analytics/metrics.test.ts` and `BacktestAnalyticsWidget.test.tsx`:
+  - Frontend test suite: 60 passed / 0 failed across 20 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 60 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

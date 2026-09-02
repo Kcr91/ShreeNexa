@@ -1,8 +1,8 @@
 {
-  "feature": "F4.7",
+  "feature": "F4.8",
   "status": "review",
-  "branch": "feature/F4.7-option-chain-greeks-iv-strike-selection",
-  "commit": "c139727a29a0090956b6680a6b682669e46a782e",
+  "branch": "feature/F4.8-backtest-analytics-visualizer-tearsheet",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -415,6 +415,15 @@
       "status": "review",
       "branch": "feature/F4.7-option-chain-greeks-iv-strike-selection",
       "commit": "c139727a29a0090956b6680a6b682669e46a782e",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F4.8": {
+      "status": "review",
+      "branch": "feature/F4.8-backtest-analytics-visualizer-tearsheet",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
