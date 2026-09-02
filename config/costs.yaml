@@ -1,0 +1,86 @@
+# Indian Market Transaction Cost Schedules with Effective Date Ranges
+version: 1
+schedules:
+  - id: "pre_oct_2024"
+    name: "Pre October 2024 Regime"
+    effective_from: "2020-01-01"
+    effective_to: "2024-09-30"
+    segments:
+      equity_delivery:
+        brokerage_flat: 0.0
+        brokerage_pct: 0.0
+        stt_buy_pct: 0.001
+        stt_sell_pct: 0.001
+        exchange_txn_pct: 0.0000345
+        sebi_fee_pct: 0.000001
+        stamp_duty_buy_pct: 0.00015
+        gst_pct: 0.18
+      equity_intraday:
+        brokerage_flat: 20.0
+        brokerage_pct: 0.0003
+        stt_buy_pct: 0.0
+        stt_sell_pct: 0.00025
+        exchange_txn_pct: 0.0000345
+        sebi_fee_pct: 0.000001
+        stamp_duty_buy_pct: 0.00003
+        gst_pct: 0.18
+      futures:
+        brokerage_flat: 20.0
+        brokerage_pct: 0.0003
+        stt_buy_pct: 0.0
+        stt_sell_pct: 0.000125
+        exchange_txn_pct: 0.00002
+        sebi_fee_pct: 0.000001
+        stamp_duty_buy_pct: 0.00002
+        gst_pct: 0.18
+      options:
+        brokerage_flat: 20.0
+        brokerage_pct: 0.0
+        stt_buy_pct: 0.0
+        stt_sell_pct: 0.000625
+        exchange_txn_pct: 0.00050
+        sebi_fee_pct: 0.000001
+        stamp_duty_buy_pct: 0.00003
+        gst_pct: 0.18
+
+  - id: "post_oct_2024"
+    name: "Post October 2024 Budget Regime (True-to-Label Fees)"
+    effective_from: "2024-10-01"
+    effective_to: "2099-12-31"
+    segments:
+      equity_delivery:
+        brokerage_flat: 0.0
+        brokerage_pct: 0.0
+        stt_buy_pct: 0.001
+        stt_sell_pct: 0.001
+        exchange_txn_pct: 0.0000297
+        sebi_fee_pct: 0.000001
+        stamp_duty_buy_pct: 0.00015
+        gst_pct: 0.18
+      equity_intraday:
+        brokerage_flat: 20.0
+        brokerage_pct: 0.0003
+        stt_buy_pct: 0.0
+        stt_sell_pct: 0.00025
+        exchange_txn_pct: 0.0000297
+        sebi_fee_pct: 0.000001
+        stamp_duty_buy_pct: 0.00003
+        gst_pct: 0.18
+      futures:
+        brokerage_flat: 20.0
+        brokerage_pct: 0.0003
+        stt_buy_pct: 0.0
+        stt_sell_pct: 0.00020
+        exchange_txn_pct: 0.0000173
+        sebi_fee_pct: 0.000001
+        stamp_duty_buy_pct: 0.00002
+        gst_pct: 0.18
+      options:
+        brokerage_flat: 20.0
+        brokerage_pct: 0.0
+        stt_buy_pct: 0.0
+        stt_sell_pct: 0.0010
+        exchange_txn_pct: 0.0003503
+        sebi_fee_pct: 0.000001
+        stamp_duty_buy_pct: 0.00003
+        gst_pct: 0.18

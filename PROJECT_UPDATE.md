@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.1 | Done | Fast-forwarded into `main` at `445fb61` after review. |
-| F3.2 | Ready for review | SimBroker execution engine with explicit fill timing (NEXT_BAR_OPEN vs SIGNAL_BAR_CLOSE), market/limit/stop matching against bar OHLC, pluggable slippage models (NoSlippage, TickSlippage, PercentageSlippage), and high/low price containment property tests. 319/319 tests passing. |
-| F3.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.2 | Done | Fast-forwarded into `main` at `30d9fd5` after review. |
+| F3.3 | Ready for review | Effective-dated Indian regulatory fee and broker cost model with `config/costs.yaml`, supporting pre/post October 2024 regimes, Delivery, Intraday, Futures, and Options taxes, and line-item contract note reconciliation. 322/322 tests passing. |
+| F3.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -906,4 +906,21 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_sim_broker.py`: 5 passed
 - Full repository test suite: 319 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (139 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `30d9fd5`.
+
+### 2026-09-02 — F3.3 Effective-dated Indian cost model completed
+
+- Created `config/costs.yaml`:
+  - Definitive legal schedules (`pre_oct_2024` and `post_oct_2024`) with effective date boundaries for Equity Delivery, Equity Intraday, Futures, and Options segments covering Brokerage, STT/CTT, Exchange Txn charges, SEBI turnover fees, Stamp Duty, and 18% GST.
+- Implemented `backend/app/engine/costs.py`:
+  - `ProductType` enum (`DELIVERY`, `INTRADAY`, `FUTURES`, `OPTIONS`).
+  - `TradeCostBreakdown` model with full itemized tax breakdown.
+  - `IndianCostCalculator`: Resolves active schedule by historical trade date, computes fee components, and calculates total transaction costs.
+- Created `backend/tests/fixtures/sample_contract_note.json`:
+  - Sanitized multi-segment Dhan contract note fixture with exact pre/post Oct 2024 tax line items.
+- Exported cost models in `backend/app/engine/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.3.md` and added 3 new unit tests covering effective-date schedule resolution, segment/side tax rules, and exact contract note line-item reconciliation:
+  - `backend/tests/unit/test_indian_cost_model.py`: 3 passed
+- Full repository test suite: 322 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (141 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

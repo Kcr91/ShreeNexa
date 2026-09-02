@@ -1,8 +1,8 @@
 {
-  "feature": "F3.2",
+  "feature": "F3.3",
   "status": "review",
-  "branch": "feature/F3.2-simbroker-fills-slippage",
-  "commit": "46223abb92b0fa171a4f00b95eb0740a3249bc12",
+  "branch": "feature/F3.3-indian-cost-model",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -271,6 +271,15 @@
       "status": "review",
       "branch": "feature/F3.2-simbroker-fills-slippage",
       "commit": "46223abb92b0fa171a4f00b95eb0740a3249bc12",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F3.3": {
+      "status": "review",
+      "branch": "feature/F3.3-indian-cost-model",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

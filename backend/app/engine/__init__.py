@@ -1,4 +1,4 @@
-"""Execution Engine contracts, clock models, simulated broker, and slippage models."""
+"""Execution Engine contracts, clock models, simulated broker, slippage, and cost models."""
 
 from __future__ import annotations
 
@@ -21,6 +21,12 @@ from app.engine.contracts import (
     SimClock,
     TimeInForce,
 )
+from app.engine.costs import (
+    IndianCostCalculator,
+    ProductType,
+    TradeCostBreakdown,
+    cost_calculator,
+)
 from app.engine.sim_broker import (
     FillTiming,
     SimBroker,
@@ -41,6 +47,7 @@ __all__ = [
     "FillEvent",
     "FillTiming",
     "HistoricalDataSource",
+    "IndianCostCalculator",
     "NoSlippageModel",
     "OrderRequest",
     "OrderResult",
@@ -50,10 +57,13 @@ __all__ = [
     "PercentageSlippageModel",
     "Portfolio",
     "Position",
+    "ProductType",
     "RealClock",
     "SimBroker",
     "SimClock",
     "SlippageModel",
     "TickSlippageModel",
     "TimeInForce",
+    "TradeCostBreakdown",
+    "cost_calculator",
 ]

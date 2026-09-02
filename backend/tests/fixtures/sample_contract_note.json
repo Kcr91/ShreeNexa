@@ -1,0 +1,106 @@
+{
+  "contract_note_id": "CN-20241015-884920",
+  "broker": "DhanHQ",
+  "trades": [
+    {
+      "trade_id": "TRD-EQ-DEL-01",
+      "symbol": "RELIANCE",
+      "exchange_segment": "NSE_EQ",
+      "side": "BUY",
+      "product_type": "DELIVERY",
+      "quantity": 10,
+      "price": 2500.0,
+      "timestamp": "2024-10-15T10:00:00Z",
+      "turnover": 25000.0,
+      "expected_costs": {
+        "brokerage": 0.0,
+        "stt_ctt": 25.0,
+        "exchange_txn_charge": 0.7425,
+        "sebi_fee": 0.025,
+        "stamp_duty": 3.75,
+        "gst": 0.13815,
+        "total_cost": 29.65565
+      }
+    },
+    {
+      "trade_id": "TRD-EQ-INTRA-02",
+      "symbol": "INFY",
+      "exchange_segment": "NSE_EQ",
+      "side": "SELL",
+      "product_type": "INTRADAY",
+      "quantity": 100,
+      "price": 1500.0,
+      "timestamp": "2024-10-15T14:30:00Z",
+      "turnover": 150000.0,
+      "expected_costs": {
+        "brokerage": 20.0,
+        "stt_ctt": 37.50,
+        "exchange_txn_charge": 4.455,
+        "sebi_fee": 0.15,
+        "stamp_duty": 0.0,
+        "gst": 4.4289,
+        "total_cost": 66.5339
+      }
+    },
+    {
+      "trade_id": "TRD-FNO-FUT-POST-03",
+      "symbol": "NIFTY24OCTFUT",
+      "exchange_segment": "NSE_FNO",
+      "side": "SELL",
+      "product_type": "FUTURES",
+      "quantity": 25,
+      "price": 25000.0,
+      "timestamp": "2024-10-15T11:00:00Z",
+      "turnover": 625000.0,
+      "expected_costs": {
+        "brokerage": 20.0,
+        "stt_ctt": 125.0,
+        "exchange_txn_charge": 10.8125,
+        "sebi_fee": 0.625,
+        "stamp_duty": 0.0,
+        "gst": 5.65875,
+        "total_cost": 162.09625
+      }
+    },
+    {
+      "trade_id": "TRD-FNO-OPT-POST-04",
+      "symbol": "NIFTY24OCT25000CE",
+      "exchange_segment": "NSE_FNO",
+      "side": "BUY",
+      "product_type": "OPTIONS",
+      "quantity": 50,
+      "price": 120.0,
+      "timestamp": "2024-10-15T12:00:00Z",
+      "turnover": 6000.0,
+      "expected_costs": {
+        "brokerage": 20.0,
+        "stt_ctt": 0.0,
+        "exchange_txn_charge": 2.1018,
+        "sebi_fee": 0.006,
+        "stamp_duty": 0.18,
+        "gst": 3.9794,
+        "total_cost": 26.2672
+      }
+    },
+    {
+      "trade_id": "TRD-FNO-FUT-PRE-05",
+      "symbol": "NIFTY24SEPFUT",
+      "exchange_segment": "NSE_FNO",
+      "side": "SELL",
+      "product_type": "FUTURES",
+      "quantity": 25,
+      "price": 25000.0,
+      "timestamp": "2024-09-15T11:00:00Z",
+      "turnover": 625000.0,
+      "expected_costs": {
+        "brokerage": 20.0,
+        "stt_ctt": 78.125,
+        "exchange_txn_charge": 12.5,
+        "sebi_fee": 0.625,
+        "stamp_duty": 0.0,
+        "gst": 5.9625,
+        "total_cost": 117.2125
+      }
+    }
+  ]
+}
