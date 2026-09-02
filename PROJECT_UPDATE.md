@@ -41,8 +41,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F5.1 | Done | Fast-forwarded into `main` at `a690495` after review. |
 | F6.1 | Done | Fast-forwarded into `main` at `789a6aa` after review. |
 | F6.2 | Done | Fast-forwarded into `main` at `1920b7c` after review. |
-| F6.3 | Ready for review | Cross-strategy return and signal correlation matrices with NumPy reference parity, DROP_COMMON / FILL_ZERO / FORWARD_FILL missing-period policies, and explicit constant/short series zero-variance handling. 375 Python tests & 122 frontend tests passing. |
-| F5.2, F6.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F6.3 | Done | Fast-forwarded into `main` at `a832ee9` after review. |
+| F6.4 | Ready for review | StrategySignal nodes, signal-level And/Or/Not composition, DAG cycle detection, and proven G1/G2 vector vs incremental parity. 382 Python tests & 122 frontend tests passing. |
+| F5.2, F6.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1510,4 +1511,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Signal correlation with discrete trading signals (+1, 0, -1) verified.
 - Full repository test suite: 375 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (184 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `a832ee9`.
+
+### 2026-09-02 — F6.4 StrategySignal nodes, boolean composition, and cycle detection completed
+
+- Implemented `backend/app/strategy/graph.py`:
+  - `extract_strategy_dependencies`: AST visitor traversing entry and exit signal trees to extract cross-strategy signal dependencies.
+  - `StrategyGraph`: Dependency graph container performing immediate DFS-based cycle detection, rejecting circular dependencies ($A \to B \to A$, $A \to B \to C \to A$, self-references) with `StrategyGraphCycleError`.
+  - Topological sorting algorithm guaranteeing producers are evaluated before consumer strategies.
+  - `evaluate_vector`: Coordinates G1 vectorized batch execution in topological order, propagating evaluated upstream signals to consumer strategies.
+  - `CompositeIncrementalEngine`: Coordinates G2 streaming incremental execution in topological order, passing real-time upstream signals down the DAG.
+- Updated `backend/app/strategy/compiler.py`:
+  - Added `external_signals` parameter to `evaluate(...)` and `_eval_signal_node(...)`.
+  - Implemented evaluation for `StrategySignalNode`, resolving cross-strategy signals dynamically.
+- Updated `backend/app/strategy/incremental.py`:
+  - Added `external_signals` parameter to `update(...)` and `_eval_node(...)`.
+  - Implemented incremental evaluation for `StrategySignalNode`.
+- Authored acceptance contract `docs/qa/acceptance/F6.4.md` and added unit tests in `backend/tests/unit/test_strategy_graph.py`:
+  - Direct 2-node cycle, indirect 3-node cycle, and self-referential cycle detection verified.
+  - Missing referenced strategy detection verified.
+  - Topological execution order verified.
+  - Signal-level boolean composition (`AndNode`, `OrNode`, `NotNode`) verified.
+  - Proven G1 (vectorized) vs G2 (incremental) bit-for-bit parity across a multi-strategy composed graph.
+- Full repository test suite: 382 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (186 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

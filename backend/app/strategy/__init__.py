@@ -7,6 +7,13 @@ from app.strategy.compiler import (
     StrategyEvaluationResult,
     VectorStrategyCompiler,
 )
+from app.strategy.graph import (
+    CompositeIncrementalEngine,
+    StrategyGraph,
+    StrategyGraphCycleError,
+    StrategyNotFoundError,
+    extract_strategy_dependencies,
+)
 from app.strategy.incremental import (
     IncrementalStrategyCompiler,
     IncrementalStrategyEngine,
@@ -70,6 +77,7 @@ __all__ = [
     "AndNode",
     "CompareOp",
     "CompiledStrategy",
+    "CompositeIncrementalEngine",
     "ConstOperand",
     "CrossOverNode",
     "CrossUnderNode",
@@ -109,9 +117,12 @@ __all__ = [
     "StaticUniverse",
     "StrategyEvaluationResult",
     "StrategyEvaluationStep",
+    "StrategyGraph",
+    "StrategyGraphCycleError",
     "StrategyHorizon",
     "StrategyIR",
     "StrategyKind",
+    "StrategyNotFoundError",
     "StrategySignalNode",
     "StrategyType",
     "StrikeSelector",
@@ -120,5 +131,6 @@ __all__ = [
     "VectorStrategyCompiler",
     "WatchlistUniverse",
     "export_strategy_ir_json_schema",
+    "extract_strategy_dependencies",
     "migrate_strategy_ir",
 ]

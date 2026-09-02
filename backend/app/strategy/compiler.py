@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, time
 from typing import Any
@@ -102,7 +103,9 @@ class CompiledStrategy:
         self._formula_compiler = FormulaCompiler()
 
     def evaluate(
-        self, data: pa.Table | dict[str, Any] | list[BarRecord]
+        self,
+        data: pa.Table | dict[str, Any] | list[BarRecord],
+        external_signals: Mapping[tuple[str, str], Sequence[bool]] | None = None,
     ) -> StrategyEvaluationResult:
         """Evaluate strategy over historical market dataset."""
         normalized_data, timestamps, length = self._normalize_dataset(data)
@@ -148,7 +151,12 @@ class CompiledStrategy:
         entry_signals: dict[str, list[bool]] = {}
         for entry in self.strategy.entries:
             mask = self._eval_signal_node(
-                entry.when, normalized_data, ind_values, timestamps, length
+                entry.when,
+                normalized_data,
+                ind_values,
+                timestamps,
+                length,
+                external_signals=external_signals,
             )
             entry_signals[entry.id] = mask
 
@@ -157,7 +165,12 @@ class CompiledStrategy:
         for exit_rule in self.strategy.exits:
             if exit_rule.type == "signal" and exit_rule.when:
                 mask = self._eval_signal_node(
-                    exit_rule.when, normalized_data, ind_values, timestamps, length
+                    exit_rule.when,
+                    normalized_data,
+                    ind_values,
+                    timestamps,
+                    length,
+                    external_signals=external_signals,
                 )
                 exit_signals[exit_rule.id] = mask
             elif exit_rule.type == "time" and exit_rule.at:
@@ -302,23 +315,30 @@ class CompiledStrategy:
         ind_values: dict[str, list[Any]],
         timestamps: list[datetime],
         length: int,
+        external_signals: Mapping[tuple[str, str], Sequence[bool]] | None = None,
     ) -> list[bool]:
         if isinstance(node, AndNode):
             child_masks = [
-                self._eval_signal_node(c, data, ind_values, timestamps, length)
+                self._eval_signal_node(
+                    c, data, ind_values, timestamps, length, external_signals=external_signals
+                )
                 for c in node.children
             ]
             return [all(mask[i] for mask in child_masks) for i in range(length)]
 
         elif isinstance(node, OrNode):
             child_masks = [
-                self._eval_signal_node(c, data, ind_values, timestamps, length)
+                self._eval_signal_node(
+                    c, data, ind_values, timestamps, length, external_signals=external_signals
+                )
                 for c in node.children
             ]
             return [any(mask[i] for mask in child_masks) for i in range(length)]
 
         elif isinstance(node, NotNode):
-            child_mask = self._eval_signal_node(node.child, data, ind_values, timestamps, length)
+            child_mask = self._eval_signal_node(
+                node.child, data, ind_values, timestamps, length, external_signals=external_signals
+            )
             return [not child_mask[i] for i in range(length)]
 
         elif isinstance(node, IndicatorCompareNode):
@@ -366,7 +386,12 @@ class CompiledStrategy:
             after_mask = [True] * length
             if node.after:
                 after_mask = self._eval_signal_node(
-                    node.after, data, ind_values, timestamps, length
+                    node.after,
+                    data,
+                    ind_values,
+                    timestamps,
+                    length,
+                    external_signals=external_signals,
                 )
 
             out = [False] * length
@@ -388,7 +413,14 @@ class CompiledStrategy:
 
         elif isinstance(node, SequenceNode):
             step_masks = [
-                self._eval_signal_node(step, data, ind_values, timestamps, length)
+                self._eval_signal_node(
+                    step,
+                    data,
+                    ind_values,
+                    timestamps,
+                    length,
+                    external_signals=external_signals,
+                )
                 for step in node.steps
             ]
             out = [False] * length
@@ -446,14 +478,30 @@ class CompiledStrategy:
             return out
 
         elif isinstance(node, PersistNode):
-            child_mask = self._eval_signal_node(node.child, data, ind_values, timestamps, length)
+            child_mask = self._eval_signal_node(
+                node.child,
+                data,
+                ind_values,
+                timestamps,
+                length,
+                external_signals=external_signals,
+            )
             bars = node.bars
             out = [False] * length
             for i in range(bars - 1, length):
                 out[i] = all(child_mask[j] for j in range(i - bars + 1, i + 1))
             return out
 
-        elif isinstance(node, (RegimeNode, StrategySignalNode, CustomPythonNode)):
+        elif isinstance(node, StrategySignalNode):
+            key = (str(node.strategy_id), node.signal)
+            if external_signals and key in external_signals:
+                sig = external_signals[key]
+                if len(sig) >= length:
+                    return [bool(x) for x in sig[:length]]
+                return [bool(x) for x in sig] + [False] * (length - len(sig))
+            return [False] * length
+
+        elif isinstance(node, (RegimeNode, CustomPythonNode)):
             return [False] * length
 
         return [False] * length

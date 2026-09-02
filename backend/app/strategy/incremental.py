@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -93,7 +94,9 @@ class IncrementalStrategyEngine:
         self._orl_val: dict[str, float | None] = {}
         self._node_states: dict[str, Any] = {}
 
-    def update(self, bar: BarRecord) -> StrategyEvaluationStep:
+    def update(
+        self, bar: BarRecord, external_signals: Mapping[tuple[str, str], bool] | None = None
+    ) -> StrategyEvaluationStep:
         """Process a single incoming bar in real-time O(1) time."""
         self._bar_count += 1
         day = bar.timestamp.date()
@@ -138,7 +141,9 @@ class IncrementalStrategyEngine:
         entry_signals: dict[str, bool] = {}
         for entry in self.strategy.entries:
             path = f"entry_{entry.id}"
-            sig = self._eval_node(entry.when, bar, ind_values, path)
+            sig = self._eval_node(
+                entry.when, bar, ind_values, path, external_signals=external_signals
+            )
             entry_signals[entry.id] = sig
 
         # 4. Evaluate exit rules
@@ -146,7 +151,9 @@ class IncrementalStrategyEngine:
         for exit_rule in self.strategy.exits:
             path = f"exit_{exit_rule.id}"
             if exit_rule.type == "signal" and exit_rule.when:
-                sig = self._eval_node(exit_rule.when, bar, ind_values, path)
+                sig = self._eval_node(
+                    exit_rule.when, bar, ind_values, path, external_signals=external_signals
+                )
                 exit_signals[exit_rule.id] = sig
             elif exit_rule.type == "time" and exit_rule.at:
                 exit_time = _parse_time_str(exit_rule.at)
@@ -187,22 +194,33 @@ class IncrementalStrategyEngine:
         return None
 
     def _eval_node(
-        self, node: SignalNode, bar: BarRecord, ind_values: dict[str, Any], path: str
+        self,
+        node: SignalNode,
+        bar: BarRecord,
+        ind_values: dict[str, Any],
+        path: str,
+        external_signals: Mapping[tuple[str, str], bool] | None = None,
     ) -> bool:
         if isinstance(node, AndNode):
             return all(
-                self._eval_node(c, bar, ind_values, f"{path}_{i}")
+                self._eval_node(
+                    c, bar, ind_values, f"{path}_{i}", external_signals=external_signals
+                )
                 for i, c in enumerate(node.children)
             )
 
         elif isinstance(node, OrNode):
             return any(
-                self._eval_node(c, bar, ind_values, f"{path}_{i}")
+                self._eval_node(
+                    c, bar, ind_values, f"{path}_{i}", external_signals=external_signals
+                )
                 for i, c in enumerate(node.children)
             )
 
         elif isinstance(node, NotNode):
-            return not self._eval_node(node.child, bar, ind_values, f"{path}_child")
+            return not self._eval_node(
+                node.child, bar, ind_values, f"{path}_child", external_signals=external_signals
+            )
 
         elif isinstance(node, IndicatorCompareNode):
             l_val = self._get_operand_val(node.left, bar, ind_values)
@@ -252,7 +270,9 @@ class IncrementalStrategyEngine:
 
             after_sig = True
             if node.after:
-                after_sig = self._eval_node(node.after, bar, ind_values, f"{path}_after")
+                after_sig = self._eval_node(
+                    node.after, bar, ind_values, f"{path}_after", external_signals=external_signals
+                )
 
             return bool(is_break and after_sig)
 
@@ -264,7 +284,9 @@ class IncrementalStrategyEngine:
 
             # Check which steps trigger on this bar
             for s_idx, step in enumerate(node.steps):
-                if self._eval_node(step, bar, ind_values, f"{path}_s{s_idx}"):
+                if self._eval_node(
+                    step, bar, ind_values, f"{path}_s{s_idx}", external_signals=external_signals
+                ):
                     step_history.append((self._bar_count, s_idx))
 
             # Check if sequence is satisfied terminating on current bar
@@ -318,7 +340,9 @@ class IncrementalStrategyEngine:
             return False
 
         elif isinstance(node, PersistNode):
-            child_sig = self._eval_node(node.child, bar, ind_values, f"{path}_child")
+            child_sig = self._eval_node(
+                node.child, bar, ind_values, f"{path}_child", external_signals=external_signals
+            )
             consecutive: int = self._node_states.get(path, 0)
             if child_sig:
                 consecutive += 1
@@ -327,7 +351,13 @@ class IncrementalStrategyEngine:
             self._node_states[path] = consecutive
             return consecutive >= node.bars
 
-        elif isinstance(node, (RegimeNode, StrategySignalNode, CustomPythonNode)):
+        elif isinstance(node, StrategySignalNode):
+            key = (str(node.strategy_id), node.signal)
+            if external_signals and key in external_signals:
+                return bool(external_signals[key])
+            return False
+
+        elif isinstance(node, (RegimeNode, CustomPythonNode)):
             return False
 
         return False

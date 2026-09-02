@@ -117,18 +117,14 @@ def compute_correlation_matrix(
                 vec_j = raw_j[:min_len]
             else:
                 # Mixed types
-                warnings.append(
-                    f"Mismatched series formats between '{label_i}' and '{label_j}'"
-                )
+                warnings.append(f"Mismatched series formats between '{label_i}' and '{label_j}'")
                 vec_i, vec_j = [], []
 
             count = len(vec_i)
             sample_counts[i][j] = count
             sample_counts[j][i] = count
 
-            coeff, warn = compute_series_correlation(
-                vec_i, vec_j, min_periods=min_periods
-            )
+            coeff, warn = compute_series_correlation(vec_i, vec_j, min_periods=min_periods)
             if warn:
                 warnings.append(f"Pair ({label_i}, {label_j}): {warn}")
 
@@ -155,4 +151,3 @@ def compute_signal_correlation_matrix(
         policy=policy,
         min_periods=min_periods,
     )
-
