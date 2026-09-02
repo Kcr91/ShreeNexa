@@ -1,13 +1,38 @@
 {
-  "feature": "F7.7",
+  "feature": "F7.8",
   "status": "review",
-  "branch": "feature/F7.7-live-minute-bar-builder",
-  "commit": "0b832df75fe5f2fedcf5018a1632bc85f0b9a145",
+  "branch": "feature/F7.8-index-constituent-heatmap-breadth",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F7.8": {
+      "status": "review",
+      "branch": "feature/F7.8-index-constituent-heatmap-breadth",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 435,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 142,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F7.8.md",
+        "backend/app/api/heatmap.py",
+        "frontend/src/heatmap/engine.ts",
+        "frontend/src/widgets/builtin/MarketHeatmapWidget.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F7.7": {
       "status": "review",
       "branch": "feature/F7.7-live-minute-bar-builder",

@@ -49,8 +49,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F7.4 | Done | Fast-forwarded into `main` at `8e00b64` after review. |
 | F7.5 | Done | Fast-forwarded into `main` at `482fe16` after review. |
 | F7.6 | Done | Fast-forwarded into `main` at `925142e` after review. |
-| F7.7 | Ready for review | Session-aware live one-minute bar builder with duplicate, out-of-order, and late tick handling, exact Dhan minute bar reconciliation, and warehouse history merging. 433 Python tests & 136 frontend tests passing. |
-| F5.2, F7.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F7.7 | Done | Fast-forwarded into `main` at `66d525f` after review. |
+| F7.8 | Ready for review | Index and constituent heatmaps with market breadth, sentiment measures, transparent weighting source, and deterministic missing-weight handling. 435 Python tests & 142 frontend tests passing. |
+| F5.2, F7.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1732,3 +1733,32 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Seamless merging of warehouse history and live session bars.
 - Full repository test suite: 433 Python tests passed + 136 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (205 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `66d525f`.
+
+### 2026-09-02 — F7.8 Index and constituent heatmaps with breadth and transparent weighting completed
+
+- Implemented `backend/app/api/heatmap.py`:
+  - `GET /api/v1/heatmap/indices`: Returns sectoral index heatmap cells with weight, LTP, % change, advances/declines count, futures basis, and OI change %.
+  - `GET /api/v1/heatmap/{index_name}/constituents`: Returns constituent heatmap with normalized weights, transparent weighting source, deterministic missing-weight handling, and market breadth metrics.
+  - Market breadth aggregation: `advances`, `declines`, `unchanged`, `advance_decline_ratio`, `pct_above_prev_close`, `weighted_breadth`, `sentiment_posture`.
+  - Deterministic missing-weight handling: divides unassigned weight evenly among unweighted constituents, assigns `FALLBACK_EQUAL_WEIGHT` source, labels fallback cells, and normalizes cell total weight strictly to 100.0%.
+- Mounted `heatmap_router` in `backend/app/main.py`.
+- Authored backend unit tests in `backend/tests/unit/test_heatmap_api.py`:
+  - Verified index-level heatmap listing with basis and OI change metrics.
+  - Verified constituent heatmap with exact 100.0% cell total reconciliation, breadth calculations, and weighting source visibility.
+- Implemented `frontend/src/heatmap/`:
+  - `types.ts`: `IndexHeatmapItem`, `ConstituentHeatmapItem`, `MarketBreadth`, `WeightingSource`.
+  - `engine.ts`: `calculateMarketBreadth`, `handleMissingWeights` (deterministic fallback assignment and 100% total guarantee), and `getHeatmapTileColor` (rich financial green/red/neutral gradient).
+  - `engine.test.ts`: Mathematical tests verifying breadth calculation, A/D ratio, and deterministic missing-weight labelling and allocation.
+- Created `frontend/src/widgets/builtin/MarketHeatmapWidget.tsx`:
+  - Two-level interactive view: Sectoral Indices and Constituents Drill-In.
+  - Index selector for constituent drill-down.
+  - Live Sentiment & Market Breadth summary bar (Advances, Declines, Unchanged, A/D Ratio, % Above Prev Close, Weighted Breadth, Posture tag).
+  - Weight-proportional responsive Treemap/Grid layout with rich CSS color gradients.
+  - Transparent weighting source: explicitly labels unweighted cells with `[Fallback Wt]` and displays `OFFICIAL_NSE`.
+  - Seamless drill-in: clicking any sectoral index tile in Index View immediately opens its constituent drill-in.
+  - Registered `marketHeatmapDefinition` in `frontend/src/widgets/builtin/index.ts`.
+- Authored frontend component tests in `frontend/src/widgets/builtin/MarketHeatmapWidget.test.tsx`:
+  - Verified index-level rendering, breadth metrics, constituent drill-in, fallback weight labelling, and interactive tile drill-down.
+- Full repository test suite: 435 Python tests passed + 142 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (207 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

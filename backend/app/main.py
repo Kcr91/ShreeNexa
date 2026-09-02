@@ -17,6 +17,7 @@ from fastapi import FastAPI
 
 from app.api.backtests import router as backtests_router
 from app.api.feed import router as feed_router
+from app.api.heatmap import router as heatmap_router
 from app.api.indicators import alias_router as indicators_alias_router
 from app.api.indicators import router as indicators_router
 from app.api.instruments import router as instruments_router
@@ -68,6 +69,7 @@ app.include_router(indicators_alias_router)
 app.include_router(screeners_router)
 app.include_router(backtests_router)
 app.include_router(watchlists_router)
+app.include_router(heatmap_router)
 
 
 @app.get("/healthz")
