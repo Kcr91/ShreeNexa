@@ -94,9 +94,7 @@ def test_bull_call_spread_payoff_and_greeks_reconciliation() -> None:
     # 1. Trade Entries: 2 entry fills + 2 expiry settlement fills = 4 total fills
     assert len(result.trades) == 4
     long_fill = next(
-        f
-        for f in result.trades
-        if f.security_id == "NIFTY26SEP25000CE" and f.side == OrderSide.BUY
+        f for f in result.trades if f.security_id == "NIFTY26SEP25000CE" and f.side == OrderSide.BUY
     )
     short_fill = next(
         f

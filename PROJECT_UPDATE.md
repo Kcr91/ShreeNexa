@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.4 | Done | Fast-forwarded into `main` at `3a69322` after review. |
-| F3.5 | Ready for review | Option strategy multi-leg backtest runner with Black-Scholes pricing, net portfolio Greeks aggregation (Delta, Gamma, Theta, Vega, Rho), SPAN/exposure margin requirement modeling, and expiration exercise/assignment lifecycle. 329/329 tests passing. |
-| F3.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.5 | Done | Fast-forwarded into `main` at `d9c0907` after review. |
+| F3.6 | Ready for review | Futures strategy backtest runner with continuous contract rollover execution, contango/backwardation spread reconciliation, daily mark-to-market accounting, and exchange initial margin tracking. 332/332 tests passing. |
+| F3.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -962,4 +962,20 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_option_backtest_runner.py`: 3 passed
 - Full repository test suite: 329 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (151 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `d9c0907`.
+
+### 2026-09-02 — F3.6 Futures-strategy backtest runner completed
+
+- Implemented `backend/app/backtest/futures_models.py`:
+  - `FuturesContractSpec`: Contract specifications, underlying symbol, expiration date, lot and tick sizes.
+  - `FuturesStrategyConfig`: Trading direction, lot sizing, initial margin %, and roll trigger rules.
+  - `FuturesBacktestConfig` & `FuturesBacktestResult`: Futures backtest configuration and execution report.
+  - `FuturesRollRecord`: Audit ledger capturing contract rollover dates, from/to contracts, roll spread, and transaction fees.
+- Implemented `backend/app/backtest/futures_runner.py`:
+  - `FuturesStrategyBacktestRunner`: Coordinates multi-month futures lifecycle, executing rollovers before contract expiration, computing continuous mark-to-market valuations, and tracking exchange initial margin requirements.
+- Exported futures backtest tools in `backend/app/backtest/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.6.md` and added 3 new unit tests covering multi-month rollover execution & spread reconciliation, daily mark-to-market / margin tracking, and effective-dated futures taxation:
+  - `backend/tests/unit/test_futures_backtest_runner.py`: 3 passed
+- Full repository test suite: 332 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (154 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

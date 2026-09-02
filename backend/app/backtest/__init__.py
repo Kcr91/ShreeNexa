@@ -1,7 +1,15 @@
-"""Backtest execution, performance analytics, strategy simulation, and options modeling."""
+"""Backtest execution, performance analytics, strategy simulation, options, and futures modeling."""
 
 from __future__ import annotations
 
+from app.backtest.futures_models import (
+    FuturesBacktestConfig,
+    FuturesBacktestResult,
+    FuturesContractSpec,
+    FuturesRollRecord,
+    FuturesStrategyConfig,
+)
+from app.backtest.futures_runner import FuturesStrategyBacktestRunner
 from app.backtest.metrics import calculate_backtest_metrics
 from app.backtest.models import (
     BacktestConfig,
@@ -30,6 +38,12 @@ __all__ = [
     "BacktestPerformanceMetrics",
     "BacktestResult",
     "BacktestStore",
+    "FuturesBacktestConfig",
+    "FuturesBacktestResult",
+    "FuturesContractSpec",
+    "FuturesRollRecord",
+    "FuturesStrategyBacktestRunner",
+    "FuturesStrategyConfig",
     "OptionBacktestConfig",
     "OptionBacktestResult",
     "OptionLegConfig",
