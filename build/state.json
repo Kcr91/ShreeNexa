@@ -2,7 +2,7 @@
   "feature": "F8.2",
   "status": "review",
   "branch": "feature/F8.2-dhan-chain-calibration-drift",
-  "commit": null,
+  "commit": "72a392376af4c9083e51d81cd5f307ca537930f6",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F8.2": {
       "status": "review",
       "branch": "feature/F8.2-dhan-chain-calibration-drift",
-      "commit": null,
+      "commit": "72a392376af4c9083e51d81cd5f307ca537930f6",
       "tests": {
         "pytest": {
           "passed": 454,
