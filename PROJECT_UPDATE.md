@@ -1331,3 +1331,32 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Full repository test suite: 353 Python tests passed + 97 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
+### 2026-09-02 - Project-local Code Review Graph tooling staged
+
+- Created `feature/dev-code-review-graph` from `main` at `e648dd8`; the paused
+  product task and its branch were not changed.
+- Pinned `code-review-graph==2.3.8` as a development dependency and configured
+  Codex, Claude Code, Gemini CLI, and the existing VS Code extension to launch
+  the executable from ShreeNexa's repository `.venv`.
+- Restricted the MCP surface to five read-only discovery/review tools:
+  `get_minimal_context_tool`, `detect_changes_tool`,
+  `get_review_context_tool`, `get_impact_radius_tool`, and `query_graph_tool`.
+- Added the acceptance contract and runbook, updated the build plan and agent
+  context-loading guidance, and excluded graph runtime state plus large
+  authoritative documents and lockfiles from graph indexing.
+- Deliberately left embeddings, cloud providers, daemons, lifecycle hooks, CI
+  comments, automatic edits, and user-level client configuration disabled.
+  Antigravity remains unconfigured because its MCP file is user-level.
+- Built and post-processed a healthy local graph: 1,993 nodes, 16,265 edges,
+  279 indexed files, 145 flows, 36 communities, and 1,993 FTS entries. A source
+  file query returned the expected six nodes, and an MCP handshake exposed
+  exactly the five allowed tools.
+- Gates passed: locked environment sync; Ruff; strict mypy over 166 files;
+  manifest validation for 108 items; two-fixture hash validation; frontend
+  typecheck; 97 frontend tests; production build; JSON/TOML parsing; relative
+  link/path checks; graph integrity/status/query; and `git diff --check`.
+- Full Python suite result in the restricted execution environment: 331 passed,
+  19 skipped, and 3 failed. Two failures require Windows DPAPI access and one
+  requires `DATABASE_URL`; none touches this documentation/configuration-only
+  change. The final all-files pre-commit rerun passed; independent branch
+  review remains open.

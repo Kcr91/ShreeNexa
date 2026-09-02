@@ -4,14 +4,26 @@
 
 ShreeNexa Terminal is a greenfield Indian-market research, paper-trading, and eventually approval-gated live-trading terminal. It is not implemented yet; follow the feature sequence instead of scaffolding ahead.
 
-Read before editing:
+Read before editing, using the narrowest authoritative sections that cover the
+current feature:
 
-1. `PROJECT_UPDATE.md` for current feature/branch status.
-2. `SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md` for feature scope, dependency order, and proof.
-3. `SHREENEXA_TECHNICAL_SPEC.md` for product behavior and invariants.
-4. `docs/architecture/README.md` and only the directly relevant linked decisions.
-5. `docs/qa/README.md` and the current feature acceptance contract.
-6. `build/manifest.yaml` for feature IDs, dependencies, and proof.
+1. `PROJECT_UPDATE.md`: the dated snapshot, feature-status row, and latest log
+   entry for the current feature and its direct dependencies. Read older log
+   history only when resolving provenance, recovery, or a conflict.
+2. `build/manifest.yaml`: the current feature entry, dependencies, and proof.
+3. `SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md`: binding rules, execution protocol,
+   current ledger row, and any section directly referenced by that row. Do not
+   load the full ledger for routine feature work.
+4. `SHREENEXA_TECHNICAL_SPEC.md`: the directly relevant product sections and
+   cross-cutting invariants. Expand to adjacent sections when an interface or
+   safety decision crosses boundaries; do not load the full specification by
+   default.
+5. `docs/architecture/README.md` and only the directly relevant linked decisions.
+6. `docs/qa/README.md` and the current feature acceptance contract.
+
+Use headings, exact feature IDs, links, and targeted search to locate these
+sections. A compact excerpt is a routing aid, not a substitute for the
+authoritative section when making a decision.
 
 If these sources disagree, stop and report the conflict. The approved specification and build plan may not be silently rewritten during implementation.
 
@@ -91,6 +103,22 @@ uv run pre-commit run --all-files
 ```
 
 `uv run pytest` discovers both `backend/tests` and `build/tests` in one invocation. `pre-commit` never auto-fixes `SHREENEXA_TECHNICAL_SPEC.md` or `SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md` — its `ruff`/`ruff-format` hooks are scoped to Python files only; do not widen that scope without re-checking this exclusion holds.
+
+### Token-efficient code discovery and review
+
+Code Review Graph 2.3.8 is optional local development tooling; see
+`docs/runbooks/code-review-graph.md`. For cross-file discovery or review, first
+check that the graph is fresh, call `get_minimal_context_tool`, use
+`detail_level="minimal"`, and keep the initial graph work to five calls or
+fewer. Prefer a specific symbol or explicit `git diff --name-only main...HEAD`
+file list over broad repository queries. For a small single-file or
+documentation-only change, direct targeted reads may be cheaper.
+
+The graph narrows what to inspect; it never replaces reading the selected
+implementation and tests, the complete Git diff, acceptance evidence, or an
+independent review. Empty or conflicting graph output does not prove absence.
+No embedding provider, cloud egress, daemon, automatic hook, CI comment, or
+graph-driven edit is authorized by this setup.
 
 For documentation/configuration changes, also parse the affected format, resolve local links, verify referenced paths, and scan the changed files for secret-shaped values.
 

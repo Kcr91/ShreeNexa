@@ -1,0 +1,9 @@
+# Keep the graph focused on executable code. These authoritative documents are
+# opened explicitly through the feature contract and source-of-truth workflow.
+PROJECT_UPDATE.md
+SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md
+SHREENEXA_TECHNICAL_SPEC.md
+
+# Dependency locks are reviewed directly when they change.
+uv.lock
+frontend/package-lock.json

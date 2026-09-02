@@ -33,6 +33,7 @@ dev = [
     "types-psutil>=6.1,<7.0",
     "hypothesis>=6.120,<7.0",
     "httpx>=0.28,<1.0",
+    "code-review-graph==2.3.8",
 ]
 
 [build-system]

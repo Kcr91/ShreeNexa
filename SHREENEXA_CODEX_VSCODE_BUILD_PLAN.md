@@ -113,6 +113,34 @@ F:\ShreeNexa\
 - “No look-ahead, deterministic runs, point-in-time universe” invariants.
 - The exact completion report format.
 
+### 3.4 Token-efficient Code Review Graph
+
+ShreeNexa pins `code-review-graph==2.3.8` as optional local development
+tooling. The same repository-owned executable is used by Codex, Claude Code,
+Gemini CLI, and the VS Code extension. Antigravity is not configured because
+its MCP configuration is user-level rather than project-local.
+
+Only these MCP tools are exposed:
+
+- `get_minimal_context_tool`
+- `detect_changes_tool`
+- `get_review_context_tool`
+- `get_impact_radius_tool`
+- `query_graph_tool`
+
+Use the graph only to select the smallest relevant implementation/test set.
+Start with minimal context, request `detail_level="minimal"`, prefer explicit
+symbols or changed-file lists, and normally stop after five graph calls. Read
+the selected source and tests before changing code. The graph is advisory: it
+does not replace the approved source documents, full diff review, gates,
+independent evidence, or protected-path controls. A stale, empty, or
+conflicting graph result must fall back to targeted source inspection.
+
+Graph data stays in the ignored `.code-review-graph/` directory. Embeddings,
+cloud providers, auto-watch/daemon processes, lifecycle hooks, CI comments,
+and graph-driven edits remain disabled. See
+`docs/runbooks/code-review-graph.md` and its acceptance contract.
+
 ---
 
 ## 4. Feature execution protocol
@@ -121,7 +149,13 @@ Follow this loop for every feature.
 
 ### Step A — preflight
 
-Codex reads `AGENTS.md`, the feature card, relevant architecture notes, and only the source files needed for that feature. It runs:
+Codex reads `AGENTS.md`, the current status/manifest entries, the relevant plan
+and specification sections, the feature contract, relevant architecture notes,
+and only the source files needed for that feature. It does not load the full
+project log, feature ledger, or technical specification unless a cross-cutting
+decision or source conflict requires it. For cross-file work it may use the
+fresh Code Review Graph to identify the source set; small or
+documentation-only tasks use direct targeted reads. It runs:
 
 ```powershell
 git status --short --branch
@@ -164,7 +198,7 @@ For UI features, also run a real application instance plus Playwright acceptance
 
 ### Step E — review and handoff
 
-Codex reviews its own diff, commits only the feature files, and reports:
+Codex reviews its own diff, optionally uses `detect_changes_tool` with an explicit changed-file list to prioritize blast-radius checks, verifies the complete Git diff directly, commits only the feature files, and reports:
 
 1. Branch and commit.
 2. Files created/modified.

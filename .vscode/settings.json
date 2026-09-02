@@ -1,0 +1,6 @@
+{
+  "codeReviewGraph.cliPath": "F:\\ShreeNexa\\.venv\\Scripts\\code-review-graph.exe",
+  "codeReviewGraph.autoUpdate": false,
+  "codeReviewGraph.blastRadiusDepth": 2,
+  "codeReviewGraph.graph.maxNodes": 500
+}

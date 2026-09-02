@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "context": {
+    "includeDirectoryTree": false,
+    "fileFiltering": {
+      "respectGitIgnore": true,
+      "respectGeminiIgnore": true
+    }
+  },
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "F:\\ShreeNexa\\.venv\\Scripts\\code-review-graph.exe",
+      "args": [
+        "serve",
+        "--repo",
+        "F:\\ShreeNexa",
+        "--tools",
+        "get_minimal_context_tool,detect_changes_tool,get_review_context_tool,get_impact_radius_tool,query_graph_tool"
+      ],
+      "cwd": "F:\\ShreeNexa",
+      "env": {
+        "PYTHONUTF8": "1"
+      },
+      "includeTools": [
+        "get_minimal_context_tool",
+        "detect_changes_tool",
+        "get_review_context_tool",
+        "get_impact_radius_tool",
+        "query_graph_tool"
+      ]
+    }
+  }
+}

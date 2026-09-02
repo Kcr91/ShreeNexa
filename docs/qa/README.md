@@ -8,6 +8,7 @@
 - [Completion report template](completion-report-template.md)
 - [Controlled local development autopilot runbook](../runbooks/dev-autopilot.md)
 - [Dhan recorded-cassette evidence procedure](../runbooks/dhan-recorded-cassette-evidence.md)
+- [Code Review Graph runbook](../runbooks/code-review-graph.md)
 
 ## Acceptance contracts
 
@@ -20,6 +21,7 @@
 - [F0.2 — Local Postgres and Redis services via Docker Compose](acceptance/F0.2.md)
 - [F0.3 — Process skeletons and durable heartbeat contract](acceptance/F0.3.md)
 - [Development autopilot pilot setup](acceptance/dev-autopilot-pilot.md)
+- [Development Code Review Graph tooling](acceptance/dev-code-review-graph.md)
 - [F0.4 — Central settings, secret redaction, and Dhan token health](acceptance/F0.4.md)
 - [F0.5 — Typed Dhan REST wrapper and recorded cassettes](acceptance/F0.5.md)
 - [F0.6 — Dhan Rate Limiter with Redis Token Bucket](acceptance/F0.6.md)

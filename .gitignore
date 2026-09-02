@@ -95,7 +95,8 @@ temp/
 
 # IDE and editor output
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 *.code-workspace
 *.suo
 *.user
@@ -109,6 +110,7 @@ Thumbs.db
 Desktop.ini
 
 # Local runtime state
+.code-review-graph/
 .local/
 .runtime/
 runtime/

@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "type": "stdio",
+      "command": "F:\\ShreeNexa\\.venv\\Scripts\\code-review-graph.exe",
+      "args": [
+        "serve",
+        "--repo",
+        "F:\\ShreeNexa",
+        "--tools",
+        "get_minimal_context_tool,detect_changes_tool,get_review_context_tool,get_impact_radius_tool,query_graph_tool"
+      ],
+      "env": {
+        "PYTHONUTF8": "1"
+      },
+      "alwaysLoad": false
+    }
+  }
+}
