@@ -45,8 +45,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F6.4 | Done | Fast-forwarded into `main` at `dff4fdc` after review. |
 | F7.1 | Done | Fast-forwarded into `main` at `0c4beda` after review. |
 | F7.2 | Done | Fast-forwarded into `main` at `0cfe68e` after review. |
-| F7.3 | Ready for review | Redis quote/OI/depth hot cache with schema v1, staleness evaluation (threshold 5.0s), atomic composite pipeline writes, multi-quote batch queries, and feed health records. 416 Python tests & 122 frontend tests passing. |
-| F5.2, F7.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F7.3 | Done | Fast-forwarded into `main` at `ba32b5d` after review. |
+| F7.4 | Ready for review | Browser WebSocket fan-out with initial snapshots, streaming deltas, backpressure queue isolation, slow client non-blocking protection, and resync. 420 Python tests & 122 frontend tests passing. |
+| F5.2, F7.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1634,3 +1635,23 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified Redis pipeline execution on mock Redis storage.
 - Full repository test suite: 416 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (198 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `ba32b5d`.
+
+### 2026-09-02 — F7.4 Browser WebSocket fan-out, snapshots, and backpressure completed
+
+- Implemented `backend/app/api/ws.py`:
+  - `ClientSession`: Bounded outbound queue (`asyncio.Queue(maxsize=100)`), non-blocking enqueue via `send_nowait`, subscription channel tracking, and slow client detection.
+  - `MarketDataFanoutManager`: Browser session registry, initial state snapshot generation from `HotCache`, non-blocking streaming delta broadcasting, and backpressure telemetry.
+  - Slow client protection invariant: When a client queue is full, incoming messages are dropped and `dropped_messages_count` is incremented. The broadcast loop and feed ingestion are guaranteed non-blocking and never stall.
+  - `resync`: Delivers fresh snapshots for all active subscriptions on demand.
+- Updated `backend/app/api/feed.py`:
+  - Added authenticated WebSocket route `@router.websocket("/ws")` compatible with frontend `NexaWebSocketClient`.
+  - Added telemetry endpoint `@router.get("/metrics")` exposing active sessions, backpressure statistics, and slow client IDs.
+  - Background async message pump streaming outbound frames from bounded session queues.
+- Authored acceptance contract `docs/qa/acceptance/F7.4.md` and added unit tests in `backend/tests/unit/test_market_ws_fanout.py`:
+  - Proven three-client consistency and slow-client backpressure invariant: 2 fast clients receive 100% of 50 updates synchronously, while 1 slow client drops updates without blocking feed ingestion (elapsed time < 0.05s).
+  - Snapshot delivery verified: returns `quotes`, `depth`, and `oi` snapshots immediately upon subscribing and on `resync`.
+  - Unsubscribe routing verified: stopping deltas immediately when a symbol is unsubscribed.
+  - FastAPI WebSocket endpoint integration tested: connection handshake, ping/pong, and JSON action parsing verified.
+- Full repository test suite: 420 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (200 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

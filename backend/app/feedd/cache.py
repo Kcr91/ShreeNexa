@@ -158,9 +158,7 @@ class HotCache(Protocol):
     def get_all_feed_health(self, now: float | None = None) -> list[CachedFeedHealth]: ...
 
 
-def _apply_freshness_quote(
-    quote: CachedQuote, now: float, threshold: float
-) -> CachedQuote:
+def _apply_freshness_quote(quote: CachedQuote, now: float, threshold: float) -> CachedQuote:
     elapsed = max(0.0, now - quote.received_at)
     is_stale = elapsed > threshold
     return CachedQuote(
@@ -198,9 +196,7 @@ def _apply_freshness_oi(oi: CachedOI, now: float, threshold: float) -> CachedOI:
     )
 
 
-def _apply_freshness_depth(
-    depth: CachedDepth, now: float, threshold: float
-) -> CachedDepth:
+def _apply_freshness_depth(depth: CachedDepth, now: float, threshold: float) -> CachedDepth:
     elapsed = max(0.0, now - depth.received_at)
     is_stale = elapsed > threshold
     return CachedDepth(
@@ -332,9 +328,7 @@ class InMemoryHotCache:
                     received_at=t,
                 )
 
-    def batch_update_packets(
-        self, packets: Sequence[FeedPacket], now: float | None = None
-    ) -> None:
+    def batch_update_packets(self, packets: Sequence[FeedPacket], now: float | None = None) -> None:
         t = now if now is not None else time.time()
         for p in packets:
             self.update_from_packet(p, now=t)
@@ -348,9 +342,7 @@ class InMemoryHotCache:
             return None
         return _apply_freshness_quote(item, t, self.freshness_threshold)
 
-    def get_oi(
-        self, segment: str, security_id: str, now: float | None = None
-    ) -> CachedOI | None:
+    def get_oi(self, segment: str, security_id: str, now: float | None = None) -> CachedOI | None:
         t = now if now is not None else time.time()
         item = self._oi.get((segment, security_id))
         if not item:
@@ -380,9 +372,7 @@ class InMemoryHotCache:
     def update_feed_health(self, health: CachedFeedHealth) -> None:
         self._health[health.socket_id] = health
 
-    def get_feed_health(
-        self, socket_id: str, now: float | None = None
-    ) -> CachedFeedHealth | None:
+    def get_feed_health(self, socket_id: str, now: float | None = None) -> CachedFeedHealth | None:
         t = now if now is not None else time.time()
         item = self._health.get(socket_id)
         if not item:
@@ -420,9 +410,7 @@ class RedisHotCache:
     def update_from_packet(self, packet: FeedPacket, now: float | None = None) -> None:
         self.batch_update_packets([packet], now=now)
 
-    def batch_update_packets(
-        self, packets: Sequence[FeedPacket], now: float | None = None
-    ) -> None:
+    def batch_update_packets(self, packets: Sequence[FeedPacket], now: float | None = None) -> None:
         if not packets:
             return
 
@@ -498,9 +486,7 @@ class RedisHotCache:
         quote = CachedQuote.model_validate(data)
         return _apply_freshness_quote(quote, t, self.freshness_threshold)
 
-    def get_oi(
-        self, segment: str, security_id: str, now: float | None = None
-    ) -> CachedOI | None:
+    def get_oi(self, segment: str, security_id: str, now: float | None = None) -> CachedOI | None:
         t = now if now is not None else time.time()
         val = self._client.get(oi_key(segment, security_id))
         if not val:
@@ -535,9 +521,7 @@ class RedisHotCache:
             if raw:
                 data = json.loads(raw)
                 q = CachedQuote.model_validate(data)
-                results[(seg, sec_id)] = _apply_freshness_quote(
-                    q, t, self.freshness_threshold
-                )
+                results[(seg, sec_id)] = _apply_freshness_quote(q, t, self.freshness_threshold)
 
         return results
 
@@ -548,9 +532,7 @@ class RedisHotCache:
         # Add to set of known socket IDs
         self._client.sadd("shreenexa:feed:v1:sockets", health.socket_id)
 
-    def get_feed_health(
-        self, socket_id: str, now: float | None = None
-    ) -> CachedFeedHealth | None:
+    def get_feed_health(self, socket_id: str, now: float | None = None) -> CachedFeedHealth | None:
         t = now if now is not None else time.time()
         h_key = health_key(socket_id)
         val = self._client.get(h_key)

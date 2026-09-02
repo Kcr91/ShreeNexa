@@ -1,13 +1,37 @@
 {
-  "feature": "F7.3",
+  "feature": "F7.4",
   "status": "review",
-  "branch": "feature/F7.3-redis-quote-oi-depth-hot-cache",
-  "commit": "2ab000fa331834a474daceab488e62a0e4925123",
+  "branch": "feature/F7.4-browser-websocket-fan-out",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F7.4": {
+      "status": "review",
+      "branch": "feature/F7.4-browser-websocket-fan-out",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 420,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 122,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F7.4.md",
+        "backend/app/api/ws.py",
+        "backend/tests/unit/test_market_ws_fanout.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F7.3": {
       "status": "review",
       "branch": "feature/F7.3-redis-quote-oi-depth-hot-cache",
