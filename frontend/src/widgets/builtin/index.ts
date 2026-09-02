@@ -6,6 +6,7 @@ import { fixtureTestDefinition } from "./FixtureTestWidget";
 import { chartDefinition } from "./ChartWidget";
 import { orderTicketDefinition } from "./OrderTicketWidget";
 import { blotterDefinition } from "./BlotterWidget";
+import { optionChainDefinition } from "./OptionChainWidget";
 
 export function registerBuiltinWidgets(): void {
   widgetRegistry.register(marketClockDefinition);
@@ -15,6 +16,7 @@ export function registerBuiltinWidgets(): void {
   widgetRegistry.register(chartDefinition);
   widgetRegistry.register(orderTicketDefinition);
   widgetRegistry.register(blotterDefinition);
+  widgetRegistry.register(optionChainDefinition);
 }
 
 // Auto-register built-in widgets

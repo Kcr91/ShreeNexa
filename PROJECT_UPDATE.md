@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.5 | Done | Fast-forwarded into `main` at `94cc5fb` after review. |
-| F4.6 | Ready for review | Integrated trading blotter widget managing real-time positions with live mark-to-market PnL calculations, active working orders management with individual and batch cancellation, historical execution trade log, and single-click 'Cancel All Open Orders' panic action. 353 Python tests & 46 frontend tests passing. |
+| F4.6 | Done | Fast-forwarded into `main` at `da8c5cf` after review. |
+| F4.7 | Ready for review | Interactive Indian market option chain widget with dual-sided (Calls / Puts) strike ladder, real-time Black-Scholes Greeks (Delta, Gamma, Theta, Vega), Implied Volatility (IV), Open Interest (OI) metrics, Put-Call Ratio (PCR), Max Pain analysis, and one-click strike selection into order legs. 353 Python tests & 52 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1184,5 +1184,24 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 46 passed / 0 failed across 16 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 46 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `da8c5cf`.
+
+### 2026-09-02 — F4.7 Option chain and Greeks widget completed
+
+- Implemented `frontend/src/optionchain/types.ts`:
+  - `Greeks`, `OptionContract`, `OptionStrikeRow`, `OptionChainData`, and `OptionChainWidgetSettings`.
+- Implemented `frontend/src/optionchain/greeks.ts`:
+  - Closed-form Black-Scholes pricing model with normal CDF/PDF routines for European Indian index options.
+  - Computes Delta, Gamma, Theta (daily decay), Vega, IV, and strike ladder generation around spot price.
+  - Put-Call Ratio (PCR) and Max Pain strike computation.
+- Implemented `frontend/src/widgets/builtin/OptionChainWidget.tsx`:
+  - Symmetrical Call / Put strike ladder with ATM marker, spot price banner, expiry selector, and analytics badges.
+  - Interactive one-click leg selection generating formatted `OptionLeg` notification.
+  - Registered in `widgetRegistry` under category `analytics`.
+- Authored acceptance contract `docs/qa/acceptance/F4.7.md` and added unit tests in `frontend/src/optionchain/greeks.test.ts` and `OptionChainWidget.test.tsx`:
+  - Frontend test suite: 52 passed / 0 failed across 18 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 52 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

@@ -1,8 +1,8 @@
 {
-  "feature": "F4.6",
+  "feature": "F4.7",
   "status": "review",
-  "branch": "feature/F4.6-positions-orders-trade-blotter-panic",
-  "commit": "b8b546bb4c90bc989100fa1b0db747a965d1d6a7",
+  "branch": "feature/F4.7-option-chain-greeks-iv-strike-selection",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -406,6 +406,15 @@
       "status": "review",
       "branch": "feature/F4.6-positions-orders-trade-blotter-panic",
       "commit": "b8b546bb4c90bc989100fa1b0db747a965d1d6a7",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F4.7": {
+      "status": "review",
+      "branch": "feature/F4.7-option-chain-greeks-iv-strike-selection",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
