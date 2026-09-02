@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.1 | Done | Fast-forwarded into `main` at `ad70358` after review. |
-| F4.2 | Ready for review | Typed widget registry with settings-schema validation, dynamic palette discovery, lazy loading (`React.lazy` + `Suspense`), and built-in market widgets. 353 Python tests & 9 frontend tests passing. |
+| F4.2 | Done | Fast-forwarded into `main` at `8fe4500` after review. |
+| F4.3 | Ready for review | Multi-grid and multi-tab layout manager with persistent `localStorage` serialization, corrupt state fallback to default layout, tab management, dynamic widget palette spawning, and responsive grid layout. 353 Python tests & 18 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1097,5 +1097,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 9 passed / 0 failed across 5 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 9 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `8fe4500`.
+
+### 2026-09-02 — F4.3 Multi-grid and multi-tab layout manager completed
+
+- Implemented `frontend/src/layout/types.ts`:
+  - `GridPosition`, `LayoutWidgetItem`, `LayoutTab`, and `WorkspaceLayout` schema contracts.
+- Implemented `frontend/src/layout/storage.ts`:
+  - Persistent storage layer reading and writing to `localStorage` with `validateLayout` schema guard.
+  - Resilient error handling automatically falling back to `DEFAULT_LAYOUT` upon corrupt JSON, malformed schema, or missing active tab.
+- Implemented `frontend/src/layout/LayoutContext.tsx`:
+  - Global layout state provider and `useLayout` hook managing tab switching, adding/removing tabs, adding/removing widgets, updating widget positions, updating widget settings, and resetting workspace layout.
+- Implemented Layout Components:
+  - `TabBar.tsx`: Tab strip with active tab highlighting, tab removal, "+ Tab" creator, "+ Add Widget" palette modal launcher, and "↺ Reset" defaults button.
+  - `GridContainer.tsx`: Responsive CSS grid rendering widget frames with empty-state placeholders.
+  - `LayoutManager.tsx`: Master coordinator binding TabBar, GridContainer, and modal WidgetPalette together.
+- Integrated into `frontend/src/views/DashboardView.tsx`:
+  - Replaced static placeholder with interactive `LayoutProvider` and `LayoutManager`.
+- Authored acceptance contract `docs/qa/acceptance/F4.3.md` and added unit tests in `frontend/src/layout/storage.test.ts` and `frontend/src/layout/LayoutManager.test.tsx`:
+  - Frontend test suite: 18 passed / 0 failed across 7 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 18 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
