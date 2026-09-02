@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.9 | Done | Fast-forwarded into `main` at `482eafc` after review. |
-| F3.10 | Ready for review | Strategy scorecard engine supporting four horizon profiles (Intraday, Swing, Positional, Investment), multi-metric scoring, deployment gates, and overfitting-aware verdict generation. 349/349 tests passing. |
-| F3.11–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.10 | Done | Fast-forwarded into `main` at `fd1fb0d` after review. |
+| F3.12 | Ready for review | Universal daily accounting ledger with realized P&L, MTM change, costs, cashflows, and Time-Weighted Return (TWR) calculation. 353/353 tests passing. |
+| F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1039,4 +1039,18 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_metric_grading_scorecard.py`: 5 passed
 - Full repository test suite: 349 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (164 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `fd1fb0d`.
+
+### 2026-09-02 — F3.12 Shared daily P&L model and TWR accounting completed
+
+- Implemented `backend/app/engine/daily_pnl.py`:
+  - `ExecutionMode`: Execution runtime contexts (`BACKTEST`, `PAPER`, `LIVE`).
+  - `DailyPnLRecord`: Immutable daily accounting ledger record validating fundamental accounting identity $E_{end, t} = E_{start, t} + C_t + P_{real, t} + \Delta U_t - K_t$.
+  - `DailyPnLTracker`: Tracks multi-day P&L, MTM day-over-day shifts, external cashflows, and sub-period Time-Weighted Return (TWR) compounding without distortion from capital deposits or withdrawals.
+  - `MonthlyPnLSummary` & `YearlyPnLSummary`: Performance aggregations providing monthly and yearly Net PnL, TWR return %, and win/loss day counts.
+- Exported daily P&L tools in `backend/app/engine/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.12.md` and added 4 new unit tests covering fundamental accounting identity validation, pure-cashflow 0% return invariance, TWR sub-period compounding under capital injections, and monthly/yearly performance summaries:
+  - `backend/tests/unit/test_daily_pnl_tracker.py`: 4 passed
+- Full repository test suite: 353 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

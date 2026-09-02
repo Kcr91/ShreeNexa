@@ -1,4 +1,4 @@
-"""Execution Engine contracts, clock models, simulated broker, slippage, and cost models."""
+"""Execution Engine contracts, clock models, simulated broker, daily P&L, and cost models."""
 
 from __future__ import annotations
 
@@ -27,6 +27,13 @@ from app.engine.costs import (
     TradeCostBreakdown,
     cost_calculator,
 )
+from app.engine.daily_pnl import (
+    DailyPnLRecord,
+    DailyPnLTracker,
+    ExecutionMode,
+    MonthlyPnLSummary,
+    YearlyPnLSummary,
+)
 from app.engine.sim_broker import (
     FillTiming,
     SimBroker,
@@ -41,13 +48,17 @@ from app.engine.slippage import (
 __all__ = [
     "Broker",
     "Clock",
+    "DailyPnLRecord",
+    "DailyPnLTracker",
     "DataSource",
     "EngineCheckpoint",
     "EquityPoint",
+    "ExecutionMode",
     "FillEvent",
     "FillTiming",
     "HistoricalDataSource",
     "IndianCostCalculator",
+    "MonthlyPnLSummary",
     "NoSlippageModel",
     "OrderRequest",
     "OrderResult",
@@ -65,5 +76,6 @@ __all__ = [
     "TickSlippageModel",
     "TimeInForce",
     "TradeCostBreakdown",
+    "YearlyPnLSummary",
     "cost_calculator",
 ]

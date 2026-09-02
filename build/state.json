@@ -1,8 +1,8 @@
 {
-  "feature": "F3.10",
+  "feature": "F3.12",
   "status": "review",
-  "branch": "feature/F3.10-metric-grading-scorecard",
-  "commit": "69142d088c3a9f02377bcf7a7cf3d32ef3c8d195",
+  "branch": "feature/F3.12-shared-daily-pnl-model",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -343,6 +343,15 @@
       "status": "review",
       "branch": "feature/F3.10-metric-grading-scorecard",
       "commit": "69142d088c3a9f02377bcf7a7cf3d32ef3c8d195",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F3.12": {
+      "status": "review",
+      "branch": "feature/F3.12-shared-daily-pnl-model",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

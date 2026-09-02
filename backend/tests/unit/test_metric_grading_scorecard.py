@@ -118,9 +118,7 @@ def test_horizon_profiles_different_standards() -> None:
 
     # In POSITIONAL, 7.0% Drawdown is EXCELLENT (well below 12.0% EXCELLENT threshold)
     card_pos = evaluate_strategy_scorecard("TestPositional", metrics, StrategyHorizon.POSITIONAL)
-    dd_score_pos = next(
-        ms for ms in card_pos.metric_scores if ms.metric_name == "Max Drawdown %"
-    )
+    dd_score_pos = next(ms for ms in card_pos.metric_scores if ms.metric_name == "Max Drawdown %")
     assert dd_score_pos.grade == MetricGrade.EXCELLENT
     assert card_pos.overall_score > card_intraday.overall_score
 
