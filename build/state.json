@@ -1,13 +1,38 @@
 {
-  "feature": "F7.4",
+  "feature": "F7.5",
   "status": "review",
-  "branch": "feature/F7.4-browser-websocket-fan-out",
-  "commit": "f8778f4f5d57ee233022f4fbe74c7dfd79dfcbac",
+  "branch": "feature/F7.5-multiple-watchlists-configurable-columns",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F7.5": {
+      "status": "review",
+      "branch": "feature/F7.5-multiple-watchlists-configurable-columns",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 424,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 130,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F7.5.md",
+        "backend/app/api/watchlists.py",
+        "frontend/src/watchlist/storage.ts",
+        "frontend/src/widgets/builtin/WatchlistWidget.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F7.4": {
       "status": "review",
       "branch": "feature/F7.4-browser-websocket-fan-out",

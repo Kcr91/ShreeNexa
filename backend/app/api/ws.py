@@ -169,9 +169,7 @@ class MarketDataFanoutManager:
 
         return snapshots
 
-    def unsubscribe(
-        self, session_id: str, instruments: Sequence[tuple[str, str]]
-    ) -> None:
+    def unsubscribe(self, session_id: str, instruments: Sequence[tuple[str, str]]) -> None:
         """Unsubscribe session from specified instruments."""
         session = self._sessions.get(session_id)
         if not session:
@@ -195,9 +193,7 @@ class MarketDataFanoutManager:
         active_instruments = list(session.subscribed_instruments)
         return self.subscribe(session_id, active_instruments, now=now)
 
-    def broadcast_packet(
-        self, packet: FeedPacket, now: float | None = None
-    ) -> int:
+    def broadcast_packet(self, packet: FeedPacket, now: float | None = None) -> int:
         """Ingest feed packet into hot cache and dispatch deltas to subscribed sessions.
 
         Guaranteed non-blocking: slow clients with full queues have messages dropped

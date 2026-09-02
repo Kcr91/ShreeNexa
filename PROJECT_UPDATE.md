@@ -46,8 +46,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F7.1 | Done | Fast-forwarded into `main` at `0c4beda` after review. |
 | F7.2 | Done | Fast-forwarded into `main` at `0cfe68e` after review. |
 | F7.3 | Done | Fast-forwarded into `main` at `ba32b5d` after review. |
-| F7.4 | Ready for review | Browser WebSocket fan-out with initial snapshots, streaming deltas, backpressure queue isolation, slow client non-blocking protection, and resync. 420 Python tests & 122 frontend tests passing. |
-| F5.2, F7.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F7.4 | Done | Fast-forwarded into `main` at `8e00b64` after review. |
+| F7.5 | Ready for review | Multiple manual and F&O watchlists with configurable columns, stable ordering, CRUD REST API, and instrument master refresh survival. 424 Python tests & 130 frontend tests passing. |
+| F5.2, F7.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1655,3 +1656,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - FastAPI WebSocket endpoint integration tested: connection handshake, ping/pong, and JSON action parsing verified.
 - Full repository test suite: 420 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (200 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `8e00b64`.
+
+### 2026-09-02 — F7.5 Multiple manual and F&O watchlists with configurable columns completed
+
+- Implemented `backend/app/api/watchlists.py` and mounted at `/api/v1/watchlists` in `backend/app/main.py`:
+  - CRUD REST endpoints for listing, creating, retrieving, updating, and deleting watchlists.
+  - Granular symbol endpoints: `POST /symbols`, `DELETE /symbols/{symbol}`, and `POST /reorder`.
+  - Initial default watchlists seeded ("NIFTY 50" with large caps, "BANK NIFTY F&O" with futures and options).
+  - Protection preventing deletion of system default watchlists.
+- Authored backend unit tests in `backend/tests/unit/test_watchlists_api.py`:
+  - Verified default listing, custom watchlist creation and deletion, duplicate prevention, and stable ordering sequence.
+- Implemented `frontend/src/watchlist/`:
+  - `types.ts`: `WatchlistColumn`, `ColumnConfig`, `WatchlistItem` (Equity & F&O with strikes/expiry/optionType), and `Watchlist`.
+  - `storage.ts`: Local persistence (`shreenexa_watchlists_v1`), default seed initializers, symbol manipulation, reordering helpers, and `reconcileWithInstrumentMaster` verifying symbols survive master refreshes.
+- Redesigned `frontend/src/widgets/builtin/WatchlistWidget.tsx`:
+  - Multiple tab switcher supporting custom watchlists and "+ New" modal creation.
+  - Configurable column picker toggling `LTP`, `Chg %`, `Chg (₹)`, `Volume`, `OI`, `OI Chg %`, `High/Low`, and `Bid/Ask`.
+  - Fast Equity/F&O symbol search & add input.
+  - Row action buttons with stable Move Up ("▲"), Move Down ("▼"), and Remove ("✕").
+- Authored frontend unit tests in `frontend/src/watchlist/watchlist.test.ts` and `frontend/src/widgets/builtin/WatchlistWidget.test.tsx`:
+  - Verified storage CRUD, stable reordering, and instrument master refresh survival.
+  - Verified tab switching between Equity and F&O watchlists.
+  - Verified column configuration toggles and dynamic table layout.
+- Full repository test suite: 424 Python tests passed + 130 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (202 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

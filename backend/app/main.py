@@ -22,6 +22,7 @@ from app.api.indicators import router as indicators_router
 from app.api.instruments import router as instruments_router
 from app.api.screeners import router as screeners_router
 from app.api.universe import router as universe_router
+from app.api.watchlists import router as watchlists_router
 from app.contracts import heartbeat as hb
 from app.contracts.process_loop import HEARTBEAT_INTERVAL_S
 from app.dhan.credentials import resolve_dhan_credentials
@@ -66,6 +67,7 @@ app.include_router(indicators_router)
 app.include_router(indicators_alias_router)
 app.include_router(screeners_router)
 app.include_router(backtests_router)
+app.include_router(watchlists_router)
 
 
 @app.get("/healthz")
