@@ -2,7 +2,7 @@
   "feature": "F8.4",
   "status": "review",
   "branch": "feature/F8.4-options-chain-analytics",
-  "commit": null,
+  "commit": "d8067497987aedc56ada7f8e6713895786f4229b",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F8.4": {
       "status": "review",
       "branch": "feature/F8.4-options-chain-analytics",
-      "commit": null,
+      "commit": "d8067497987aedc56ada7f8e6713895786f4229b",
       "tests": {
         "pytest": {
           "passed": 461,
