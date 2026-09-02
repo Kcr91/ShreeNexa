@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.13 | Done | Fast-forwarded into `main` at `e2a8931` after review. |
-| F4.14 | Ready for review | Integrated end-to-end terminal workflow executing streaming tick ingestion, technical indicator calculation (fast/slow EMA, RSI), StrategyIR golden cross rule trigger, automated paper order creation, Blotter position updates, real-time mark-to-market PnL reconciliation, and notification dispatch. 353 Python tests & 97 frontend tests passing. |
-| F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F4.14 | Done | Fast-forwarded into `main` at `4eb2b75` after review. |
+| F3.13 | Ready for review | P&L calendar widget rendering monthly performance grids, Indian holiday schedule indicators, and day-level trade book drilldown. 353 Python tests & 102 frontend tests passing. |
+| F3.11, F3.14–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1355,8 +1355,20 @@ a live branch indicator; run `git status --short --branch` for current state.
   manifest validation for 108 items; two-fixture hash validation; frontend
   typecheck; 97 frontend tests; production build; JSON/TOML parsing; relative
   link/path checks; graph integrity/status/query; and `git diff --check`.
-- Full Python suite result in the restricted execution environment: 331 passed,
-  19 skipped, and 3 failed. Two failures require Windows DPAPI access and one
-  requires `DATABASE_URL`; none touches this documentation/configuration-only
-  change. The final all-files pre-commit rerun passed; independent branch
-  review remains open.
+- Fast-forward merged into `main` at `21a3b51`.
+
+### 2026-09-02 — F3.13 P&L calendar widget and drilldown completed
+
+- Implemented `frontend/src/pnlcalendar/types.ts`:
+  - `DayType`, `CalendarTrade`, `DailyPnlRecord`, `MonthlyPnlSummary`, and `PnlCalendarWidgetSettings`.
+- Implemented `frontend/src/pnlcalendar/calendar.ts`:
+  - Indian exchange trading holidays schedule (`INDIAN_HOLIDAYS_2026`), month calendar grid computation with Monday starts, deterministic trading day mock PnL generator, and monthly metrics aggregators (Gross PnL, Total Taxes & Charges, Net PnL, Win Rate %, Green/Red day counts).
+- Implemented `frontend/src/widgets/builtin/PnlCalendarWidget.tsx`:
+  - Monthly calendar view with color-coded profit/loss day tiles, holiday badges, weekend shading, month scorecard strip, and interactive day trade book drilldown drawer.
+  - Registered in `widgetRegistry` under category `analytics`.
+- Authored acceptance contract `docs/qa/acceptance/F3.13.md` and added unit tests in `frontend/src/pnlcalendar/calendar.test.ts` and `PnlCalendarWidget.test.tsx`:
+  - Frontend test suite: 102 passed / 0 failed across 37 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 102 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+

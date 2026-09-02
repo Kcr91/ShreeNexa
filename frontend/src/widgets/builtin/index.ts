@@ -12,6 +12,7 @@ import { liveFeedStatusDefinition } from "./LiveFeedStatusWidget";
 import { alertsLogDefinition } from "./AlertsLogWidget";
 import { strategyBuilderDefinition } from "./StrategyBuilderWidget";
 import { strategyMarketplaceDefinition } from "./StrategyMarketplaceWidget";
+import { pnlCalendarDefinition } from "./PnlCalendarWidget";
 
 export function registerBuiltinWidgets(): void {
   widgetRegistry.register(marketClockDefinition);
@@ -27,6 +28,7 @@ export function registerBuiltinWidgets(): void {
   widgetRegistry.register(alertsLogDefinition);
   widgetRegistry.register(strategyBuilderDefinition);
   widgetRegistry.register(strategyMarketplaceDefinition);
+  widgetRegistry.register(pnlCalendarDefinition);
 }
 
 // Auto-register built-in widgets
