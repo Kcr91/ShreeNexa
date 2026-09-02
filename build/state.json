@@ -2,7 +2,7 @@
   "feature": "F3.3",
   "status": "review",
   "branch": "feature/F3.3-indian-cost-model",
-  "commit": null,
+  "commit": "731daec70f4d382414dd27fa46377e8a9394fa51",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -279,7 +279,7 @@
     "F3.3": {
       "status": "review",
       "branch": "feature/F3.3-indian-cost-model",
-      "commit": null,
+      "commit": "731daec70f4d382414dd27fa46377e8a9394fa51",
       "tests": {},
       "evidence": [],
       "verified_at": null,
