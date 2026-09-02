@@ -1,0 +1,138 @@
+{
+  "scenario": "Standard forward-test vs backtest parity scenario",
+  "initial_capital": 1000000.0,
+  "start_date": "2026-01-01T09:15:00+00:00",
+  "end_date": "2026-03-31T15:30:00+00:00",
+  "trades": [
+    {
+      "order_id": "ord-1",
+      "fill_id": "fill-1",
+      "symbol": "TCS",
+      "security_id": "11536",
+      "segment": "NSE_EQ",
+      "side": "BUY",
+      "quantity": 100,
+      "price": 3500.0,
+      "slippage": 0.0,
+      "transaction_cost": 50.0,
+      "timestamp": "2026-01-05T10:00:00+00:00"
+    },
+    {
+      "order_id": "ord-2",
+      "fill_id": "fill-2",
+      "symbol": "TCS",
+      "security_id": "11536",
+      "segment": "NSE_EQ",
+      "side": "SELL",
+      "quantity": 100,
+      "price": 3700.0,
+      "slippage": 0.0,
+      "transaction_cost": 50.0,
+      "timestamp": "2026-01-20T14:30:00+00:00"
+    },
+    {
+      "order_id": "ord-3",
+      "fill_id": "fill-3",
+      "symbol": "INFY",
+      "security_id": "1594",
+      "segment": "NSE_EQ",
+      "side": "BUY",
+      "quantity": 200,
+      "price": 1500.0,
+      "slippage": 0.0,
+      "transaction_cost": 40.0,
+      "timestamp": "2026-02-01T09:30:00+00:00"
+    },
+    {
+      "order_id": "ord-4",
+      "fill_id": "fill-4",
+      "symbol": "INFY",
+      "security_id": "1594",
+      "segment": "NSE_EQ",
+      "side": "SELL",
+      "quantity": 200,
+      "price": 1450.0,
+      "slippage": 0.0,
+      "transaction_cost": 40.0,
+      "timestamp": "2026-02-15T15:00:00+00:00"
+    },
+    {
+      "order_id": "ord-5",
+      "fill_id": "fill-5",
+      "symbol": "RELIANCE",
+      "security_id": "2885",
+      "segment": "NSE_EQ",
+      "side": "BUY",
+      "quantity": 50,
+      "price": 2800.0,
+      "slippage": 0.0,
+      "transaction_cost": 30.0,
+      "timestamp": "2026-03-01T11:00:00+00:00"
+    },
+    {
+      "order_id": "ord-6",
+      "fill_id": "fill-6",
+      "symbol": "RELIANCE",
+      "security_id": "2885",
+      "segment": "NSE_EQ",
+      "side": "SELL",
+      "quantity": 50,
+      "price": 3000.0,
+      "slippage": 0.0,
+      "transaction_cost": 30.0,
+      "timestamp": "2026-03-25T14:00:00+00:00"
+    }
+  ],
+  "equity_curve": [
+    {
+      "timestamp": "2026-01-01T09:15:00+00:00",
+      "equity": 1000000.0,
+      "cash": 1000000.0,
+      "realized_pnl": 0.0,
+      "unrealized_pnl": 0.0
+    },
+    {
+      "timestamp": "2026-01-15T15:30:00+00:00",
+      "equity": 1010000.0,
+      "cash": 649950.0,
+      "realized_pnl": 0.0,
+      "unrealized_pnl": 10000.0
+    },
+    {
+      "timestamp": "2026-01-20T15:30:00+00:00",
+      "equity": 1019900.0,
+      "cash": 1019900.0,
+      "realized_pnl": 20000.0,
+      "unrealized_pnl": 0.0
+    },
+    {
+      "timestamp": "2026-02-10T15:30:00+00:00",
+      "equity": 1014000.0,
+      "cash": 719860.0,
+      "realized_pnl": 20000.0,
+      "unrealized_pnl": -5860.0
+    },
+    {
+      "timestamp": "2026-02-15T15:30:00+00:00",
+      "equity": 1009820.0,
+      "cash": 1009820.0,
+      "realized_pnl": 10000.0,
+      "unrealized_pnl": 0.0
+    },
+    {
+      "timestamp": "2026-03-15T15:30:00+00:00",
+      "equity": 1015000.0,
+      "cash": 869790.0,
+      "realized_pnl": 10000.0,
+      "unrealized_pnl": 5210.0
+    },
+    {
+      "timestamp": "2026-03-31T15:30:00+00:00",
+      "equity": 1019760.0,
+      "cash": 1019760.0,
+      "realized_pnl": 20000.0,
+      "unrealized_pnl": 0.0
+    }
+  ],
+  "final_positions": {}
+}

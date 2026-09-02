@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.engine.contracts import EquityPoint
 from app.paper.models import (
     PaperAccount,
     PaperFill,
@@ -19,6 +20,7 @@ class PaperRepository:
         self._orders: dict[str, PaperOrder] = {}
         self._fills: dict[str, PaperFill] = {}
         self._positions: dict[tuple[str, str], PaperPosition] = {}  # (account_id, security_id)
+        self._equity_curves: dict[str, list[EquityPoint]] = {}
 
     def save_account(self, account: PaperAccount) -> None:
         self._accounts[account.account_id] = account
@@ -69,10 +71,22 @@ class PaperRepository:
     def get_position(self, account_id: str, security_id: str) -> PaperPosition | None:
         return self._positions.get((account_id, security_id))
 
-    def list_positions(self, account_id: str) -> list[PaperPosition]:
-        return [
-            p for p in self._positions.values() if p.account_id == account_id and p.quantity != 0
-        ]
+    def list_positions(self, account_id: str, open_only: bool = False) -> list[PaperPosition]:
+        if open_only:
+            return [
+                p
+                for p in self._positions.values()
+                if p.account_id == account_id and p.quantity != 0
+            ]
+        return [p for p in self._positions.values() if p.account_id == account_id]
+
+    def record_equity_point(self, account_id: str, point: EquityPoint) -> None:
+        if account_id not in self._equity_curves:
+            self._equity_curves[account_id] = []
+        self._equity_curves[account_id].append(point)
+
+    def get_equity_curve(self, account_id: str) -> list[EquityPoint]:
+        return list(self._equity_curves.get(account_id, []))
 
     def clear(self) -> None:
         """Reset all in-memory paper states (used in tests or account resets)."""
@@ -80,6 +94,7 @@ class PaperRepository:
         self._orders.clear()
         self._fills.clear()
         self._positions.clear()
+        self._equity_curves.clear()
 
 
 paper_repository = PaperRepository()

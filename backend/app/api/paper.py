@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.backtest.grading import StrategyHorizon, StrategyScorecard
+from app.backtest.models import BacktestPerformanceMetrics
+from app.paper.adapter import calculate_paper_metrics, evaluate_paper_scorecard
 from app.paper.broker import paper_broker
 from app.paper.models import (
     PaperAccount,
@@ -248,3 +252,33 @@ def handle_kill_switch(payload: KillSwitchRequest) -> dict[str, Any]:
         "kill_switch_active": False,
         "action": "reset",
     }
+
+
+@router.get("/metrics", response_model=BacktestPerformanceMetrics)
+def get_paper_metrics(
+    account_id: str = "default",
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> BacktestPerformanceMetrics:
+    """Calculate Epic 3 performance metrics for a paper portfolio without calculation forks."""
+    return calculate_paper_metrics(
+        account_id=account_id,
+        repository=paper_repository,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+@router.get("/scorecard", response_model=StrategyScorecard)
+def get_paper_scorecard(
+    account_id: str = "default",
+    strategy_name: str = "Paper Forward Test",
+    horizon: StrategyHorizon = StrategyHorizon.POSITIONAL,
+) -> StrategyScorecard:
+    """Evaluate Epic 3 scorecard and deployment gates for a forward-tested paper strategy."""
+    return evaluate_paper_scorecard(
+        account_id=account_id,
+        strategy_name=strategy_name,
+        horizon=horizon,
+        repository=paper_repository,
+    )

@@ -416,4 +416,3 @@ def test_multi_strategy_bar_distribution() -> None:
     pos_2 = repo.get_position("acc-bar-test:strat-2", "1594")
     assert pos_1 is not None and pos_1.quantity == 50
     assert pos_2 is not None and pos_2.quantity == -30
-
