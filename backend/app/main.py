@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.backtests import router as backtests_router
 from app.api.feed import router as feed_router
 from app.api.indicators import alias_router as indicators_alias_router
 from app.api.indicators import router as indicators_router
@@ -64,6 +65,7 @@ app.include_router(feed_router)
 app.include_router(indicators_router)
 app.include_router(indicators_alias_router)
 app.include_router(screeners_router)
+app.include_router(backtests_router)
 
 
 @app.get("/healthz")

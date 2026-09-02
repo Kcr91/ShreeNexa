@@ -1,8 +1,8 @@
 {
-  "feature": "F3.3",
+  "feature": "F3.4",
   "status": "review",
-  "branch": "feature/F3.3-indian-cost-model",
-  "commit": "731daec70f4d382414dd27fa46377e8a9394fa51",
+  "branch": "feature/F3.4-stock-strategy-backtest-runner",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -280,6 +280,15 @@
       "status": "review",
       "branch": "feature/F3.3-indian-cost-model",
       "commit": "731daec70f4d382414dd27fa46377e8a9394fa51",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F3.4": {
+      "status": "review",
+      "branch": "feature/F3.4-stock-strategy-backtest-runner",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

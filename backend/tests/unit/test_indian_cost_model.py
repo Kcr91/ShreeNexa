@@ -57,17 +57,13 @@ def test_segment_and_side_specific_cost_rules() -> None:
     dt = datetime(2024, 11, 1, 10, 0, tzinfo=UTC)
 
     # 1. Equity Delivery Buy (Stamp Duty: Yes, STT: Yes, Brokerage: ₹0)
-    del_buy = cost_calculator.calculate_cost(
-        ProductType.DELIVERY, OrderSide.BUY, 100, 1000.0, dt
-    )
+    del_buy = cost_calculator.calculate_cost(ProductType.DELIVERY, OrderSide.BUY, 100, 1000.0, dt)
     assert del_buy.brokerage == 0.0
     assert del_buy.stamp_duty == pytest.approx(100_000 * 0.00015)  # 15.0
     assert del_buy.stt_ctt == pytest.approx(100_000 * 0.001)  # 100.0
 
     # 2. Equity Delivery Sell (Stamp Duty: No, STT: Yes, Brokerage: ₹0)
-    del_sell = cost_calculator.calculate_cost(
-        ProductType.DELIVERY, OrderSide.SELL, 100, 1000.0, dt
-    )
+    del_sell = cost_calculator.calculate_cost(ProductType.DELIVERY, OrderSide.SELL, 100, 1000.0, dt)
     assert del_sell.stamp_duty == 0.0
     assert del_sell.stt_ctt == pytest.approx(100_000 * 0.001)
 

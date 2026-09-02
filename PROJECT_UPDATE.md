@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.2 | Done | Fast-forwarded into `main` at `30d9fd5` after review. |
-| F3.3 | Ready for review | Effective-dated Indian regulatory fee and broker cost model with `config/costs.yaml`, supporting pre/post October 2024 regimes, Delivery, Intraday, Futures, and Options taxes, and line-item contract note reconciliation. 322/322 tests passing. |
-| F3.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.3 | Done | Fast-forwarded into `main` at `e7b2dc5` after review. |
+| F3.4 | Ready for review | Stock strategy backtest runner and persistence completing the first vertical slice (StrategyIR → VectorStrategyCompiler → SimClock/HistoricalDataSource → SimBroker with IndianCostCalculator → Portfolio Accounting → Metrics Engine → Persistence & Audit Trails). 326/326 tests passing. |
+| F3.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -923,4 +923,25 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_indian_cost_model.py`: 3 passed
 - Full repository test suite: 322 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (141 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `e7b2dc5`.
+
+### 2026-09-02 — F3.4 Stock-strategy backtest runner and persistence completed
+
+- Implemented `backend/app/backtest/models.py`:
+  - `BacktestConfig`: StrategyIR snapshot, date window, initial capital, fill timing, slippage configuration, and random seed.
+  - `BacktestPerformanceMetrics`: Total return, CAGR, Sharpe, Sortino, Calmar, Max drawdown, win rate, profit factor, trade counts, and fee summary.
+  - `BacktestResult`: Complete immutable snapshot with git `engine_commit`, timestamp, equity curve, and fill ledger.
+- Implemented `backend/app/backtest/metrics.py`:
+  - Pure Python / stdlib risk and return analytics engine with annualization and drawdown peak-to-trough tracking.
+- Implemented `backend/app/backtest/runner.py`:
+  - `StockStrategyBacktestRunner`: Coordinates StrategyIR compilation via `VectorStrategyCompiler`, discrete bar playback via `SimClock` and `HistoricalDataSource`, order execution through `SimBroker`, and regulatory cost attribution through `IndianCostCalculator`.
+- Implemented `backend/app/backtest/store.py` and `backend/app/api/backtests.py`:
+  - `BacktestStore` persistence manager.
+  - FastAPI endpoints for backtest execution (`POST /api/v1/backtests/run`), history (`GET /api/v1/backtests`), and details (`GET /api/v1/backtests/{id}`).
+  - Mounted router in `backend/app/main.py`.
+- Exported backtest tools in `backend/app/backtest/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.4.md` and added 4 new unit tests covering Buy-and-Hold manual spreadsheet reconciliation, SMA crossover strategy execution, byte-identical reproducibility, and REST API endpoints:
+  - `backend/tests/unit/test_backtest_runner.py`: 4 passed
+- Full repository test suite: 326 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (148 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
