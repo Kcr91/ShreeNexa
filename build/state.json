@@ -2,7 +2,7 @@
   "feature": "F6.1",
   "status": "review",
   "branch": "feature/F6.1-multi-strategy-capital-allocation-orchestration",
-  "commit": null,
+  "commit": "12a0aaf9449f826315ef98b0fef8bda2ba9db6b5",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -522,7 +522,7 @@
     "F6.1": {
       "status": "review",
       "branch": "feature/F6.1-multi-strategy-capital-allocation-orchestration",
-      "commit": null,
+      "commit": "12a0aaf9449f826315ef98b0fef8bda2ba9db6b5",
       "tests": {},
       "evidence": [],
       "verified_at": null,
