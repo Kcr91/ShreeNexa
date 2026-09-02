@@ -1120,7 +1120,7 @@
     "F9.7": {
       "status": "review",
       "branch": "feature/F9.7-paper-pnl-calendar-returns",
-      "commit": "d42e3434856cb323a72ba272bf8d9412a1885a49",
+      "commit": "fc38ec7102e33bbeb734a40aae14ba6607f787ae",
       "tests": {
         "pytest": {
           "passed": 490,
