@@ -48,8 +48,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F7.3 | Done | Fast-forwarded into `main` at `ba32b5d` after review. |
 | F7.4 | Done | Fast-forwarded into `main` at `8e00b64` after review. |
 | F7.5 | Done | Fast-forwarded into `main` at `482fe16` after review. |
-| F7.6 | Ready for review | Sector watchlists and index constituent drill-in driven by effective membership/provenance with visible fallback/stale snapshot warnings. 427 Python tests & 136 frontend tests passing. |
-| F5.2, F7.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F7.6 | Done | Fast-forwarded into `main` at `925142e` after review. |
+| F7.7 | Ready for review | Session-aware live one-minute bar builder with duplicate, out-of-order, and late tick handling, exact Dhan minute bar reconciliation, and warehouse history merging. 433 Python tests & 136 frontend tests passing. |
+| F5.2, F7.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1707,3 +1708,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified catalog retrieval, constituent drill-in, historical date selection, fallback visibility, and watchlist export.
 - Full repository test suite: 427 Python tests passed + 136 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (203 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `925142e`.
+
+### 2026-09-02 — F7.7 Session-aware live one-minute bar builder completed
+
+- Implemented `backend/app/feedd/bar_builder.py`:
+  - `LiveTick`: Normalized live tick input with price, volume, timestamp, segment, and sequence.
+  - `LiveMinuteBar`: Session-aware live 1-minute bar model tracking OHLCV, OI, tick count, first/last tick time, and finalization state.
+  - `LiveBarBuilder`:
+    - Session calendar integration (`TradingCalendar`) enforcing canonical trading hours (09:15 to 15:30 IST).
+    - Canonical 1-minute bucket alignment: floor boundary matching Dhan minute bars.
+    - Duplicate tick suppression: sliding tick signature cache preventing double-counting volume or distorting OHLC.
+    - Out-of-order tick handling: maintains high/low bounds, preserves earliest tick price as open and latest tick price as close.
+    - Late tick grace window: configurable grace window (15s) allowing retroactive updates to recently finalized minute bars; drops ticks exceeding grace window and tracks dropped telemetry.
+  - `merge_history_and_live`: Merges historical warehouse bars (`BarRecord`) and live 1-minute bars into a continuous sequence with deduplication and strict ascending timestamp monotonicity.
+- Exported classes and functions in `backend/app/feedd/__init__.py`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_live_bar_builder.py`:
+  - Exact reconciliation against `backend/tests/fixtures/sample_1m_bars.json` proving 100% numerical match with Dhan minute bars.
+  - Duplicate tick rejection without volume inflation.
+  - Out-of-order tick handling verifying accurate open, high, low, close bounds.
+  - Late tick grace window updates and dropped late tick telemetry.
+  - Session boundary enforcement dropping pre-market and post-market ticks.
+  - Seamless merging of warehouse history and live session bars.
+- Full repository test suite: 433 Python tests passed + 136 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (205 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

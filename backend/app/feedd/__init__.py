@@ -1,5 +1,11 @@
 """feedd: owns Dhan market-feed/depth connections (per ADR-0002)."""
 
+from app.feedd.bar_builder import (
+    LiveBarBuilder,
+    LiveMinuteBar,
+    LiveTick,
+    merge_history_and_live,
+)
 from app.feedd.budget import (
     BudgetStatus,
     ConnectionBudgetConfig,
@@ -56,6 +62,9 @@ __all__ = [
     "HotCache",
     "InMemoryHotCache",
     "InstrumentKey",
+    "LiveBarBuilder",
+    "LiveMinuteBar",
+    "LiveTick",
     "PoolMode",
     "RedisHotCache",
     "SocketType",
@@ -68,6 +77,7 @@ __all__ = [
     "get_connection_budget_manager",
     "health_key",
     "load_budget_config",
+    "merge_history_and_live",
     "oi_key",
     "quote_key",
 ]

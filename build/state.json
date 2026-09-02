@@ -1,13 +1,37 @@
 {
-  "feature": "F7.6",
+  "feature": "F7.7",
   "status": "review",
-  "branch": "feature/F7.6-sector-watchlists-index-drill-in",
-  "commit": "953c0c9df1acb7f8038724571c85bb3ee5451b9b",
+  "branch": "feature/F7.7-live-minute-bar-builder",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F7.7": {
+      "status": "review",
+      "branch": "feature/F7.7-live-minute-bar-builder",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 433,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 136,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F7.7.md",
+        "backend/app/feedd/bar_builder.py",
+        "backend/tests/unit/test_live_bar_builder.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F7.6": {
       "status": "review",
       "branch": "feature/F7.6-sector-watchlists-index-drill-in",
