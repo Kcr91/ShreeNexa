@@ -41,9 +41,7 @@ class MockProvider(AIProvider):
         start_time = time.perf_counter()
 
         if timeout_s <= 0.0:
-            raise AITimeoutError(
-                f"AI generation timed out after requested {timeout_s}s."
-            )
+            raise AITimeoutError(f"AI generation timed out after requested {timeout_s}s.")
 
         # Always scrub any secrets from prompt before processing
         scrubbed_prompt = redact_secrets(prompt)

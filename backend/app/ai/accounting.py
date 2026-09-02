@@ -43,11 +43,7 @@ class AIUsageAccounting:
     def get_summary(self) -> UsageSummary:
         """Return snapshot of cumulative usage metrics."""
         with self._lock:
-            avg_lat = (
-                sum(self._latencies) / len(self._latencies)
-                if self._latencies
-                else 0.0
-            )
+            avg_lat = sum(self._latencies) / len(self._latencies) if self._latencies else 0.0
             return UsageSummary(
                 total_calls=self._total_calls,
                 total_tokens=self._total_tokens,

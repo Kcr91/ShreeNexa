@@ -1,8 +1,8 @@
 {
-  "feature": "F5.1",
+  "feature": "F6.1",
   "status": "review",
-  "branch": "feature/F5.1-ai-provider-protocol-mock",
-  "commit": "10eb0db862800539c3684a0d8fe1ba1d8ff89c3d",
+  "branch": "feature/F6.1-multi-strategy-capital-allocation-orchestration",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -514,6 +514,15 @@
       "status": "review",
       "branch": "feature/F5.1-ai-provider-protocol-mock",
       "commit": "10eb0db862800539c3684a0d8fe1ba1d8ff89c3d",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F6.1": {
+      "status": "review",
+      "branch": "feature/F6.1-multi-strategy-capital-allocation-orchestration",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

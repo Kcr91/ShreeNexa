@@ -15,10 +15,7 @@ def get_ai_provider(provider_name: str | None = None) -> AIProvider:
     Runtime AI defaults to DisabledProvider to enforce zero unexpected API costs
     and complete isolation from development Codex sessions.
     """
-    mode = (
-        provider_name
-        or os.environ.get("SHREENEXA_AI_PROVIDER", "disabled")
-    ).lower().strip()
+    mode = (provider_name or os.environ.get("SHREENEXA_AI_PROVIDER", "disabled")).lower().strip()
 
     if mode == "mock":
         return MockProvider()

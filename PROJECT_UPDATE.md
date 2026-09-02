@@ -38,8 +38,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
 | F3.11 | Done | Fast-forwarded into `main` at `49d0a93` after review. |
-| F5.1 | Ready for review | Product runtime AIProvider protocol, safe DisabledProvider default, deterministic MockProvider generating valid StrategyIR, aggressive prompt secret redaction, timeout handling, and usage accounting. 359 Python tests & 122 frontend tests passing. |
-| F5.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F5.1 | Done | Fast-forwarded into `main` at `a690495` after review. |
+| F6.1 | Ready for review | Multi-strategy capital allocation engine with strict weight validation, no double-spend guarantees, isolated StrategyBook ledgers, deterministic rebalancing with zero-sum capital transfers, and synchronized daily orchestration. 365 Python tests & 122 frontend tests passing. |
+| F5.2, F6.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1440,4 +1441,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Usage accounting accurately aggregates metrics.
 - Full repository test suite: 359 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (174 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `a690495`.
+
+### 2026-09-02 — F6.1 Multi-strategy capital allocation and orchestration completed
+
+- Implemented `backend/app/portfolio/models.py`:
+  - `StrategyAllocationSpec`: Per-strategy allocation specification (weight > 0, strategy type, config payload).
+  - `PortfolioAllocationConfig`: Total initial capital, list of allocations, rebalance frequency policy, drift threshold.
+  - `RebalanceTransferRecord`, `PortfolioDailySnapshot`, and `PortfolioRunSummary`.
+- Implemented `backend/app/portfolio/allocation.py`:
+  - `validate_allocation_config`: Strictly enforces $\sum w_i = 1.0 \pm 10^{-6}$, rejecting invalid, negative, or non-unity configurations.
+  - `split_initial_capital`: Guaranteed no-double-spend initial capital splitter ensuring $\sum C_i = C_{\text{total}}$.
+  - `compute_rebalance_transfers`: Deterministic rebalancing calculation enforcing zero-sum capital conservation ($\sum \Delta \text{cash}_i = 0$).
+- Implemented `backend/app/portfolio/book.py`:
+  - `StrategyBook`: Isolated strategy accounting ledger tracking dedicated cash, position quantities, average purchase prices, and current mark-to-market prices.
+  - Integrates `DailyPnLTracker` from F3.12, recording rebalance transfers as external cash flows to prevent performance distortion.
+- Implemented `backend/app/portfolio/orchestrator.py`:
+  - `PortfolioOrchestrator`: Multi-strategy orchestrator managing isolated books, checking calendar and drift triggers, executing rebalancing, and producing daily snapshots.
+- Authored acceptance contract `docs/qa/acceptance/F6.1.md` and added unit tests in `backend/tests/unit/test_portfolio_orchestrator.py`:
+  - Allocation invariant and non-unity rejection verified.
+  - Isolated strategy books preventing cross-contamination verified.
+  - Deterministic rebalancing with zero-sum transfers verified.
+  - Simulation replay determinism verified.
+- Full repository test suite: 365 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (180 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
