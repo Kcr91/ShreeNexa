@@ -2,7 +2,7 @@
   "feature": "F7.1",
   "status": "review",
   "branch": "feature/F7.1-dhan-live-feed-ws-binary-parser",
-  "commit": null,
+  "commit": "b6bf177781bbb11c977ae129180125720abfc74d",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F7.1": {
       "status": "review",
       "branch": "feature/F7.1-dhan-live-feed-ws-binary-parser",
-      "commit": null,
+      "commit": "b6bf177781bbb11c977ae129180125720abfc74d",
       "tests": {
         "pytest": {
           "passed": 402,
