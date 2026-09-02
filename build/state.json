@@ -2,7 +2,7 @@
   "feature": "F4.14",
   "status": "review",
   "branch": "feature/F4.14-integrated-e2e-terminal-workflow",
-  "commit": null,
+  "commit": "efbd70bc0e9fcb9be4d35eb1885f83cff532d56a",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -477,7 +477,7 @@
     "F4.14": {
       "status": "review",
       "branch": "feature/F4.14-integrated-e2e-terminal-workflow",
-      "commit": null,
+      "commit": "efbd70bc0e9fcb9be4d35eb1885f83cff532d56a",
       "tests": {},
       "evidence": [],
       "verified_at": null,
