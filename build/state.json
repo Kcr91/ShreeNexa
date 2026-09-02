@@ -1,8 +1,8 @@
 {
-  "feature": "F4.3",
+  "feature": "F4.4",
   "status": "review",
-  "branch": "feature/F4.3-multi-grid-layout-manager",
-  "commit": "1ed909d73ecff221efc0211a7a13c32a0d7831f1",
+  "branch": "feature/F4.4-chart-indicators-session-breaks",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -379,6 +379,15 @@
       "status": "review",
       "branch": "feature/F4.3-multi-grid-layout-manager",
       "commit": "1ed909d73ecff221efc0211a7a13c32a0d7831f1",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F4.4": {
+      "status": "review",
+      "branch": "feature/F4.4-chart-indicators-session-breaks",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

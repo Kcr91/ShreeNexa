@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.2 | Done | Fast-forwarded into `main` at `8fe4500` after review. |
-| F4.3 | Ready for review | Multi-grid and multi-tab layout manager with persistent `localStorage` serialization, corrupt state fallback to default layout, tab management, dynamic widget palette spawning, and responsive grid layout. 353 Python tests & 18 frontend tests passing. |
+| F4.3 | Done | Fast-forwarded into `main` at `8c6f455` after review. |
+| F4.4 | Ready for review | Lightweight Charts integration with multi-pane indicators (SMA, EMA, VWAP, RSI, MACD), Indian market session break overlays, timeframe controls, and interactive toolbar. 353 Python tests & 28 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1119,5 +1119,26 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 18 passed / 0 failed across 7 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 18 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `8c6f455`.
+
+### 2026-09-02 — F4.4 Lightweight Charts integration completed
+
+- Integrated `lightweight-charts` (v5.2.1):
+  - High-performance canvas charting with dark terminal aesthetic (#00c076 profit green, #ff4d4f loss red).
+- Implemented `frontend/src/chart/types.ts`:
+  - `BarData`, `ChartIndicatorConfig`, `DrawingToolType`, `ChartDrawing`, `SessionBreak`, and `ChartWidgetSettings`.
+- Implemented `frontend/src/chart/indicators.ts`:
+  - Client-side vector indicators: Simple Moving Average (SMA), Exponential Moving Average (EMA), Relative Strength Index (RSI), Moving Average Convergence Divergence (MACD with Signal & Histogram), and Volume Weighted Average Price (VWAP).
+- Implemented `frontend/src/chart/sessionBreaks.ts`:
+  - Detects Indian market session boundaries and 09:15 IST opening bars.
+- Implemented `frontend/src/chart/ChartContainer.tsx`:
+  - Multi-pane chart container managing main price candlestick pane, volume overlay, overlay line series (SMA, EMA, VWAP), synchronized sub-panes (RSI, MACD), session break markers, and resize responsiveness.
+- Implemented `frontend/src/widgets/builtin/ChartWidget.tsx`:
+  - Full-featured chart widget with timeframe selector (1m, 5m, 15m, 1h, 1d), indicator toggle buttons, settings schema, and registered in `widgetRegistry`.
+- Authored acceptance contract `docs/qa/acceptance/F4.4.md` and added unit tests in `frontend/src/chart/indicators.test.ts`, `sessionBreaks.test.ts`, and `ChartWidget.test.tsx`:
+  - Frontend test suite: 28 passed / 0 failed across 10 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 28 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
