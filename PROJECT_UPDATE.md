@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.9 | Done | Fast-forwarded into `main` at `cdae0c5` after review. |
-| F3.1 | Ready for review | Core engine execution abstractions for clock, data source, broker, orders, fills, portfolio accounting, position state machine (with position flips and mark-to-market), and checkpoint restore state machine equivalence. 314/314 tests passing. |
-| F3.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.1 | Done | Fast-forwarded into `main` at `445fb61` after review. |
+| F3.2 | Ready for review | SimBroker execution engine with explicit fill timing (NEXT_BAR_OPEN vs SIGNAL_BAR_CLOSE), market/limit/stop matching against bar OHLC, pluggable slippage models (NoSlippage, TickSlippage, PercentageSlippage), and high/low price containment property tests. 319/319 tests passing. |
+| F3.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -891,4 +891,19 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_engine_contracts.py`: 4 passed
 - Full repository test suite: 314 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (136 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `445fb61`.
+
+### 2026-09-02 — F3.2 SimBroker fills and slippage models completed
+
+- Implemented `backend/app/engine/slippage.py`:
+  - `SlippageModel` protocol.
+  - `NoSlippageModel`, `TickSlippageModel`, `PercentageSlippageModel` with strict $[bar.low, bar.high]$ price range containment clamping.
+- Implemented `backend/app/engine/sim_broker.py`:
+  - `FillTiming`: `NEXT_BAR_OPEN` (default, proving no same-bar lookahead) and `SIGNAL_BAR_CLOSE`.
+  - `SimBroker`: Simulated execution matching engine handling Market, Limit (with gap/price improvement), Stop-Loss (SL), and Stop-Loss Market (SL_M) orders against bar OHLC.
+- Exported SimBroker and slippage models in `backend/app/engine/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.2.md` and added 5 new unit and property tests covering next-bar open timing, slippage models & containment invariant, Limit order matching, Stop order triggering, and order cancellation:
+  - `backend/tests/unit/test_sim_broker.py`: 5 passed
+- Full repository test suite: 319 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (139 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
