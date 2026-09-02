@@ -1,8 +1,8 @@
 {
-  "feature": "F2.7",
+  "feature": "F2.8",
   "status": "review",
-  "branch": "feature/F2.7-incremental-strategy-compiler",
-  "commit": "19f66583995f68b31a3962d3a3915bc5e59b2075",
+  "branch": "feature/F2.8-point-in-time-screener-runner",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -242,8 +242,8 @@
     },
     "F2.8": {
       "status": "review",
-      "branch": "feature/F2.8-indicator-property-test-suite",
-      "commit": "395403c9a098ea0659ca94eb10fe6b31e2172152",
+      "branch": "feature/F2.8-point-in-time-screener-runner",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

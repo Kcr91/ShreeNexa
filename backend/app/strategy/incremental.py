@@ -150,9 +150,7 @@ class IncrementalStrategyEngine:
                 exit_signals[exit_rule.id] = sig
             elif exit_rule.type == "time" and exit_rule.at:
                 exit_time = _parse_time_str(exit_rule.at)
-                exit_signals[exit_rule.id] = bool(
-                    exit_time and bar.timestamp.time() >= exit_time
-                )
+                exit_signals[exit_rule.id] = bool(exit_time and bar.timestamp.time() >= exit_time)
             else:
                 exit_signals[exit_rule.id] = False
 
@@ -308,9 +306,7 @@ class IncrementalStrategyEngine:
 
         elif isinstance(node, PctChangeNode):
             src_val = self._get_operand_val(node.source, bar, ind_values)
-            buf: deque[float] = self._node_states.setdefault(
-                path, deque(maxlen=node.lookback + 1)
-            )
+            buf: deque[float] = self._node_states.setdefault(path, deque(maxlen=node.lookback + 1))
             if src_val is not None:
                 buf.append(float(src_val))
             if len(buf) == node.lookback + 1:

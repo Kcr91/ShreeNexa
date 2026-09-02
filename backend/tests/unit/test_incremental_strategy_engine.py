@@ -162,12 +162,12 @@ def test_vector_incremental_strategy_parity() -> None:
     streaming_exit = [s.exit_signals["crossunder_exit"] for s in streaming_steps]
 
     # 3. Check Exact Parity
-    assert (
-        streaming_entry == vector_entry
-    ), f"Entry signals diverged: {streaming_entry} vs {vector_entry}"
-    assert (
-        streaming_exit == vector_exit
-    ), f"Exit signals diverged: {streaming_exit} vs {vector_exit}"
+    assert streaming_entry == vector_entry, (
+        f"Entry signals diverged: {streaming_entry} vs {vector_entry}"
+    )
+    assert streaming_exit == vector_exit, (
+        f"Exit signals diverged: {streaming_exit} vs {vector_exit}"
+    )
 
 
 def test_state_checkpoint_and_restore() -> None:

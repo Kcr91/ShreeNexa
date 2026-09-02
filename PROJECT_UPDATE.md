@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.6 | Done | Fast-forwarded into `main` at `72b4283` after review. |
-| F2.7 | Ready for review | Stateful, real-time bar-by-bar streaming strategy compiler with incremental indicator evaluation, signal AST state tracking, checkpointing/state recovery, and repository vector/streaming parity suite. 303/303 tests passing. |
-| F2.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.7 | Done | Fast-forwarded into `main` at `c727926` after review. |
+| F2.8 | Ready for review | Point-in-time screener execution runner evaluating arbitrary StrategyIR signal AST filters across historical index universes with survivorship-bias tracking and zero future lookahead (G2). 307/307 tests passing. |
+| F2.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -839,4 +839,20 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_incremental_strategy_engine.py`: 4 passed
 - Full repository test suite: 303 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (124 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `c727926`.
+
+### 2026-09-02 — F2.8 Point-in-time screener runner completed
+
+- Implemented `backend/app/screener/models.py`:
+  - `ScreenerDefinition`: Top-level point-in-time screener schema containing target universe (`IndexUniverse`, `StaticUniverse`, `WatchlistUniverse`), timeframe, `as_of` timestamp/date, lookback warmup length, indicator definitions, and recursive `SignalNode` filter tree.
+  - `RankingRule`, `ScreenerMatch`, and `ScreenerResult` models with provenance and warning metadata.
+- Implemented `backend/app/screener/runner.py`:
+  - `PointInTimeScreenerRunner`: Point-in-time screener execution engine resolving historical index memberships via `index_resolver` and enforcing strict G2 anti-lookahead ($\le T$).
+  - Automatic survivorship-bias tracking and detection for static/incomplete index constituent records.
+  - Integration with `VectorStrategyCompiler` for batch AST evaluation, indicator extraction, match ranking, and top-$k$ limiting.
+- Exported screener engine in `backend/app/screener/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.8.md` and added 4 new unit tests covering 3 hand-verified names, G2 anti-lookahead invariance, survivorship-bias warnings, and indicator ranking/limit:
+  - `backend/tests/unit/test_point_in_time_screener.py`: 4 passed
+- Full repository test suite: 307 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (128 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
