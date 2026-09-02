@@ -1095,7 +1095,7 @@
     "F9.6": {
       "status": "review",
       "branch": "feature/F9.6-paper-deployment-lifecycle-engine",
-      "commit": "1ca8762bcb2608b77a949b42f7247c63c161415f",
+      "commit": "af0696da3e3367b59afaba38fe385229dab51993",
       "tests": {
         "pytest": {
           "passed": 485,
