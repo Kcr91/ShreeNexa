@@ -2,7 +2,7 @@
   "feature": "F6.2",
   "status": "review",
   "branch": "feature/F6.2-combined-equity-drawdown-caps-marginal-contribution",
-  "commit": null,
+  "commit": "d3906c66657c793ff8082ae1fcb0ae601b339f40",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -531,7 +531,7 @@
     "F6.2": {
       "status": "review",
       "branch": "feature/F6.2-combined-equity-drawdown-caps-marginal-contribution",
-      "commit": null,
+      "commit": "d3906c66657c793ff8082ae1fcb0ae601b339f40",
       "tests": {},
       "evidence": [],
       "verified_at": null,
