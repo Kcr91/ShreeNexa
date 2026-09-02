@@ -2,7 +2,7 @@
   "feature": "F7.4",
   "status": "review",
   "branch": "feature/F7.4-browser-websocket-fan-out",
-  "commit": null,
+  "commit": "f8778f4f5d57ee233022f4fbe74c7dfd79dfcbac",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F7.4": {
       "status": "review",
       "branch": "feature/F7.4-browser-websocket-fan-out",
-      "commit": null,
+      "commit": "f8778f4f5d57ee233022f4fbe74c7dfd79dfcbac",
       "tests": {
         "pytest": {
           "passed": 420,
