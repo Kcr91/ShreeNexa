@@ -1,4 +1,4 @@
-"""Backtest execution, performance analytics, Walk-Forward, and Overfitting controls."""
+"""Backtest execution, metrics grading, scorecard, and Overfitting controls."""
 
 from __future__ import annotations
 
@@ -10,6 +10,16 @@ from app.backtest.futures_models import (
     FuturesStrategyConfig,
 )
 from app.backtest.futures_runner import FuturesStrategyBacktestRunner
+from app.backtest.grading import (
+    DeploymentGateResult,
+    GradingConfig,
+    MetricGrade,
+    MetricScore,
+    StrategyHorizon,
+    StrategyScorecard,
+    Verdict,
+    evaluate_strategy_scorecard,
+)
 from app.backtest.metrics import calculate_backtest_metrics
 from app.backtest.models import (
     BacktestConfig,
@@ -73,12 +83,16 @@ __all__ = [
     "BacktestResult",
     "BacktestStore",
     "DeflatedSharpeResult",
+    "DeploymentGateResult",
     "FuturesBacktestConfig",
     "FuturesBacktestResult",
     "FuturesContractSpec",
     "FuturesRollRecord",
     "FuturesStrategyBacktestRunner",
     "FuturesStrategyConfig",
+    "GradingConfig",
+    "MetricGrade",
+    "MetricScore",
     "MonteCarloConfig",
     "MonteCarloPercentileSummary",
     "MonteCarloResult",
@@ -99,6 +113,9 @@ __all__ = [
     "StockStrategyBacktestRunner",
     "StrategyAllocation",
     "StrategyContribution",
+    "StrategyHorizon",
+    "StrategyScorecard",
+    "Verdict",
     "WalkForwardConfig",
     "WalkForwardResult",
     "WalkForwardSplit",
@@ -110,6 +127,7 @@ __all__ = [
     "calculate_option_margin",
     "calculate_pbo",
     "calculate_whites_reality_check",
+    "evaluate_strategy_scorecard",
     "generate_overfitting_report",
     "generate_walk_forward_splits",
     "run_monte_carlo",

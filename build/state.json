@@ -1,8 +1,8 @@
 {
-  "feature": "F3.9",
+  "feature": "F3.10",
   "status": "review",
-  "branch": "feature/F3.9-overfitting-p-hacking-controls",
-  "commit": "13af1544a0b27f4955b252ee3ebc45f44da605f6",
+  "branch": "feature/F3.10-metric-grading-scorecard",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -334,6 +334,15 @@
       "status": "review",
       "branch": "feature/F3.9-overfitting-p-hacking-controls",
       "commit": "13af1544a0b27f4955b252ee3ebc45f44da605f6",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F3.10": {
+      "status": "review",
+      "branch": "feature/F3.10-metric-grading-scorecard",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

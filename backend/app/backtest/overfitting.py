@@ -57,9 +57,9 @@ def _norm_ppf(p: float) -> float:
 
     if p < p_low:
         q = math.sqrt(-2.0 * math.log(p))
-        return (
-            ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]
-        ) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+        return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / (
+            (((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0
+        )
     elif p <= p_high:
         q = p - 0.5
         r = q * q
@@ -70,9 +70,9 @@ def _norm_ppf(p: float) -> float:
         )
     else:
         q = math.sqrt(-2.0 * math.log(1.0 - p))
-        return -(
-            ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]
-        ) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+        return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / (
+            (((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0
+        )
 
 
 class DeflatedSharpeResult(BaseModel):
@@ -366,8 +366,7 @@ def generate_overfitting_report(
         pbo = calculate_pbo(candidate_returns_matrix)
         if pbo.pbo > 0.50:
             warnings.append(
-                f"High Probability of Backtest Overfitting (PBO: {pbo.pbo:.2%}) "
-                "detected via CSCV."
+                f"High Probability of Backtest Overfitting (PBO: {pbo.pbo:.2%}) detected via CSCV."
             )
 
     wrc: WhiteRealityCheckResult | None = None
@@ -375,8 +374,7 @@ def generate_overfitting_report(
         wrc = calculate_whites_reality_check(candidate_returns_matrix)
         if not wrc.is_significant:
             warnings.append(
-                f"White's Reality Check p-value ({wrc.p_value:.3f}) does not "
-                "reject data snooping."
+                f"White's Reality Check p-value ({wrc.p_value:.3f}) does not reject data snooping."
             )
 
     is_overfit = bool(warnings)

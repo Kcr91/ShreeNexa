@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.8 | Done | Fast-forwarded into `main` at `9c40f58` after review. |
-| F3.9 | Ready for review | Statistical multi-testing and overfitting controls implementing Deflated Sharpe Ratio (DSR), CSCV Probability of Backtest Overfitting (PBO), and White's Reality Check (WRC). 344/344 tests passing. |
-| F3.10–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.9 | Done | Fast-forwarded into `main` at `482eafc` after review. |
+| F3.10 | Ready for review | Strategy scorecard engine supporting four horizon profiles (Intraday, Swing, Positional, Investment), multi-metric scoring, deployment gates, and overfitting-aware verdict generation. 349/349 tests passing. |
+| F3.11–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1025,4 +1025,18 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_overfitting_controls.py`: 5 passed
 - Full repository test suite: 344 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (162 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `482eafc`.
+
+### 2026-09-02 — F3.10 Metric grading and scorecard engine completed
+
+- Implemented `backend/app/backtest/grading.py`:
+  - `StrategyHorizon`: Timeframe and holding profiles (`INTRADAY`, `SWING`, `POSITIONAL`, `INVESTMENT`).
+  - `MetricGrade` & `Verdict`: Evaluation tiering (`EXCELLENT`, `GOOD`, `ACCEPTABLE`, `POOR`, `REJECTED`) and deployment verdict (`DEPLOYABLE`, `INVESTIGATE`, `REJECT`).
+  - `GradingConfig`: Versioned threshold band rules and deployment gate parameterization.
+  - `evaluate_strategy_scorecard`: Assesses backtest performance against horizon profile standards (Sharpe, Max Drawdown %, Profit Factor, Win Rate, CAGR), enforces mandatory risk deployment gates, surfaces risk flags, and automatically routes overfitting audit warnings to `INVESTIGATE`.
+- Exported grading tools in `backend/app/backtest/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.10.md` and added 5 new unit tests covering contiguous boundary scaling, lower-is-better drawdown grading, horizon profile adjustments, overfitting-to-INVESTIGATE verdict transitions, and risk gate rejection:
+  - `backend/tests/unit/test_metric_grading_scorecard.py`: 5 passed
+- Full repository test suite: 349 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (164 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
