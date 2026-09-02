@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.10 | Done | Fast-forwarded into `main` at `fd1fb0d` after review. |
-| F3.12 | Ready for review | Universal daily accounting ledger with realized P&L, MTM change, costs, cashflows, and Time-Weighted Return (TWR) calculation. 353/353 tests passing. |
+| F3.12 | Done | Fast-forwarded into `main` at `acdb1d9` after review. |
+| F4.1 | Ready for review | React/TypeScript/Vite frontend shell with dark terminal theme tokens, typed API boundary, client routing (Dashboard, Research, Screener, P&L, Settings), error boundary, and development auth stub. 353 Python tests & 2 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1052,5 +1052,29 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Authored acceptance contract `docs/qa/acceptance/F3.12.md` and added 4 new unit tests covering fundamental accounting identity validation, pure-cashflow 0% return invariance, TWR sub-period compounding under capital injections, and monthly/yearly performance summaries:
   - `backend/tests/unit/test_daily_pnl_tracker.py`: 4 passed
 - Full repository test suite: 353 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `acdb1d9`.
+
+### 2026-09-02 — F4.1 Frontend shell, routing, theme tokens, and API boundary completed
+
+- Implemented Design System & Theme Tokens:
+  - `frontend/src/theme/tokens.css` & `frontend/src/index.css`: Comprehensive dark terminal theme CSS custom properties covering Indian market palette (profit green, loss red), typography, spacing, custom scrollbars, and surface elevations.
+- Implemented Typed API Client Boundary:
+  - `frontend/src/api/client.ts`: Robust Fetch wrapper with `ApiError` hierarchy, JSON serialization, typed endpoints for health and Dhan token status, and secret-redaction protection.
+- Implemented Development Authentication Stub:
+  - `frontend/src/auth/AuthContext.tsx`: Session context provider exposing active development user profile (`dev_trader`) and role permissions.
+- Implemented Component & Layout Shell:
+  - `Header.tsx`: Terminal brand header, live IST market clock, and real-time Dhan feed token health status indicator.
+  - `Navigation.tsx`: Primary sidebar navigation supporting 5 routes (`dashboard`, `research`, `screener`, `pnl`, `settings`) with active indicator tabs and ARIA accessibility roles.
+  - `StatusFooter.tsx`: Four-role process status telemetry (API, Engine, Feedd, Worker) and workspace metadata.
+  - `ErrorBoundary.tsx`: React error boundary preventing white-screen crashes on unhandled render errors with retry capability.
+  - `LoadingSkeleton.tsx`: Reusable pulse animation loading placeholders.
+  - `Shell.tsx` & `App.tsx`: Master layout coordinating view swapping and global context providers.
+- Shipped 5 Terminal View Skeletons:
+  - `DashboardView.tsx`, `ResearchView.tsx`, `ScreenerView.tsx`, `PnLView.tsx`, `SettingsView.tsx`.
+- Authored acceptance contract `docs/qa/acceptance/F4.1.md` and added unit tests in `frontend/src/App.test.tsx` and `frontend/src/components/Shell.test.tsx`:
+  - Frontend test suite: 2 passed / 0 failed (App layout & navigation switching).
+  - Production bundle build: `dist/assets/index-*.js` (357 kB raw / 104 kB gzip) created cleanly.
+- Full repository test suite: 353 Python tests passed + 2 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
