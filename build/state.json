@@ -2,7 +2,7 @@
   "feature": "F4.10",
   "status": "review",
   "branch": "feature/F4.10-frontend-websocket-client-multiplexing",
-  "commit": null,
+  "commit": "3e0a84346eb4a03498ae908e2f8d227b607cecf2",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -441,7 +441,7 @@
     "F4.10": {
       "status": "review",
       "branch": "feature/F4.10-frontend-websocket-client-multiplexing",
-      "commit": null,
+      "commit": "3e0a84346eb4a03498ae908e2f8d227b607cecf2",
       "tests": {},
       "evidence": [],
       "verified_at": null,
