@@ -62,8 +62,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F9.1 | Done | Fast-forwarded into `main` at `4f94049` after review. |
 | F9.2 | Done | Fast-forwarded into `main` at `08ee58c` after review. |
 | F9.3 | Done | Fast-forwarded into `main` at `102c606` after review. |
-| F9.4 | Done | Fast-forwarded into `main` at `3791da3` after review. |
-| F5.2, F9.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F9.4 | Done | Fast-forwarded into `main` at `c52c45d` after review. |
+| F9.5 | Done | Fast-forwarded into `main` at `f31f337` after review. |
+| F5.2, F9.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2135,3 +2136,32 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Authored acceptance contract in `docs/qa/acceptance/F9.4.md`.
 - Full repository test suite: 472 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (243 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-02 — F9.5 Same-session paper-vs-backtest divergence report completed
+
+- Implemented `backend/app/paper/divergence.py`:
+  - `SessionDivergenceReport`: Automated multi-dimensional comparison report covering signals, execution timestamps, execution prices, fills/quantities, transaction costs, and P&L.
+  - Multi-tier classification severity: `PERFECT_MATCH`, `ACCEPTABLE_DRIFT`, `DIVERGENCE_DETECTED`, and `CRITICAL_MISMATCH`.
+  - Configurable `DivergenceTolerances` covering maximum price drift %, execution latency delay, cost model drift %, and P&L drift %.
+  - Root-cause discrepancy attribution: Categorizes each execution anomaly (`SLIPPAGE_DISCREPANCY`, `LATENCY_DELAY`, `MISSED_SIGNAL`, `UNEXPECTED_SIGNAL`, `FILL_QUANTITY_MISMATCH`, `DROPPED_FILL`, `UNEXPECTED_FILL`, `COST_MODEL_DRIFT`, `PNL_DISCREPANCY`) with exact delta values and explanatory text.
+  - Signal and execution reconcilers (`compare_signals`, `compare_executions`): Match chronological order sequences, detect partial executions or dropped orders, and measure millisecond latency.
+  - P&L and cost reconciler (`PnLComparisonSummary`): Reconciles gross and net P&L, transaction costs, and final equity.
+  - Direct account comparator: `generate_account_divergence_report` reconciles a live paper trading account directly against replay backtest fills.
+- Extended `backend/app/paper/adapter.py`:
+  - Added fallback position reconstruction from fills when position maps are uninitialized.
+- Extended `backend/app/api/paper.py`:
+  - `POST /api/v1/paper/divergence-report`: REST API endpoint generating and returning a `SessionDivergenceReport`.
+- Extended `backend/app/paper/__init__.py`:
+  - Exported divergence models and generation functions.
+- Authored acceptance contract in `docs/qa/acceptance/F9.5.md`.
+- Authored unit tests in `backend/tests/unit/test_paper_backtest_divergence.py` (7 tests passing):
+  - Verified identical inputs reconcile cleanly to `PERFECT_MATCH`.
+  - Verified executions with micro-slippage within declared tolerance evaluate to `ACCEPTABLE_DRIFT`.
+  - Verified injected slippage drift beyond tolerance is localized, explained, and flagged.
+  - Verified injected execution latency delay is localized, explained, and flagged.
+  - Verified dropped fills trigger `CRITICAL_MISMATCH` with localized entity identification.
+  - Verified injected signal discrepancies (missed and unexpected signals) are localized and flagged.
+  - Verified `/api/v1/paper/divergence-report` REST API endpoint.
+- Full repository test suite: 479 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (245 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
