@@ -1020,7 +1020,18 @@
       "status": "review",
       "branch": "feature/F9.3-multi-strategy-paper-isolation",
       "commit": "c5a7bbd15d603358aed42233134415528c37cb68",
-      "tests": {},
+      "tests": {
+        "pytest": {
+          "passed": 468,
+          "failed": 0,
+          "skipped": 30
+        },
+        "frontend_vitest": {
+          "passed": 179,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
       "evidence": [
         "docs/qa/acceptance/F9.3.md",
         "backend/app/paper/multi_strategy.py",

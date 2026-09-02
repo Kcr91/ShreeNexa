@@ -61,7 +61,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.7 | Done | Fast-forwarded into `main` at `469f6c0` after review. |
 | F9.1 | Done | Fast-forwarded into `main` at `4f94049` after review. |
 | F9.2 | Done | Fast-forwarded into `main` at `08ee58c` after review. |
-| F9.3 | Review ready | Implementation and independent test suite passing at `c5a7bbd`; review report completed. |
+| F9.3 | Done | Fast-forwarded into `main` at `b9ad251` after review. |
 | F5.2, F9.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
