@@ -1,8 +1,8 @@
 {
-  "feature": "F9.5",
+  "feature": "F9.6",
   "status": "review",
-  "branch": "feature/F9.5-same-session-paper-backtest-divergence",
-  "commit": "f31f337bf589aa94ae71a9bca38d4c5de5d22281",
+  "branch": "feature/F9.6-paper-deployment-lifecycle-engine",
+  "commit": "1ca8762bcb2608b77a949b42f7247c63c161415f",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1088,6 +1088,31 @@
         "backend/app/paper/divergence.py",
         "backend/app/api/paper.py",
         "backend/tests/unit/test_paper_backtest_divergence.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F9.6": {
+      "status": "review",
+      "branch": "feature/F9.6-paper-deployment-lifecycle-engine",
+      "commit": "1ca8762bcb2608b77a949b42f7247c63c161415f",
+      "tests": {
+        "pytest": {
+          "passed": 485,
+          "failed": 0,
+          "skipped": 30
+        },
+        "frontend_vitest": {
+          "passed": 179,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F9.6.md",
+        "backend/app/paper/lifecycle.py",
+        "backend/app/api/paper.py",
+        "backend/tests/unit/test_paper_deployment_lifecycle.py"
       ],
       "verified_at": null,
       "blockers": []
