@@ -2,7 +2,7 @@
   "feature": "F7.5",
   "status": "review",
   "branch": "feature/F7.5-multiple-watchlists-configurable-columns",
-  "commit": null,
+  "commit": "851299f29094b7643b5c6e8d058a1bf5367637ce",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F7.5": {
       "status": "review",
       "branch": "feature/F7.5-multiple-watchlists-configurable-columns",
-      "commit": null,
+      "commit": "851299f29094b7643b5c6e8d058a1bf5367637ce",
       "tests": {
         "pytest": {
           "passed": 424,
