@@ -2,7 +2,7 @@
   "feature": "F8.3",
   "status": "review",
   "branch": "feature/F8.3-streaming-option-chain-widget",
-  "commit": null,
+  "commit": "f340b88bb805f35185ba157aa91fde982710f33c",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F8.3": {
       "status": "review",
       "branch": "feature/F8.3-streaming-option-chain-widget",
-      "commit": null,
+      "commit": "f340b88bb805f35185ba157aa91fde982710f33c",
       "tests": {
         "pytest": {
           "passed": 454,
