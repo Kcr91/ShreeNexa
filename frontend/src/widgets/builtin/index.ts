@@ -8,6 +8,7 @@ import { orderTicketDefinition } from "./OrderTicketWidget";
 import { blotterDefinition } from "./BlotterWidget";
 import { optionChainDefinition } from "./OptionChainWidget";
 import { backtestAnalyticsDefinition } from "./BacktestAnalyticsWidget";
+import { liveFeedStatusDefinition } from "./LiveFeedStatusWidget";
 
 export function registerBuiltinWidgets(): void {
   widgetRegistry.register(marketClockDefinition);
@@ -19,6 +20,7 @@ export function registerBuiltinWidgets(): void {
   widgetRegistry.register(blotterDefinition);
   widgetRegistry.register(optionChainDefinition);
   widgetRegistry.register(backtestAnalyticsDefinition);
+  widgetRegistry.register(liveFeedStatusDefinition);
 }
 
 // Auto-register built-in widgets

@@ -1,8 +1,8 @@
 {
-  "feature": "F4.9",
+  "feature": "F4.10",
   "status": "review",
-  "branch": "feature/F4.9-dashboard-templates-export-import-hotkeys",
-  "commit": "b8da740ecb10461b5f7e713605bfebc992769d41",
+  "branch": "feature/F4.10-frontend-websocket-client-multiplexing",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -433,6 +433,15 @@
       "status": "review",
       "branch": "feature/F4.9-dashboard-templates-export-import-hotkeys",
       "commit": "b8da740ecb10461b5f7e713605bfebc992769d41",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F4.10": {
+      "status": "review",
+      "branch": "feature/F4.10-frontend-websocket-client-multiplexing",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
