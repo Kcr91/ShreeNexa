@@ -1,8 +1,8 @@
 {
-  "feature": "F9.4",
+  "feature": "F9.5",
   "status": "review",
-  "branch": "feature/F9.4-paper-metrics-registry-reuse",
-  "commit": "3791da31bc08751aa4ae1e341dc832eebcb0e570",
+  "branch": "feature/F9.5-same-session-paper-backtest-divergence",
+  "commit": "f31f337bf589aa94ae71a9bca38d4c5de5d22281",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1063,6 +1063,31 @@
         "backend/app/api/paper.py",
         "backend/tests/fixtures/trade_equity_parity_fixture.json",
         "backend/tests/unit/test_paper_metrics_registry_reuse.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F9.5": {
+      "status": "review",
+      "branch": "feature/F9.5-same-session-paper-backtest-divergence",
+      "commit": "f31f337bf589aa94ae71a9bca38d4c5de5d22281",
+      "tests": {
+        "pytest": {
+          "passed": 479,
+          "failed": 0,
+          "skipped": 30
+        },
+        "frontend_vitest": {
+          "passed": 179,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F9.5.md",
+        "backend/app/paper/divergence.py",
+        "backend/app/api/paper.py",
+        "backend/tests/unit/test_paper_backtest_divergence.py"
       ],
       "verified_at": null,
       "blockers": []
