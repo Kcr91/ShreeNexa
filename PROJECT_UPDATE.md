@@ -64,8 +64,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F9.3 | Done | Fast-forwarded into `main` at `102c606` after review. |
 | F9.4 | Done | Fast-forwarded into `main` at `c52c45d` after review. |
 | F9.5 | Done | Fast-forwarded into `main` at `561364f` after review. |
-| F9.6 | Done | Fast-forwarded into `main` at `1ca8762` after review. |
-| F5.2, F9.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F9.6 | Done | Fast-forwarded into `main` at `e8e520b` after review. |
+| F9.7 | Done | Fast-forwarded into `main` at `d42e343` after review. |
+| F5.2, F10.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2200,3 +2201,29 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified end-to-end REST API deployment and audit endpoints.
 - Full repository test suite: 485 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (247 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-02 — F9.7 Paper P&L calendar and monthly/yearly returns by reusing F3.12–F3.14 completed
+
+- Implemented `backend/app/paper/calendar.py`:
+  - Directly reused the quantitative accounting ledger `app.engine.daily_pnl.DailyPnLTracker` instantiated with `mode=ExecutionMode.PAPER`, eliminating duplicate code paths and ensuring bit-for-bit accounting parity between backtest and paper modes.
+  - `record_paper_day`: Records daily trading performance into the ledger, enforcing the fundamental identity $E_{end} = E_{start} + C + P_{real} + \Delta U - K$.
+  - `generate_paper_calendar_report`: Produces `PaperCalendarResponse` containing daily accounting records, monthly summaries, and yearly summaries with green/red day counts, win rates, and compounded TWR %.
+  - `generate_paper_returns_slice`: Generates a `TimelinePhaseSlice` with `phase="PAPER"` and daily compounded return points, fully compatible with continuous timeline stitching in `frontend/src/returns/engine.ts`.
+- Extended `backend/app/api/paper.py`:
+  - `GET /api/v1/paper/calendar`: Endpoint querying paper P&L calendar performance report.
+  - `GET /api/v1/paper/returns`: Endpoint querying paper returns timeline slice.
+- Extended `backend/app/paper/__init__.py`:
+  - Exported paper calendar models, reports, and helper methods.
+- Extended `frontend/src/pnlcalendar/types.ts` & `frontend/src/widgets/builtin/PnlCalendarWidget.tsx`:
+  - Added `sourceKind` ("backtest" | "paper") to `PnlCalendarWidgetSettings` and widget schema fields.
+  - Added visual source badge in the monthly navigation header.
+- Authored acceptance contract in `docs/qa/acceptance/F9.7.md`.
+- Authored unit tests in `backend/tests/unit/test_paper_pnl_calendar.py` (5 tests passing):
+  - Verified fundamental accounting identity for paper mode.
+  - Proved bit-for-bit numeric parity between backtest and paper modes with zero duplicate calculations.
+  - Verified `generate_paper_calendar_report` reconciliation with `source_kind='paper'`.
+  - Verified `generate_paper_returns_slice` contract and empty-history fallback.
+  - Verified `/api/v1/paper/calendar` and `/returns` REST API endpoints.
+- Full repository test suite: 490 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (249 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
