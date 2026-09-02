@@ -2,7 +2,7 @@
   "feature": "F3.8",
   "status": "review",
   "branch": "feature/F3.8-monte-carlo-walk-forward",
-  "commit": null,
+  "commit": "6fde7b50f7ff3b10b00e84b80e5564fa72a0e4c6",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -324,7 +324,7 @@
     "F3.8": {
       "status": "review",
       "branch": "feature/F3.8-monte-carlo-walk-forward",
-      "commit": null,
+      "commit": "6fde7b50f7ff3b10b00e84b80e5564fa72a0e4c6",
       "tests": {},
       "evidence": [],
       "verified_at": null,
