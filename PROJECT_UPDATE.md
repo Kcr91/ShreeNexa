@@ -50,8 +50,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F7.5 | Done | Fast-forwarded into `main` at `482fe16` after review. |
 | F7.6 | Done | Fast-forwarded into `main` at `925142e` after review. |
 | F7.7 | Done | Fast-forwarded into `main` at `66d525f` after review. |
-| F7.8 | Ready for review | Index and constituent heatmaps with market breadth, sentiment measures, transparent weighting source, and deterministic missing-weight handling. 435 Python tests & 142 frontend tests passing. |
-| F5.2, F7.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F7.8 | Done | Fast-forwarded into `main` at `f14645b` after review. |
+| F7.9 | Ready for review | 20-level depth ladder, multi-script depth watchlist, on-demand 200-level full book with connection cost surfacing, and explicit 5-level fallback for unsupported segments. 440 Python tests & 150 frontend tests passing. |
+| F5.2, F8.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1762,3 +1763,41 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified index-level rendering, breadth metrics, constituent drill-in, fallback weight labelling, and interactive tile drill-down.
 - Full repository test suite: 435 Python tests passed + 142 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (207 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `f14645b`.
+
+### 2026-09-02 — F7.9 20-level depth ladder, on-demand 200-level book, and 5-level fallback completed
+
+- Implemented `backend/app/feedd/depth.py`:
+  - `DepthLevelType`: `LEVEL_5`, `LEVEL_20`, `LEVEL_200`.
+  - `DepthLevel`: Single level tracking price, quantity, order count, and strictly monotonic cumulative quantity.
+  - `MarketDepthBook`: Complete depth book with monotonic cumulative bids/asks, total quantities, spread, spread %, imbalance ratio, connection cost metadata, and fallback flags.
+  - `DepthWatchlistItem`: Multi-script depth strip summary model for up to 50 pinned instruments.
+  - `calculate_cumulative_depth`: Enforces strictly monotonic cumulative sums ($Q_{cum, i} = \sum_{j=1}^i Q_j \ge Q_{cum, i-1}$).
+  - `build_depth_book`: Builds depth book, calculates monotonic cumulative quantities, enforces exchange segment limitations (degrades `BSE_EQ`, `MCX_COMM`, and currency to `LEVEL_5` with explicit explanation note), and surfaces connection cost (`Dedicated Socket`, `Shared Socket Pool`, `Regular Feed`).
+- Exported depth symbols in `backend/app/feedd/__init__.py`.
+- Implemented `backend/app/api/depth.py`:
+  - `GET /api/v1/depth/{symbol}`: Returns depth book with fallback handling and connection cost.
+  - `GET /api/v1/depth/watchlist`: Returns multi-script depth strip for pinned instruments.
+- Mounted `depth_router` in `backend/app/main.py`.
+- Authored backend unit tests in `backend/tests/unit/test_depth_book.py`:
+  - Verified 20-level monotonic cumulative quantities and shared pool connection cost.
+  - Verified 200-level on-demand dedicated connection socket.
+  - Verified 5-level fallback on BSE/MCX with explicit exchange limitation reason banner.
+  - Verified REST API endpoints `/api/v1/depth/{symbol}` and `/api/v1/depth/watchlist`.
+- Implemented `frontend/src/depth/`:
+  - `types.ts`: `DepthLevel`, `DepthLevelType`, `MarketDepthBook`, `DepthWatchlistItem`.
+  - `engine.ts`: `calculateCumulativeDepth`, `resolveSegmentDepthCapability`, `computeOrderBookImbalance`, `generateMockDepthBook`.
+  - `engine.test.ts`: Mathematical tests verifying monotonic cumulative sums, segment capability fallback, and bounded order book imbalance.
+- Created `frontend/src/widgets/builtin/MarketDepthWidget.tsx`:
+  - Depth Ladder & Depth Watchlist tabs.
+  - Sizing level buttons: `5L`, `20L (Standard)`, `200L (On Demand)`.
+  - Connection cost indicator badge (`⚡ Dedicated Socket` for 200L, `👥 Shared Socket Pool` for 20L).
+  - Prominent 5-level fallback banner when selecting BSE/MCX/Currency (`⚠️ 5-Level Depth Active: Exchange limitation (20/200 depth available only on NSE_EQ and NSE_FNO)`). Never displays an empty ladder.
+  - Visual depth ladder table with proportional liquidity fill bars.
+  - Imbalance footer with Total Bids, Total Asks, dynamic skew bias bar, and spread metrics.
+  - Multi-script depth watchlist strip with top-5 imbalance, total book, and quick "Focus" button.
+  - Registered `marketDepthDefinition` in `frontend/src/widgets/builtin/index.ts`.
+- Authored frontend component tests in `frontend/src/widgets/builtin/MarketDepthWidget.test.tsx`:
+  - Verified 20-level ladder rendering, monotonic cumulative quantities, 200-level on-demand dedicated socket surfacing, 5-level BSE fallback, and watchlist focus.
+- Full repository test suite: 440 Python tests passed + 150 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (210 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

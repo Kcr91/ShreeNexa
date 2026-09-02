@@ -1,13 +1,38 @@
 {
-  "feature": "F7.8",
+  "feature": "F7.9",
   "status": "review",
-  "branch": "feature/F7.8-index-constituent-heatmap-breadth",
-  "commit": "4dd3c7bb76af169614ebf50c7bbe7aece868212a",
+  "branch": "feature/F7.9-market-depth-ladder-watchlist",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F7.9": {
+      "status": "review",
+      "branch": "feature/F7.9-market-depth-ladder-watchlist",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 440,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 150,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F7.9.md",
+        "backend/app/feedd/depth.py",
+        "frontend/src/depth/engine.ts",
+        "frontend/src/widgets/builtin/MarketDepthWidget.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F7.8": {
       "status": "review",
       "branch": "feature/F7.8-index-constituent-heatmap-breadth",

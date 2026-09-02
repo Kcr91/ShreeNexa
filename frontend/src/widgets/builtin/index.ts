@@ -17,12 +17,14 @@ import { returnsTimelineDefinition } from "./ReturnsTimelineWidget";
 import { gradingThresholdsDefinition } from "./GradingThresholdsWidget";
 import { sectorDrillInDefinition } from "./SectorDrillInWidget";
 import { marketHeatmapDefinition } from "./MarketHeatmapWidget";
+import { marketDepthDefinition } from "./MarketDepthWidget";
 
 export function registerBuiltinWidgets(): void {
   widgetRegistry.register(marketClockDefinition);
   widgetRegistry.register(watchlistDefinition);
   widgetRegistry.register(sectorDrillInDefinition);
   widgetRegistry.register(marketHeatmapDefinition);
+  widgetRegistry.register(marketDepthDefinition);
   widgetRegistry.register(backtestSummaryDefinition);
   widgetRegistry.register(fixtureTestDefinition);
   widgetRegistry.register(chartDefinition);

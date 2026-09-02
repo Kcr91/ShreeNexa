@@ -32,6 +32,14 @@ from app.feedd.cache import (
     oi_key,
     quote_key,
 )
+from app.feedd.depth import (
+    DepthLevel,
+    DepthLevelType,
+    DepthWatchlistItem,
+    MarketDepthBook,
+    build_depth_book,
+    calculate_cumulative_depth,
+)
 from app.feedd.subscriptions import (
     MAX_INSTRUMENTS_PER_MESSAGE,
     MAX_INSTRUMENTS_PER_SOCKET,
@@ -58,6 +66,9 @@ __all__ = [
     "ConnectionBudgetExhaustedError",
     "ConnectionBudgetManager",
     "ConnectionLease",
+    "DepthLevel",
+    "DepthLevelType",
+    "DepthWatchlistItem",
     "FeedSocketRecord",
     "HotCache",
     "InMemoryHotCache",
@@ -65,6 +76,7 @@ __all__ = [
     "LiveBarBuilder",
     "LiveMinuteBar",
     "LiveTick",
+    "MarketDepthBook",
     "PoolMode",
     "RedisHotCache",
     "SocketType",
@@ -73,6 +85,8 @@ __all__ = [
     "SubscriptionManager",
     "SubscriptionMode",
     "SubscriptionPriority",
+    "build_depth_book",
+    "calculate_cumulative_depth",
     "depth_key",
     "get_connection_budget_manager",
     "health_key",
