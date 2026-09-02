@@ -60,7 +60,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.6 | Done | Fast-forwarded into `main` at `3979235` after review. |
 | F8.7 | Done | Fast-forwarded into `main` at `469f6c0` after review. |
 | F9.1 | Done | Fast-forwarded into `main` at `4f94049` after review. |
-| F9.2 | Ready for review | Paper order book, trade book, positions, live MTM, costs, and rejection/reason display. 462 Python tests & 179 frontend tests passing. |
+| F9.2 | Done | Fast-forwarded into `main` at `08ee58c` after review. |
 | F5.2, F9.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
