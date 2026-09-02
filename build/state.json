@@ -2,7 +2,7 @@
   "feature": "F2.7",
   "status": "review",
   "branch": "feature/F2.7-incremental-strategy-compiler",
-  "commit": null,
+  "commit": "19f66583995f68b31a3962d3a3915bc5e59b2075",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -234,7 +234,7 @@
     "F2.7": {
       "status": "review",
       "branch": "feature/F2.7-incremental-strategy-compiler",
-      "commit": null,
+      "commit": "19f66583995f68b31a3962d3a3915bc5e59b2075",
       "tests": {},
       "evidence": [],
       "verified_at": null,
