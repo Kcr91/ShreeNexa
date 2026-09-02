@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.3 | Done | Fast-forwarded into `main` at `8c6f455` after review. |
-| F4.4 | Ready for review | Lightweight Charts integration with multi-pane indicators (SMA, EMA, VWAP, RSI, MACD), Indian market session break overlays, timeframe controls, and interactive toolbar. 353 Python tests & 28 frontend tests passing. |
+| F4.4 | Done | Fast-forwarded into `main` at `e52274f` after review. |
+| F4.5 | Ready for review | Comprehensive order ticket widget supporting stock equities, multi-leg options builder (Strangles, Straddles, Spreads, Condors), dynamic margin requirements preview (hedged SPAN/Exposure approximation), Indian regulatory cost breakdown, risk limit validation, and paper/live execution safety gates. 353 Python tests & 38 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1140,5 +1140,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 28 passed / 0 failed across 10 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 28 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `e52274f`.
+
+### 2026-09-02 — F4.5 Order ticket widget and leg builder completed
+
+- Implemented `frontend/src/order/types.ts`:
+  - `StockOrder`, `OptionLeg`, `MultiLegOptionOrder`, `MarginRequirement`, `OrderValidationResult`, `OrderPlacementResult`, and `OrderTicketSettings`.
+- Implemented `frontend/src/order/margin.ts`:
+  - Indian regulatory cost model integration (STT, Exchange turnover, Stamp duty, GST, Brokerage).
+  - Equity CNC delivery (100%) vs MIS intraday (20% margin with 5x leverage) margin calculations.
+  - Multi-leg option SPAN + Exposure calculations with hedged spread offset benefits (e.g. Iron Condor risk reduction).
+- Implemented `frontend/src/order/execution.ts`:
+  - Order validation verifying positive integer quantities, valid strike prices, and funds sufficiency.
+  - Hard safety invariant strictly gating live execution behind Epic 12 approval.
+- Implemented `frontend/src/widgets/builtin/OrderTicketWidget.tsx`:
+  - Interactive ticket supporting Stock (BUY/SELL, CNC/MIS, LIMIT/MARKET, Qty, Price) and Multi-Leg Options (underlying index, expiry date, dynamic leg addition/removal, real-time margin & cost preview).
+  - Mode toggle supporting Paper simulation and locked Live execution.
+  - Registered in `widgetRegistry` under category `order`.
+- Authored acceptance contract `docs/qa/acceptance/F4.5.md` and added unit tests in `frontend/src/order/margin.test.ts`, `execution.test.ts`, and `OrderTicketWidget.test.tsx`:
+  - Frontend test suite: 38 passed / 0 failed across 13 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 38 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
