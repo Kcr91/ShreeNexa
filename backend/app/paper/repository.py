@@ -27,11 +27,15 @@ class PaperRepository:
         return self._accounts.get(account_id)
 
     def get_or_create_account(
-        self, account_id: str, initial_capital: float = 1_000_000.0
+        self,
+        account_id: str,
+        initial_capital: float = 1_000_000.0,
+        name: str = "Default Paper Account",
     ) -> PaperAccount:
         if account_id not in self._accounts:
             acc = PaperAccount(
                 account_id=account_id,
+                name=name,
                 initial_capital=initial_capital,
                 cash_balance=initial_capital,
             )

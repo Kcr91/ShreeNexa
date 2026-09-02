@@ -11,6 +11,13 @@ from app.paper.models import (
     PaperOrderType,
     PaperPosition,
 )
+from app.paper.multi_strategy import (
+    MultiStrategyPaperCoordinator,
+    MultiStrategyStatus,
+    SharedAccountCaps,
+    StrategyAllocationConfig,
+    StrategyBookSummary,
+)
 from app.paper.reconciliation import (
     PortfolioSummary,
     PositionSummaryItem,
@@ -20,6 +27,8 @@ from app.paper.reconciliation import (
 from app.paper.repository import PaperRepository, paper_repository
 
 __all__ = [
+    "MultiStrategyPaperCoordinator",
+    "MultiStrategyStatus",
     "PaperAccount",
     "PaperBroker",
     "PaperFill",
@@ -33,6 +42,9 @@ __all__ = [
     "PortfolioSummary",
     "PositionSummaryItem",
     "RejectedOrderInfo",
+    "SharedAccountCaps",
+    "StrategyAllocationConfig",
+    "StrategyBookSummary",
     "paper_broker",
     "paper_repository",
     "reconcile_portfolio",

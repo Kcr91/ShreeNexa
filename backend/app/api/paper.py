@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -17,10 +18,18 @@ from app.paper.models import (
     PaperOrderType,
     PaperPosition,
 )
+from app.paper.multi_strategy import (
+    MultiStrategyPaperCoordinator,
+    MultiStrategyStatus,
+    SharedAccountCaps,
+    StrategyAllocationConfig,
+)
 from app.paper.reconciliation import PortfolioSummary, reconcile_portfolio
 from app.paper.repository import paper_repository
 
 router = APIRouter(prefix="/api/v1/paper", tags=["Paper Trading"])
+
+_coordinators: dict[str, MultiStrategyPaperCoordinator] = {}
 
 
 class CreateAccountRequest(BaseModel):
@@ -127,3 +136,115 @@ def get_portfolio_summary(account_id: str = "default") -> PortfolioSummary:
 def get_reconciliation_report(account_id: str = "default") -> PortfolioSummary:
     """Run mathematical accounting reconciliation across orders, fills, and cash balance."""
     return reconcile_portfolio(account_id=account_id, repository=paper_repository)
+
+
+class InitMultiStrategyRequest(BaseModel):
+    """Payload to initialize a multi-strategy paper trading portfolio."""
+
+    account_id: str = "default"
+    total_capital: float = Field(default=1000000.0, ge=1000.0)
+    allocations: list[StrategyAllocationConfig]
+    shared_caps: SharedAccountCaps | None = None
+
+
+class SubmitStrategyOrderPayload(BaseModel):
+    """Payload to route an order to an isolated strategy book."""
+
+    account_id: str = "default"
+    strategy_id: str
+    symbol: str
+    security_id: str
+    side: PaperOrderSide
+    order_type: PaperOrderType
+    quantity: int = Field(gt=0)
+    price: float | None = None
+    trigger_price: float | None = None
+
+
+class KillSwitchRequest(BaseModel):
+    """Payload to activate or deactivate the global kill switch."""
+
+    account_id: str = "default"
+    action: str = Field(pattern="^(trigger|reset)$")
+    reason: str = "Manual emergency halt"
+
+
+@router.post("/multi-strategy/init", response_model=MultiStrategyStatus)
+def init_multi_strategy(payload: InitMultiStrategyRequest) -> MultiStrategyStatus:
+    """Initialize a multi-strategy paper trading portfolio with isolated capital pools."""
+    coord = MultiStrategyPaperCoordinator(
+        account_id=payload.account_id,
+        total_capital=payload.total_capital,
+        allocations=payload.allocations,
+        shared_caps=payload.shared_caps,
+        repository=paper_repository,
+    )
+    _coordinators[payload.account_id] = coord
+    return coord.get_status()
+
+
+@router.post("/multi-strategy/orders", response_model=PaperOrder)
+def submit_strategy_order(payload: SubmitStrategyOrderPayload) -> PaperOrder:
+    """Submit an order to an isolated strategy under shared account caps."""
+    coord = _coordinators.get(payload.account_id)
+    if not coord:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Multi-strategy paper coordinator not initialized for account "
+                f"'{payload.account_id}'"
+            ),
+        )
+
+    order_id = f"ord-strat-{uuid.uuid4().hex[:8]}"
+    order = PaperOrder(
+        order_id=order_id,
+        account_id=f"{payload.account_id}:{payload.strategy_id}",
+        strategy_id=payload.strategy_id,
+        symbol=payload.symbol,
+        security_id=payload.security_id,
+        side=payload.side,
+        order_type=payload.order_type,
+        quantity=payload.quantity,
+        price=payload.price,
+        trigger_price=payload.trigger_price,
+    )
+    return coord.submit_strategy_order(payload.strategy_id, order)
+
+
+@router.get("/multi-strategy/status", response_model=MultiStrategyStatus)
+def get_multi_strategy_status(account_id: str = "default") -> MultiStrategyStatus:
+    """Get real-time status of all strategy books and shared risk caps."""
+    coord = _coordinators.get(account_id)
+    if not coord:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Multi-strategy paper coordinator not found for account '{account_id}'",
+        )
+    return coord.get_status()
+
+
+@router.post("/multi-strategy/kill-switch")
+def handle_kill_switch(payload: KillSwitchRequest) -> dict[str, Any]:
+    """Trigger or reset global emergency kill switch across all strategies."""
+    coord = _coordinators.get(payload.account_id)
+    if not coord:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Multi-strategy paper coordinator not found for account '{payload.account_id}'"
+            ),
+        )
+    if payload.action == "trigger":
+        coord.trigger_kill_switch(reason=payload.reason)
+        return {
+            "account_id": payload.account_id,
+            "kill_switch_active": True,
+            "action": "triggered",
+        }
+    coord.reset_kill_switch()
+    return {
+        "account_id": payload.account_id,
+        "kill_switch_active": False,
+        "action": "reset",
+    }
