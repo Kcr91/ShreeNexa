@@ -51,8 +51,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F7.6 | Done | Fast-forwarded into `main` at `925142e` after review. |
 | F7.7 | Done | Fast-forwarded into `main` at `66d525f` after review. |
 | F7.8 | Done | Fast-forwarded into `main` at `f14645b` after review. |
-| F7.9 | Ready for review | 20-level depth ladder, multi-script depth watchlist, on-demand 200-level full book with connection cost surfacing, and explicit 5-level fallback for unsupported segments. 440 Python tests & 150 frontend tests passing. |
-| F5.2, F8.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F7.9 | Done | Fast-forwarded into `main` at `1221ac5` after review. |
+| F8.1 | Ready for review | Black-76 pricing model, forward price selection, Brent IV solver with vega guard, closed-form Greeks, Indian conventions (ACT/365, calendar hours to 15:30 IST), reliability flags, and vector/incremental forms. 449 Python tests & 152 frontend tests passing. |
+| F5.2, F8.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1801,3 +1802,45 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified 20-level ladder rendering, monotonic cumulative quantities, 200-level on-demand dedicated socket surfacing, 5-level BSE fallback, and watchlist focus.
 - Full repository test suite: 440 Python tests passed + 150 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (210 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `1221ac5`.
+
+### 2026-09-02 — F8.1 Black-76 pricing, forward selection, Brent IV solver, Greeks, and conventions completed
+
+- Implemented `backend/app/analytics/greeks.py`:
+  - Analytical Black-76 European forward-based option pricing model for Indian index/stock options settling against futures/forward.
+  - Closed-form Greeks:
+    - Delta: Call $e^{-rT} N(d_1) \in [0, 1]$, Put $-e^{-rT} N(-d_1) \in [-1, 0]$.
+    - Gamma: $\frac{e^{-rT} N'(d_1)}{F \sigma \sqrt{T}} \ge 0$.
+    - Theta: 1-day calendar decay ($1/365$ or $1/252$).
+    - Vega: 1 volatility point sensitivity ($0.01 \times \text{Vega}_{\text{annual}}$).
+    - Rho: 1 interest rate point sensitivity ($0.01 \times \text{Rho}_{\text{annual}}$).
+  - Forward resolution hierarchy (`resolve_forward_price`):
+    1. Actual liquid Futures LTP (`ForwardSource.FUTURES_LTP`).
+    2. Synthetic forward derived from ATM Put-Call Parity ($F = K + e^{rT}(C_{\text{ATM}} - P_{\text{ATM}})$) (`ForwardSource.SYNTHETIC_PCP`).
+    3. Spot cost-of-carry forward ($F = S \cdot e^{(r - q)T}$) (`ForwardSource.SPOT_COC`).
+  - High-precision Brent root-finding IV inversion solver (`solve_implied_volatility`):
+    - Brackets root $\sigma \in [0.001, 5.0]$.
+    - Near-zero vega guard ($T \le 0$ or vega $< 10^{-5}$): flags `is_iv_reliable = False` with explicit explanation reason rather than reporting a fabricated number.
+    - Intrinsic lower bound guard: flags `is_iv_reliable = False` if market price is below discounted intrinsic value.
+  - Time-to-expiry calculation (`calculate_time_to_expiry`): Indian market conventions with 15:30 IST close on expiry date.
+  - Vector/batch pricing form (`price_black76_vector`).
+- Exported analytics models and functions in `backend/app/analytics/__init__.py`.
+- Implemented `backend/app/api/options.py`:
+  - `POST /api/v1/options/price`: Theoretical Black-76 pricing, Greeks, and forward resolution.
+  - `POST /api/v1/options/solve-iv`: Implied volatility solving with reliability guards.
+  - `POST /api/v1/options/price-batch`: Batch pricing for contract sequences.
+- Mounted `options_router` in `backend/app/main.py`.
+- Authored backend unit tests in `backend/tests/unit/test_black76_greeks.py`:
+  - Verified benchmark numerical parity against standard reference test vectors.
+  - Verified exact Put-Call parity across moneyness ($\text{Call} - \text{Put} = e^{-rT}(F - K)$).
+  - Verified Greek mathematical bounds and convexity properties.
+  - Verified forward resolution hierarchy.
+  - Verified Brent IV inversion accuracy ($< 10^{-3}$) and near-zero vega / intrinsic guards.
+  - Verified batch/vectorized pricing form.
+  - Verified REST API endpoints `/api/v1/options/price`, `/api/v1/options/solve-iv`, `/api/v1/options/price-batch`.
+- Implemented frontend TypeScript parity in `frontend/src/optionchain/greeks.ts`:
+  - `calculateBlack76Greeks` and `solveImpliedVolatilityBlack76`.
+  - Updated `generateOptionChain` to utilize Black-76 forward pricing and Indian conventions.
+- Authored frontend unit tests in `frontend/src/optionchain/greeks.test.ts` (4 unit tests passing).
+- Full repository test suite: 449 Python tests passed + 152 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (214 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

@@ -155,9 +155,7 @@ def build_depth_book(
 
     total_combined = total_bid_qty + total_ask_qty
     imbalance = (
-        round((total_bid_qty - total_ask_qty) / total_combined, 4)
-        if total_combined > 0
-        else 0.0
+        round((total_bid_qty - total_ask_qty) / total_combined, 4) if total_combined > 0 else 0.0
     )
 
     return MarketDepthBook(

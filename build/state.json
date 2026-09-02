@@ -1,13 +1,38 @@
 {
-  "feature": "F7.9",
+  "feature": "F8.1",
   "status": "review",
-  "branch": "feature/F7.9-market-depth-ladder-watchlist",
-  "commit": "28f3503a0159d68ec12d0bf291a94339b3841318",
+  "branch": "feature/F8.1-black76-iv-solver-greeks",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F8.1": {
+      "status": "review",
+      "branch": "feature/F8.1-black76-iv-solver-greeks",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 449,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 152,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F8.1.md",
+        "backend/app/analytics/greeks.py",
+        "backend/app/api/options.py",
+        "frontend/src/optionchain/greeks.ts"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F7.9": {
       "status": "review",
       "branch": "feature/F7.9-market-depth-ladder-watchlist",

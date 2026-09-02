@@ -44,9 +44,7 @@ def get_depth_watchlist() -> list[DepthWatchlistItem]:
         top5_b = sum(b.quantity for b in book.bids[:5])
         top5_a = sum(a.quantity for a in book.asks[:5])
         top5_imbalance = (
-            round((top5_b - top5_a) / (top5_b + top5_a), 4)
-            if (top5_b + top5_a) > 0
-            else 0.0
+            round((top5_b - top5_a) / (top5_b + top5_a), 4) if (top5_b + top5_a) > 0 else 0.0
         )
 
         items.append(
