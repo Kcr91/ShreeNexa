@@ -2,7 +2,7 @@
   "feature": "F3.6",
   "status": "review",
   "branch": "feature/F3.6-futures-strategy-backtest-runner",
-  "commit": null,
+  "commit": "9f290750239cf2c08a9fa64df457c4c1d428bf27",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -306,7 +306,7 @@
     "F3.6": {
       "status": "review",
       "branch": "feature/F3.6-futures-strategy-backtest-runner",
-      "commit": null,
+      "commit": "9f290750239cf2c08a9fa64df457c4c1d428bf27",
       "tests": {},
       "evidence": [],
       "verified_at": null,
