@@ -2,7 +2,7 @@
   "feature": "F3.2",
   "status": "review",
   "branch": "feature/F3.2-simbroker-fills-slippage",
-  "commit": null,
+  "commit": "46223abb92b0fa171a4f00b95eb0740a3249bc12",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -270,7 +270,7 @@
     "F3.2": {
       "status": "review",
       "branch": "feature/F3.2-simbroker-fills-slippage",
-      "commit": null,
+      "commit": "46223abb92b0fa171a4f00b95eb0740a3249bc12",
       "tests": {},
       "evidence": [],
       "verified_at": null,
