@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.7 | Done | Fast-forwarded into `main` at `17b5cd1` after review. |
-| F3.8 | Ready for review | Monte Carlo trade/bar resampling with confidence intervals and empirical risk of ruin, along with rolling/anchored Walk-Forward Analysis and Walk-Forward Efficiency (WFE) evaluation. 339/339 tests passing. |
-| F3.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.8 | Done | Fast-forwarded into `main` at `9c40f58` after review. |
+| F3.9 | Ready for review | Statistical multi-testing and overfitting controls implementing Deflated Sharpe Ratio (DSR), CSCV Probability of Backtest Overfitting (PBO), and White's Reality Check (WRC). 344/344 tests passing. |
+| F3.10–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1011,4 +1011,18 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_monte_carlo_walk_forward.py`: 4 passed
 - Full repository test suite: 339 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (160 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `9c40f58`.
+
+### 2026-09-02 — F3.9 Overfitting and p-hacking controls completed
+
+- Implemented `backend/app/backtest/overfitting.py`:
+  - `calculate_deflated_sharpe_ratio`: Computes Deflated Sharpe Ratio (DSR) and Probabilistic Sharpe Ratio (PSR) adjusting for non-normal skewness/kurtosis, sample size, number of candidate trials $N$, and trials variance $V$.
+  - `calculate_pbo`: Implements Combinatorially Symmetric Cross-Validation (CSCV) over $S$ slices and evaluates $\binom{S}{S/2}$ combinations to compute the Probability of Backtest Overfitting ($PBO$) and logit distributions.
+  - `calculate_whites_reality_check`: Implements White's Reality Check bootstrap data-snooper hypothesis testing with centered null test statistics.
+  - `generate_overfitting_report`: Generates automated diagnostic warnings when DSR falls below 95% confidence or PBO exceeds 50%.
+- Exported overfitting controls in `backend/app/backtest/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.9.md` and added 5 new unit tests covering normal CDF/PPF numerical accuracy, multiple testing penalties under DSR, CSCV PBO on persistent vs overfit matrices, White's Reality Check data snooping discrimination, and comprehensive audit reports:
+  - `backend/tests/unit/test_overfitting_controls.py`: 5 passed
+- Full repository test suite: 344 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (162 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

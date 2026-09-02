@@ -1,4 +1,4 @@
-"""Backtest execution, performance analytics, Monte Carlo, and Walk-Forward modeling."""
+"""Backtest execution, performance analytics, Walk-Forward, and Overfitting controls."""
 
 from __future__ import annotations
 
@@ -34,6 +34,16 @@ from app.backtest.options_runner import (
     OptionStrategyBacktestRunner,
     calculate_option_margin,
 )
+from app.backtest.overfitting import (
+    DeflatedSharpeResult,
+    OverfittingReport,
+    PBOResult,
+    WhiteRealityCheckResult,
+    calculate_deflated_sharpe_ratio,
+    calculate_pbo,
+    calculate_whites_reality_check,
+    generate_overfitting_report,
+)
 from app.backtest.portfolio_models import (
     PortfolioBacktestConfig,
     PortfolioBacktestResult,
@@ -62,6 +72,7 @@ __all__ = [
     "BacktestPerformanceMetrics",
     "BacktestResult",
     "BacktestStore",
+    "DeflatedSharpeResult",
     "FuturesBacktestConfig",
     "FuturesBacktestResult",
     "FuturesContractSpec",
@@ -76,6 +87,8 @@ __all__ = [
     "OptionLegConfig",
     "OptionStrategyBacktestRunner",
     "OptionStrategyConfig",
+    "OverfittingReport",
+    "PBOResult",
     "PortfolioBacktestConfig",
     "PortfolioBacktestResult",
     "PortfolioBacktestRunner",
@@ -90,9 +103,14 @@ __all__ = [
     "WalkForwardResult",
     "WalkForwardSplit",
     "WalkForwardWindowResult",
+    "WhiteRealityCheckResult",
     "backtest_store",
     "calculate_backtest_metrics",
+    "calculate_deflated_sharpe_ratio",
     "calculate_option_margin",
+    "calculate_pbo",
+    "calculate_whites_reality_check",
+    "generate_overfitting_report",
     "generate_walk_forward_splits",
     "run_monte_carlo",
     "run_walk_forward_analysis",
