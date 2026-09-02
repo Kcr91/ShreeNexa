@@ -1,13 +1,41 @@
 {
-  "feature": "F6.5",
+  "feature": "F7.1",
   "status": "review",
-  "branch": "feature/F6.5-versioned-regime-detectors-walk-forward-switching",
-  "commit": "47aa888173cb4f315e58502206d890e07eda27f7",
+  "branch": "feature/F7.1-dhan-live-feed-ws-binary-parser",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F7.1": {
+      "status": "review",
+      "branch": "feature/F7.1-dhan-live-feed-ws-binary-parser",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 402,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 122,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F7.1.md",
+        "backend/tests/fixtures/golden_packets/golden_index.bin",
+        "backend/tests/fixtures/golden_packets/golden_ticker.bin",
+        "backend/tests/fixtures/golden_packets/golden_quote.bin",
+        "backend/tests/fixtures/golden_packets/golden_oi.bin",
+        "backend/tests/fixtures/golden_packets/golden_full.bin",
+        "backend/tests/fixtures/golden_packets/golden_disconnect.bin"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F0.5": {
       "status": "blocked",
       "branch": "feature/F0.5-dhan-rest-wrapper",

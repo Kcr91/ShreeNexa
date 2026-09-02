@@ -146,7 +146,7 @@ class TrendRegimeDetector_v1(RegimeDetector):
             return "ranging"
 
         # Point-in-time fast SMA and slow SMA
-        fast_closes = list(self._closes)[-self.fast_period:]
+        fast_closes = list(self._closes)[-self.fast_period :]
         fast_sma = sum(fast_closes) / self.fast_period
         slow_sma = sum(self._closes) / self.slow_period
 
@@ -166,9 +166,7 @@ class TrendRegimeDetector_v1(RegimeDetector):
         highs: Sequence[float] | None = None,
         lows: Sequence[float] | None = None,
     ) -> list[str]:
-        det = TrendRegimeDetector_v1(
-            fast_period=self.fast_period, slow_period=self.slow_period
-        )
+        det = TrendRegimeDetector_v1(fast_period=self.fast_period, slow_period=self.slow_period)
         return [det.update_bar(c) for c in closes]
 
 

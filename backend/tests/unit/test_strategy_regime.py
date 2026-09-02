@@ -24,29 +24,31 @@ def _make_strategy_with_regime(
     detector: str = "trend_v1",
     state: str = "trending_up",
 ) -> StrategyIR:
-    return StrategyIR.model_validate({
-        "ir_version": 1,
-        "name": f"RegimeStrategy_{detector}_{state}",
-        "kind": "stock",
-        "horizon": "intraday",
-        "strategy_type": "trend_following",
-        "universe": {
-            "type": "static",
-            "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
-        },
-        "timeframe": "1d",
-        "entries": [
-            {
-                "id": "e_regime",
-                "type": "buy",
-                "when": {
-                    "node": "Regime",
-                    "detector": detector,
-                    "state": state,
-                },
-            }
-        ],
-    })
+    return StrategyIR.model_validate(
+        {
+            "ir_version": 1,
+            "name": f"RegimeStrategy_{detector}_{state}",
+            "kind": "stock",
+            "horizon": "intraday",
+            "strategy_type": "trend_following",
+            "universe": {
+                "type": "static",
+                "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
+            },
+            "timeframe": "1d",
+            "entries": [
+                {
+                    "id": "e_regime",
+                    "type": "buy",
+                    "when": {
+                        "node": "Regime",
+                        "detector": detector,
+                        "state": state,
+                    },
+                }
+            ],
+        }
+    )
 
 
 def _generate_synthetic_bars(n: int = 50) -> list[BarRecord]:
@@ -152,97 +154,103 @@ def test_regime_node_g1_g2_parity() -> None:
 
 def test_has_regime_conditioning_detection() -> None:
     # Standard non-regime strategy
-    plain_strategy = StrategyIR.model_validate({
-        "ir_version": 1,
-        "name": "PlainCrossover",
-        "kind": "stock",
-        "horizon": "intraday",
-        "strategy_type": "trend_following",
-        "universe": {
-            "type": "static",
-            "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
-        },
-        "timeframe": "1d",
-        "entries": [
-            {
-                "id": "e_plain",
-                "type": "buy",
-                "when": {
-                    "node": "IndicatorCompare",
-                    "left": {"field": "close"},
-                    "op": ">",
-                    "right": 100.0,
-                },
-            }
-        ],
-    })
+    plain_strategy = StrategyIR.model_validate(
+        {
+            "ir_version": 1,
+            "name": "PlainCrossover",
+            "kind": "stock",
+            "horizon": "intraday",
+            "strategy_type": "trend_following",
+            "universe": {
+                "type": "static",
+                "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
+            },
+            "timeframe": "1d",
+            "entries": [
+                {
+                    "id": "e_plain",
+                    "type": "buy",
+                    "when": {
+                        "node": "IndicatorCompare",
+                        "left": {"field": "close"},
+                        "op": ">",
+                        "right": 100.0,
+                    },
+                }
+            ],
+        }
+    )
     assert not has_regime_conditioning(plain_strategy)
 
     # Strategy with nested RegimeNode
-    regime_strategy = StrategyIR.model_validate({
-        "ir_version": 1,
-        "name": "NestedRegimeStrategy",
-        "kind": "stock",
-        "horizon": "intraday",
-        "strategy_type": "trend_following",
-        "universe": {
-            "type": "static",
-            "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
-        },
-        "timeframe": "1d",
-        "entries": [
-            {
-                "id": "e_nested",
-                "type": "buy",
-                "when": {
-                    "node": "And",
-                    "children": [
-                        {
-                            "node": "IndicatorCompare",
-                            "left": {"field": "close"},
-                            "op": ">",
-                            "right": 100.0,
-                        },
-                        {
-                            "node": "Regime",
-                            "detector": "trend_v1",
-                            "state": "trending_up",
-                        },
-                    ],
-                },
-            }
-        ],
-    })
+    regime_strategy = StrategyIR.model_validate(
+        {
+            "ir_version": 1,
+            "name": "NestedRegimeStrategy",
+            "kind": "stock",
+            "horizon": "intraday",
+            "strategy_type": "trend_following",
+            "universe": {
+                "type": "static",
+                "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
+            },
+            "timeframe": "1d",
+            "entries": [
+                {
+                    "id": "e_nested",
+                    "type": "buy",
+                    "when": {
+                        "node": "And",
+                        "children": [
+                            {
+                                "node": "IndicatorCompare",
+                                "left": {"field": "close"},
+                                "op": ">",
+                                "right": 100.0,
+                            },
+                            {
+                                "node": "Regime",
+                                "detector": "trend_v1",
+                                "state": "trending_up",
+                            },
+                        ],
+                    },
+                }
+            ],
+        }
+    )
     assert has_regime_conditioning(regime_strategy)
 
 
 def test_enforced_walk_forward_headline_metrics_refused() -> None:
     """Proof that headline metrics are refused without walk-forward evidence."""
     regime_strategy = _make_strategy_with_regime("trend_v1", "trending_up")
-    plain_strategy = StrategyIR.model_validate({
-        "ir_version": 1,
-        "name": "PlainCrossover",
-        "kind": "stock",
-        "horizon": "intraday",
-        "strategy_type": "trend_following",
-        "universe": {
-            "type": "static",
-            "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
-        },
-        "timeframe": "1d",
-        "entries": [
-            {
-                "id": "e_plain",
-                "type": "buy",
-                "when": {
-                    "node": "IndicatorCompare",
-                    "left": {"field": "close"},
-                    "op": ">",
-                    "right": 100.0,
-                },
-            }
-        ],
-    })
+    plain_strategy = StrategyIR.model_validate(
+        {
+            "ir_version": 1,
+            "name": "PlainCrossover",
+            "kind": "stock",
+            "horizon": "intraday",
+            "strategy_type": "trend_following",
+            "universe": {
+                "type": "static",
+                "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
+            },
+            "timeframe": "1d",
+            "entries": [
+                {
+                    "id": "e_plain",
+                    "type": "buy",
+                    "when": {
+                        "node": "IndicatorCompare",
+                        "left": {"field": "close"},
+                        "op": ">",
+                        "right": 100.0,
+                    },
+                }
+            ],
+        }
+    )
 
     # 1. Non-regime strategy requires no walk-forward evidence
     validate_headline_metrics_evidence(plain_strategy, None)

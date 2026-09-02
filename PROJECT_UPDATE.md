@@ -43,8 +43,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F6.2 | Done | Fast-forwarded into `main` at `1920b7c` after review. |
 | F6.3 | Done | Fast-forwarded into `main` at `a832ee9` after review. |
 | F6.4 | Done | Fast-forwarded into `main` at `dff4fdc` after review. |
-| F6.5 | Ready for review | Versioned regime detectors (vol_v1, trend_v1), look-ahead prevention, RegimeNode G1/G2 parity, and enforced walk-forward verification for headline metrics. 387 Python tests & 122 frontend tests passing. |
-| F5.2, F7.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F6.5 | Done | Fast-forwarded into `main` at `898e436` after review. |
+| F7.1 | Ready for review | Dhan live-feed WebSocket client, binary packet parser, heartbeat, reconnect state machine, and captured golden packets. 402 Python tests & 122 frontend tests passing. |
+| F5.2, F7.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1558,4 +1559,30 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Enforced walk-forward protection verified: refusing headline metrics when walk-forward evidence is absent or non-positive, and permitting publishing when valid evidence is provided.
 - Full repository test suite: 387 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (188 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `898e436`.
 
+### 2026-09-02 — F7.1 Dhan live-feed WebSocket client, binary packet parser, and heartbeat completed
+
+- Implemented `backend/app/dhan/packets.py`:
+  - Defined Dhan HQ binary protocol data structures with Little Endian byte encoding (`<`).
+  - Standard 8-byte header parser extracting `response_code`, `msg_length`, `exchange_segment`, and `security_id`.
+  - Parsers for all standard Dhan live feed packets: `IndexPacket`, `TickerPacket`, `QuotePacket`, `OIPacket`, `FullPacket` (with 5-level Market Depth), and `DisconnectPacket`.
+  - High-performance packet serializers/builders supporting test fixture generation.
+  - Strict input validation and `CorruptPacketError` raising for truncated or malformed binary streams.
+- Implemented `backend/app/dhan/feed.py`:
+  - `DhanLiveFeedClient`: WebSocket feed client with frame streaming, packet dispatching, and credential redaction.
+  - `FeedConnectionStateMachine`: Robust lifecycle state machine (`DISCONNECTED`, `CONNECTING`, `CONNECTED`, `RECONNECTING`, `FAILED`) with exponential backoff and jitter.
+  - `FeedHeartbeatMonitor`: Socket ping/pong monitor with automated stall detection.
+  - Subscription batch builder enforcing $\le 100$ instruments batch size limit.
+- Committed binary golden packet fixtures in `backend/tests/fixtures/golden_packets/`:
+  - `golden_index.bin`, `golden_ticker.bin`, `golden_quote.bin`, `golden_oi.bin`, `golden_full.bin`, `golden_disconnect.bin`.
+  - Contain zero credentials, tokens, or live secrets.
+- Authored acceptance contract `docs/qa/acceptance/F7.1.md` and added unit tests in `backend/tests/unit/test_dhan_feed_packets.py` and `backend/tests/unit/test_dhan_feed_client.py`:
+  - Independent bit-for-bit golden packet decoding verified across all packet types.
+  - Truncated packets, corrupted headers, and invalid lengths safely rejected without client state corruption.
+  - Multi-packet streaming frame parsing verified.
+  - Exponential backoff mathematical progression and max attempts cutoff verified.
+  - Heartbeat stall detection and activity refresh verified.
+  - Credential redaction in client representation and logs verified.
+- Full repository test suite: 402 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (193 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
