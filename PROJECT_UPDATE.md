@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.4 | Done | Fast-forwarded into `main` at `e52274f` after review. |
-| F4.5 | Ready for review | Comprehensive order ticket widget supporting stock equities, multi-leg options builder (Strangles, Straddles, Spreads, Condors), dynamic margin requirements preview (hedged SPAN/Exposure approximation), Indian regulatory cost breakdown, risk limit validation, and paper/live execution safety gates. 353 Python tests & 38 frontend tests passing. |
+| F4.5 | Done | Fast-forwarded into `main` at `94cc5fb` after review. |
+| F4.6 | Ready for review | Integrated trading blotter widget managing real-time positions with live mark-to-market PnL calculations, active working orders management with individual and batch cancellation, historical execution trade log, and single-click 'Cancel All Open Orders' panic action. 353 Python tests & 46 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1162,5 +1162,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 38 passed / 0 failed across 13 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 38 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `94cc5fb`.
+
+### 2026-09-02 — F4.6 Positions, orders, and trade log blotter completed
+
+- Implemented `frontend/src/blotter/types.ts`:
+  - `PositionItem`, `ActiveOrderItem`, `TradeLogItem`, `PortfolioSummary`, `PanicCancelResult`, and `BlotterWidgetSettings`.
+- Implemented `frontend/src/blotter/pnl.ts`:
+  - Real-time mark-to-market position PnL computation: `(ltp - buyAvgPrice) * quantity` for longs, short PnL inversion, and percentage change.
+  - Aggregated portfolio metrics: Total Unrealized PnL, Total Realized PnL, Net Day PnL, open positions count, and working orders count.
+- Implemented `frontend/src/blotter/panic.ts`:
+  - Atomic batch cancellation engine for all active working and pending orders.
+  - Individual single-order cancellation.
+- Implemented `frontend/src/widgets/builtin/BlotterWidget.tsx`:
+  - Header summary strip with live color-coded Unrealized, Realized, and Net Day PnL.
+  - One-click panic button ("⚠️ CANCEL ALL") with cancellation receipt banner.
+  - Tabbed sub-views: `Positions (N)` with Square-Off exit action, `Open Orders (N)` with status badges and cancel actions, and `Trade Log (N)` with fill audit trail.
+  - Registered in `widgetRegistry` under category `order`.
+- Authored acceptance contract `docs/qa/acceptance/F4.6.md` and added unit tests in `frontend/src/blotter/pnl.test.ts`, `panic.test.ts`, and `BlotterWidget.test.tsx`:
+  - Frontend test suite: 46 passed / 0 failed across 16 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 46 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
