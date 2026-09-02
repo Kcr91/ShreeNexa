@@ -54,8 +54,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F7.9 | Done | Fast-forwarded into `main` at `1221ac5` after review. |
 | F8.1 | Done | Fast-forwarded into `main` at `d9f2833` after review. |
 | F8.2 | Done | Fast-forwarded into `main` at `381e38f` after review. |
-| F8.3 | Ready for review | Streaming option-chain widget combining tick prices/OI with locally computed IV/Greeks. 454 Python tests & 160 frontend tests passing. |
-| F5.2, F8.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F8.3 | Done | Fast-forwarded into `main` at `b567041` after review. |
+| F8.4 | Ready for review | ATM IV, IV rank/percentile, OI/volume PCR, max pain, skew/smile, and term structure. 461 Python tests & 165 frontend tests passing. |
+| F5.2, F8.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1899,3 +1900,33 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified contract leg selection, underlying switching, and Greek column toggling (5 unit tests passing).
 - Full repository test suite: 454 Python tests passed + 160 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (218 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `b567041`.
+
+### 2026-09-02 — F8.4 ATM IV, IV rank/percentile, OI/volume PCR, max pain, skew/smile, and term structure completed
+
+- Implemented `backend/app/analytics/options_analytics.py`:
+  - `calculate_atm_iv`: Derived blended ATM Implied Volatility via linear interpolation at spot/forward.
+  - `calculate_iv_rank_and_percentile`: Historical IV rank and percentile with strict minimum-history rules ($N \ge 30$ days), zero-spread division protection ($\text{IV}_{\max} == \text{IV}_{\min} \to 50.0$), and explicit unreliability flagging.
+  - `calculate_max_pain`: Option Max Pain strike minimizing total option buyer payout at expiration, verified against independent mathematical hand fixtures.
+  - `calculate_put_call_ratios`: Open interest and volume PCR with zero-denominator safety guards.
+  - `calculate_iv_skew_and_smile`: Full strike volatility smile points, 25-delta Risk Reversal ($\sigma_{25\Delta\text{P}} - \sigma_{25\Delta\text{C}}$), and 25-delta Butterfly curvature.
+  - `calculate_term_structure`: Expiry curve mapping ATM IV across DTEs with automated Contango/Backwardation regime detection and annualized slope.
+- Implemented `backend/app/api/options_analytics.py`:
+  - `GET /api/v1/options/analytics/{underlying}`: Comprehensive options analytics bundle endpoint.
+  - `POST /api/v1/options/analytics/compute`: On-demand calculation endpoint for custom option chains.
+- Mounted `options_analytics_router` in `backend/app/main.py`.
+- Authored unit tests in `backend/tests/unit/test_options_advanced_analytics.py` (7 tests passing):
+  - Verified ATM IV interpolation.
+  - Verified IV rank/percentile with 50-day fixture, flat history division guard, and $<30$ day insufficient history rejection.
+  - Verified 3-strike hand-calculated Max Pain test vector.
+  - Verified PCR OI/Volume and zero-denominator guard.
+  - Verified 25Δ Risk Reversal and Butterfly skew metrics.
+  - Verified Contango and Backwardation term structure regimes.
+  - Verified REST API GET and POST compute endpoints.
+- Implemented `frontend/src/optionchain/OptionsAnalyticsPanel.tsx`:
+  - Interactive multi-tab panel with Volatility Skew & Smile table, Term Structure curve with Contango badge, Max Pain cash loss curve, and 52-week IV Rank / Percentile gauges.
+  - Registered `optionsAnalyticsDefinition` in `frontend/src/widgets/builtin/index.ts`.
+- Authored frontend unit tests in `frontend/src/optionchain/OptionsAnalyticsPanel.test.tsx` (5 tests passing).
+- Full repository test suite: 461 Python tests passed + 165 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (221 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+

@@ -1,13 +1,38 @@
 {
-  "feature": "F8.3",
+  "feature": "F8.4",
   "status": "review",
-  "branch": "feature/F8.3-streaming-option-chain-widget",
-  "commit": "f340b88bb805f35185ba157aa91fde982710f33c",
+  "branch": "feature/F8.4-options-chain-analytics",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F8.4": {
+      "status": "review",
+      "branch": "feature/F8.4-options-chain-analytics",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 461,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 165,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F8.4.md",
+        "backend/app/analytics/options_analytics.py",
+        "backend/app/api/options_analytics.py",
+        "frontend/src/optionchain/OptionsAnalyticsPanel.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F8.3": {
       "status": "review",
       "branch": "feature/F8.3-streaming-option-chain-widget",

@@ -18,6 +18,7 @@ import { gradingThresholdsDefinition } from "./GradingThresholdsWidget";
 import { sectorDrillInDefinition } from "./SectorDrillInWidget";
 import { marketHeatmapDefinition } from "./MarketHeatmapWidget";
 import { marketDepthDefinition } from "./MarketDepthWidget";
+import { optionsAnalyticsDefinition } from "../../optionchain/OptionsAnalyticsPanel";
 
 export function registerBuiltinWidgets(): void {
   widgetRegistry.register(marketClockDefinition);
@@ -39,6 +40,7 @@ export function registerBuiltinWidgets(): void {
   widgetRegistry.register(pnlCalendarDefinition);
   widgetRegistry.register(returnsTimelineDefinition);
   widgetRegistry.register(gradingThresholdsDefinition);
+  widgetRegistry.register(optionsAnalyticsDefinition);
 }
 
 // Auto-register built-in widgets
