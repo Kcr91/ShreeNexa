@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.7 | Done | Fast-forwarded into `main` at `c727926` after review. |
-| F2.8 | Ready for review | Point-in-time screener execution runner evaluating arbitrary StrategyIR signal AST filters across historical index universes with survivorship-bias tracking and zero future lookahead (G2). 307/307 tests passing. |
-| F2.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.8 | Done | Fast-forwarded into `main` at `1856dd0` after review. |
+| F2.9 | Ready for review | Screener persistence layer, offline scheduled execution engine, snapshot audit trails, CSV/JSON export formats, routing to watchlists/StrategyIR universes, and FastAPI REST endpoints. 310/310 tests passing. |
+| F3.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -855,4 +855,25 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_point_in_time_screener.py`: 4 passed
 - Full repository test suite: 307 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (128 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `1856dd0`.
+
+### 2026-09-02 — F2.9 Screener persistence, scheduling, ranking, export, and routing completed
+
+- Implemented `backend/app/screener/store.py`:
+  - `ScreenerRecord` and `ScreenerRunSnapshot` models.
+  - `ScreenerStore`: Thread-safe persistence store for screeners and execution history audit logs.
+- Implemented `backend/app/screener/scheduler.py`:
+  - `ScreenerScheduler`: Offline scheduled execution manager for periodic screener jobs with immutable snapshot capture.
+- Implemented `backend/app/screener/routing.py`:
+  - Export utilities: `export_screener_csv` (RFC-4180 compliant) and `export_screener_json`.
+  - Routing utilities: `route_to_watchlist` and `route_to_static_universe`.
+- Implemented `backend/app/api/screeners.py`:
+  - Full FastAPI REST endpoints for screener CRUD (`/api/v1/screeners`), execution (`/api/v1/screeners/{id}/run`), run history (`/api/v1/screeners/{id}/runs`), CSV/JSON export (`/api/v1/screeners/runs/{run_id}/export`), watchlist routing (`/api/v1/screeners/runs/{run_id}/route-watchlist`), and universe routing (`/api/v1/screeners/runs/{run_id}/route-universe`).
+  - Mounted router on app in `backend/app/main.py`.
+- Exported screener services in `backend/app/screener/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.9.md` and added unit and integration tests covering CRUD, execution, CSV/JSON export, routing, and offline scheduled run reproducibility:
+  - `backend/tests/unit/test_screener_api.py`: 2 passed
+  - `backend/tests/integration/test_screener_persistence_scheduling.py`: 1 passed
+- Full repository test suite: 310 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (134 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

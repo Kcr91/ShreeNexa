@@ -19,6 +19,7 @@ from app.api.feed import router as feed_router
 from app.api.indicators import alias_router as indicators_alias_router
 from app.api.indicators import router as indicators_router
 from app.api.instruments import router as instruments_router
+from app.api.screeners import router as screeners_router
 from app.api.universe import router as universe_router
 from app.contracts import heartbeat as hb
 from app.contracts.process_loop import HEARTBEAT_INTERVAL_S
@@ -62,6 +63,7 @@ app.include_router(universe_router)
 app.include_router(feed_router)
 app.include_router(indicators_router)
 app.include_router(indicators_alias_router)
+app.include_router(screeners_router)
 
 
 @app.get("/healthz")

@@ -1,8 +1,8 @@
 {
-  "feature": "F2.8",
+  "feature": "F2.9",
   "status": "review",
-  "branch": "feature/F2.8-point-in-time-screener-runner",
-  "commit": "51c0c6f2c39556a3138b1f79f8863f82cbdf5780",
+  "branch": "feature/F2.9-screener-persistence-scheduling",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -251,8 +251,8 @@
     },
     "F2.9": {
       "status": "review",
-      "branch": "feature/F2.9-indicator-catalog-api",
-      "commit": "b4764e0486c91a03006bbd92484fa2d9d936081e",
+      "branch": "feature/F2.9-screener-persistence-scheduling",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
