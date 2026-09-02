@@ -120,9 +120,7 @@ def test_theta_convention_explicit_validation() -> None:
     exp = date(2026, 9, 24)
     curr_time = datetime(2026, 9, 3, 11, 30, tzinfo=IST)
     t_years = calculate_time_to_expiry(curr_time, exp)
-    quotes = _build_test_quotes(
-        spot=spot, strikes_count=12, strike_step=100.0, t_years=t_years
-    )
+    quotes = _build_test_quotes(spot=spot, strikes_count=12, strike_step=100.0, t_years=t_years)
 
     report = calibrate_option_chain(
         underlying="BANKNIFTY",

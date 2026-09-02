@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { WidgetComponentProps, WidgetDefinition } from "../types";
 import { OptionChainWidgetSettings, OptionContract } from "../../optionchain/types";
-import { generateOptionChain } from "../../optionchain/greeks";
 import { DriftBadge } from "../../optionchain/DriftBadge";
+import { useStreamingOptionChain } from "../../optionchain/useStreamingOptionChain";
 
 export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetSettings>> = ({
   settings,
@@ -11,12 +11,23 @@ export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetS
   const [expiry, setExpiry] = useState<string>("2026-01-29");
   const [selectedLegInfo, setSelectedLegInfo] = useState<string | null>(null);
 
+  // Greek column visibility toggles
+  const [showDelta, setShowDelta] = useState<boolean>(true);
+  const [showTheta, setShowTheta] = useState<boolean>(true);
+  const [showVega, setShowVega] = useState<boolean>(false);
+  const [showGamma, setShowGamma] = useState<boolean>(false);
+
   const spotPrice = underlying === "NIFTY" ? 24520 : underlying === "BANKNIFTY" ? 51800 : 23100;
   const strikeStep = underlying === "NIFTY" ? 50 : 100;
 
-  const chainData = useMemo(() => {
-    return generateOptionChain(underlying, spotPrice, expiry, strikeStep, settings.strikesCount || 8);
-  }, [underlying, spotPrice, expiry, strikeStep, settings.strikesCount]);
+  const { chainData, isStale } = useStreamingOptionChain({
+    underlying,
+    spotPrice,
+    expiry,
+    strikeStep,
+    strikesCount: settings.strikesCount || 8,
+    mockStreaming: true,
+  });
 
   const handleSelectContract = (contract: OptionContract, side: "BUY" | "SELL") => {
     setSelectedLegInfo(`Selected: ${contract.symbol} ${side} @ ₹${contract.ltp}`);
@@ -85,10 +96,48 @@ export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetS
               ))}
             </select>
           </div>
+
+          {/* Stale Feed Indicator */}
+          {isStale && (
+            <span
+              style={{
+                backgroundColor: "#78350f",
+                color: "#fcd34d",
+                padding: "2px 6px",
+                borderRadius: "4px",
+                fontSize: "10px",
+                fontWeight: 600,
+                border: "1px solid #d97706",
+              }}
+            >
+              ⚠️ Feed Stale (&gt;5s)
+            </span>
+          )}
         </div>
 
-        {/* Analytics Badges */}
+        {/* Analytics Badges & Column Toggles */}
         <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-3)" }}>
+          {/* Greeks Toggles */}
+          <div style={{ display: "flex", gap: "4px", fontSize: "10px", alignItems: "center" }}>
+            <span style={{ color: "var(--text-muted)" }}>Greeks:</span>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "2px", cursor: "pointer" }}>
+              <input type="checkbox" checked={showDelta} onChange={(e) => setShowDelta(e.target.checked)} />
+              Δ
+            </label>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "2px", cursor: "pointer" }}>
+              <input type="checkbox" checked={showTheta} onChange={(e) => setShowTheta(e.target.checked)} />
+              θ
+            </label>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "2px", cursor: "pointer" }}>
+              <input type="checkbox" checked={showVega} onChange={(e) => setShowVega(e.target.checked)} />
+              ν
+            </label>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "2px", cursor: "pointer" }}>
+              <input type="checkbox" checked={showGamma} onChange={(e) => setShowGamma(e.target.checked)} />
+              γ
+            </label>
+          </div>
+
           <DriftBadge underlying={underlying} />
           <div>
             <span style={{ color: "var(--text-muted)", marginRight: "4px" }}>PCR:</span>
@@ -133,11 +182,11 @@ export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetS
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.6875rem" }}>
           <thead>
             <tr style={{ backgroundColor: "var(--bg-surface)", borderBottom: "1px solid var(--border-default)" }}>
-              <th colSpan={5} style={{ padding: "4px", color: "var(--color-up)", textAlign: "center" }}>
+              <th colSpan={3 + (showDelta ? 1 : 0) + (showTheta ? 1 : 0) + (showVega ? 1 : 0) + (showGamma ? 1 : 0)} style={{ padding: "4px", color: "var(--color-up)", textAlign: "center" }}>
                 CALLS (CE)
               </th>
               <th style={{ padding: "4px", textAlign: "center", backgroundColor: "var(--bg-active)" }}>STRIKE</th>
-              <th colSpan={5} style={{ padding: "4px", color: "var(--color-down)", textAlign: "center" }}>
+              <th colSpan={3 + (showDelta ? 1 : 0) + (showTheta ? 1 : 0) + (showVega ? 1 : 0) + (showGamma ? 1 : 0)} style={{ padding: "4px", color: "var(--color-down)", textAlign: "center" }}>
                 PUTS (PE)
               </th>
             </tr>
@@ -145,17 +194,21 @@ export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetS
               {/* Call Headers */}
               <th style={{ padding: "4px", textAlign: "right" }}>OI</th>
               <th style={{ padding: "4px", textAlign: "right" }}>IV</th>
-              <th style={{ padding: "4px", textAlign: "right" }}>Delta</th>
-              <th style={{ padding: "4px", textAlign: "right" }}>Theta</th>
+              {showDelta && <th style={{ padding: "4px", textAlign: "right" }}>Delta</th>}
+              {showTheta && <th style={{ padding: "4px", textAlign: "right" }}>Theta</th>}
+              {showVega && <th style={{ padding: "4px", textAlign: "right" }}>Vega</th>}
+              {showGamma && <th style={{ padding: "4px", textAlign: "right" }}>Gamma</th>}
               <th style={{ padding: "4px", textAlign: "right" }}>LTP</th>
 
               {/* Center Strike */}
-              <th style={{ padding: "4px", textAlign: "center", backgroundColor: "var(--bg-active)" }}>Price</th>
+              <th style={{ padding: "4px", textAlign: "center", backgroundColor: "var(--bg-active)" }}>Price (Straddle)</th>
 
               {/* Put Headers */}
               <th style={{ padding: "4px", textAlign: "left" }}>LTP</th>
-              <th style={{ padding: "4px", textAlign: "right" }}>Theta</th>
-              <th style={{ padding: "4px", textAlign: "right" }}>Delta</th>
+              {showGamma && <th style={{ padding: "4px", textAlign: "right" }}>Gamma</th>}
+              {showVega && <th style={{ padding: "4px", textAlign: "right" }}>Vega</th>}
+              {showTheta && <th style={{ padding: "4px", textAlign: "right" }}>Theta</th>}
+              {showDelta && <th style={{ padding: "4px", textAlign: "right" }}>Delta</th>}
               <th style={{ padding: "4px", textAlign: "right" }}>IV</th>
               <th style={{ padding: "4px", textAlign: "right" }}>OI</th>
             </tr>
@@ -181,12 +234,26 @@ export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetS
                   <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)" }}>
                     {row.call.iv}%
                   </td>
-                  <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)" }}>
-                    {row.call.greeks.delta.toFixed(2)}
-                  </td>
-                  <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)", color: "var(--color-down)" }}>
-                    {row.call.greeks.theta.toFixed(1)}
-                  </td>
+                  {showDelta && (
+                    <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)" }}>
+                      {row.call.greeks.delta.toFixed(2)}
+                    </td>
+                  )}
+                  {showTheta && (
+                    <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)", color: "var(--color-down)" }}>
+                      {row.call.greeks.theta.toFixed(1)}
+                    </td>
+                  )}
+                  {showVega && (
+                    <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)", color: "#a78bfa" }}>
+                      {row.call.greeks.vega.toFixed(1)}
+                    </td>
+                  )}
+                  {showGamma && (
+                    <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)", color: "#38bdf8" }}>
+                      {row.call.greeks.gamma.toFixed(4)}
+                    </td>
+                  )}
                   <td
                     style={{
                       padding: "4px",
@@ -213,7 +280,7 @@ export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetS
                     </button>
                   </td>
 
-                  {/* Center Strike Price */}
+                  {/* Center Strike Price & Straddle Price */}
                   <td
                     style={{
                       padding: "4px",
@@ -224,21 +291,10 @@ export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetS
                       color: row.isAtm ? "var(--color-primary)" : "var(--text-primary)",
                     }}
                   >
-                    {row.strike}
-                    {row.isAtm && (
-                      <span
-                        style={{
-                          marginLeft: "4px",
-                          fontSize: "0.5625rem",
-                          padding: "1px 3px",
-                          backgroundColor: "var(--color-primary)",
-                          color: "var(--text-inverse)",
-                          borderRadius: "2px",
-                        }}
-                      >
-                        ATM
-                      </span>
-                    )}
+                    <div>{row.strike}</div>
+                    <div style={{ fontSize: "9px", color: "var(--text-muted)", fontWeight: 400 }}>
+                      ₹{(row.call.ltp + row.put.ltp).toFixed(1)}
+                    </div>
                   </td>
 
                   {/* Put Columns */}
@@ -267,12 +323,26 @@ export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetS
                       ₹{row.put.ltp.toFixed(2)}
                     </button>
                   </td>
-                  <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)", color: "var(--color-down)" }}>
-                    {row.put.greeks.theta.toFixed(1)}
-                  </td>
-                  <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)" }}>
-                    {row.put.greeks.delta.toFixed(2)}
-                  </td>
+                  {showGamma && (
+                    <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)", color: "#38bdf8" }}>
+                      {row.put.greeks.gamma.toFixed(4)}
+                    </td>
+                  )}
+                  {showVega && (
+                    <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)", color: "#a78bfa" }}>
+                      {row.put.greeks.vega.toFixed(1)}
+                    </td>
+                  )}
+                  {showTheta && (
+                    <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)", color: "var(--color-down)" }}>
+                      {row.put.greeks.theta.toFixed(1)}
+                    </td>
+                  )}
+                  {showDelta && (
+                    <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)" }}>
+                      {row.put.greeks.delta.toFixed(2)}
+                    </td>
+                  )}
                   <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)" }}>
                     {row.put.iv}%
                   </td>

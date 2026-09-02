@@ -1,13 +1,37 @@
 {
-  "feature": "F8.2",
+  "feature": "F8.3",
   "status": "review",
-  "branch": "feature/F8.2-dhan-chain-calibration-drift",
-  "commit": "72a392376af4c9083e51d81cd5f307ca537930f6",
+  "branch": "feature/F8.3-streaming-option-chain-widget",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F8.3": {
+      "status": "review",
+      "branch": "feature/F8.3-streaming-option-chain-widget",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 454,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 160,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F8.3.md",
+        "frontend/src/optionchain/useStreamingOptionChain.ts",
+        "frontend/src/widgets/builtin/OptionChainWidget.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F8.2": {
       "status": "review",
       "branch": "feature/F8.2-dhan-chain-calibration-drift",

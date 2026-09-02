@@ -53,8 +53,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F7.8 | Done | Fast-forwarded into `main` at `f14645b` after review. |
 | F7.9 | Done | Fast-forwarded into `main` at `1221ac5` after review. |
 | F8.1 | Done | Fast-forwarded into `main` at `d9f2833` after review. |
-| F8.2 | Ready for review | Dhan-chain calibration, convention fitting, tolerance policy, persistence, and drift badge API/UI. 454 Python tests & 155 frontend tests passing. |
-| F5.2, F8.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F8.2 | Done | Fast-forwarded into `main` at `381e38f` after review. |
+| F8.3 | Ready for review | Streaming option-chain widget combining tick prices/OI with locally computed IV/Greeks. 454 Python tests & 160 frontend tests passing. |
+| F5.2, F8.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1873,4 +1874,28 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Integrated `DriftBadge` into `frontend/src/widgets/builtin/OptionChainWidget.tsx` header toolbar.
 - Authored frontend unit tests in `frontend/src/optionchain/DriftBadge.test.tsx` (3 tests passing).
 - Full repository test suite: 454 Python tests passed + 155 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (218 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `381e38f`.
+
+### 2026-09-02 — F8.3 Streaming option-chain widget combining tick prices/OI with locally computed IV/Greeks completed
+
+- Implemented `frontend/src/optionchain/useStreamingOptionChain.ts`:
+  - High-performance React streaming hook managing real-time option chain tick buffering and 60 FPS requestAnimationFrame render-budgeting.
+  - Automatically computes Black-76 forward pricing, implied volatility inversion via Brent solver, and closed-form Greeks (Delta, Gamma, Theta, Vega) locally in real time on every tick and spot price update.
+  - Monitors feed staleness and triggers visual staleness banner (`isStale = true`) when incoming ticks are delayed beyond 5 seconds.
+  - Clean subscription lifecycle management: un-subscribes previous contract symbols and subscribes to new symbols when underlying index, expiry date, or strike count changes.
+- Enhanced `frontend/src/widgets/builtin/OptionChainWidget.tsx`:
+  - Connected to `useStreamingOptionChain` with real-time price and OI updates.
+  - Integrated `DriftBadge` in the option chain toolbar showing live broker reconciliation health and calibration details.
+  - Added Greek column visibility toggles (Delta, Theta, Vega, Gamma).
+  - Added center column ATM indicator and Straddle Price display.
+- Authored frontend unit tests in `frontend/src/optionchain/useStreamingOptionChain.test.ts`:
+  - Verified initial strike ladder generation and subscription triggering.
+  - Verified tick update processing, requestAnimationFrame render batching, and real-time Greek recalculation.
+  - Verified safe resubscription on underlying changes (`NIFTY` -> `BANKNIFTY`).
+  - Verified staleness detection after 5s tick delay.
+- Authored frontend unit tests in `frontend/src/widgets/builtin/OptionChainWidget.test.tsx`:
+  - Verified streaming strike ladder rendering, ATM marker, Greeks, and drift badge.
+  - Verified contract leg selection, underlying switching, and Greek column toggling (5 unit tests passing).
+- Full repository test suite: 454 Python tests passed + 160 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (218 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

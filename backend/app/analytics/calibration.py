@@ -263,11 +263,7 @@ def calibrate_option_chain(
                     ForwardSource.SYNTHETIC_PCP,
                     ForwardSource.SPOT_COC,
                 ]:
-                    cand_fut = (
-                        futures_price
-                        if f_src_choice == ForwardSource.FUTURES_LTP
-                        else None
-                    )
+                    cand_fut = futures_price if f_src_choice == ForwardSource.FUTURES_LTP else None
                     cand_call = (
                         atm_call.last_price
                         if atm_call and f_src_choice == ForwardSource.SYNTHETIC_PCP
@@ -400,12 +396,8 @@ def calibrate_option_chain(
         )
 
     # Compute aggregate metrics
-    theta_mae = (
-        round(sum(theta_errors) / len(theta_errors), 4) if theta_errors else 0.0
-    )
-    delta_mae = (
-        round(sum(delta_errors) / len(delta_errors), 4) if delta_errors else 0.0
-    )
+    theta_mae = round(sum(theta_errors) / len(theta_errors), 4) if theta_errors else 0.0
+    delta_mae = round(sum(delta_errors) / len(delta_errors), 4) if delta_errors else 0.0
     iv_mae = round(sum(iv_errors) / len(iv_errors), 4) if iv_errors else 0.0
     theta_rmse = (
         round(math.sqrt(sum(e * e for e in theta_errors) / len(theta_errors)), 4)

@@ -5,7 +5,7 @@ import { widgetRegistry } from "../registry";
 import "./index";
 
 describe("OptionChainWidget Component", () => {
-  it("renders option chain strike ladder with ATM marker and Greeks", () => {
+  it("renders option chain strike ladder with ATM marker, Greeks, and drift badge", () => {
     render(
       <OptionChainWidget
         instanceId="chain-1"
@@ -23,6 +23,7 @@ describe("OptionChainWidget Component", () => {
     expect(screen.getByText("PUTS (PE)")).toBeInTheDocument();
     expect(screen.getByText("PCR:")).toBeInTheDocument();
     expect(screen.getByText("Max Pain:")).toBeInTheDocument();
+    expect(screen.getByText(/Calibrated/i)).toBeInTheDocument();
     expect(screen.getByTestId("strike-row-24500")).toBeInTheDocument();
   });
 
@@ -66,6 +67,29 @@ describe("OptionChainWidget Component", () => {
     fireEvent.change(select, { target: { value: "BANKNIFTY" } });
 
     expect(screen.getByTestId("option-chain-spot")).toHaveTextContent("51");
+  });
+
+  it("toggles Vega and Gamma columns on and off", () => {
+    render(
+      <OptionChainWidget
+        instanceId="chain-1"
+        settings={{
+          defaultUnderlying: "NIFTY",
+          strikesCount: 5,
+          showGreeks: true,
+          showIV: true,
+          showOI: true,
+        }}
+      />
+    );
+
+    expect(screen.queryByText("Vega")).not.toBeInTheDocument();
+
+    // Toggle Vega on
+    const vegaCheckbox = screen.getByLabelText("ν");
+    fireEvent.click(vegaCheckbox);
+
+    expect(screen.getAllByText("Vega").length).toBeGreaterThan(0);
   });
 
   it("is registered in widget registry under analytics category", () => {
