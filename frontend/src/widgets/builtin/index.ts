@@ -14,6 +14,7 @@ import { strategyBuilderDefinition } from "./StrategyBuilderWidget";
 import { strategyMarketplaceDefinition } from "./StrategyMarketplaceWidget";
 import { pnlCalendarDefinition } from "./PnlCalendarWidget";
 import { returnsTimelineDefinition } from "./ReturnsTimelineWidget";
+import { gradingThresholdsDefinition } from "./GradingThresholdsWidget";
 
 export function registerBuiltinWidgets(): void {
   widgetRegistry.register(marketClockDefinition);
@@ -31,6 +32,7 @@ export function registerBuiltinWidgets(): void {
   widgetRegistry.register(strategyMarketplaceDefinition);
   widgetRegistry.register(pnlCalendarDefinition);
   widgetRegistry.register(returnsTimelineDefinition);
+  widgetRegistry.register(gradingThresholdsDefinition);
 }
 
 // Auto-register built-in widgets

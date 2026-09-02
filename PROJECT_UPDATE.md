@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.13 | Done | Fast-forwarded into `main` at `fc4d4ac` after review. |
-| F3.14 | Ready for review | Monthly/yearly compounded return matrix, rolling return distribution engine (21, 63, 126, 252 days), and Continuous Mode Timeline seamlessly stitching Backtest -> Paper -> Live with zero double counting. 353 Python tests & 111 frontend tests passing. |
-| F3.11, F5.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.14 | Done | Fast-forwarded into `main` at `7f5e274` after review. |
+| F3.11 | Ready for review | Configurable metric grading thresholds manager with horizon profiles, strict monotonic band validation, live preview before save, stale scorecard tracking, and explicit re-grade. 353 Python tests & 122 frontend tests passing. |
+| F5.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1392,5 +1392,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 111 passed / 0 failed across 39 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 111 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `7f5e274`.
+
+### 2026-09-02 — F3.11 Grading thresholds UI completed
+
+- Implemented `frontend/src/grading/types.ts`:
+  - `HorizonProfile` (`INTRADAY`, `SWING`, `POSITIONAL`, `INVESTMENT`), `MetricGrade`, `Verdict`, `ScorecardStatus`, `ThresholdBand`, `GradingConfig`, and `ScorecardSummary`.
+- Implemented `frontend/src/grading/validator.ts`:
+  - Strict monotonic band validation: higher-is-better metrics (Sharpe, Profit Factor, Win Rate %) enforce $E > G > A > P$; lower-is-better metrics (Max Drawdown %) enforce $E < G < A < P$. Rejects non-monotonic bands and validates weight sums.
+- Implemented `frontend/src/grading/engine.ts`:
+  - Scorecard scoring algorithm matching backend `grading.py`.
+  - `markScorecardsStale`: Automatically marks existing scorecards as `STALE` when active config version changes.
+  - `regradeScorecards`: Explicit re-grading routine updating scorecards to new active config version.
+- Implemented `frontend/src/widgets/builtin/GradingThresholdsWidget.tsx`:
+  - Horizon profile switcher, threshold inputs, validation error alerts, side-by-side active vs preview scorecard comparison, save configuration action, and explicit re-grade trigger.
+  - Registered in `widgetRegistry` under category `analytics`.
+- Authored acceptance contract `docs/qa/acceptance/F3.11.md` and added unit tests in `frontend/src/grading/validator.test.ts`, `engine.test.ts`, and `GradingThresholdsWidget.test.tsx`:
+  - Non-monotonic bands rejection verified.
+  - Stale scorecard marking on save verified.
+  - Explicit re-grade execution verified.
+  - Frontend test suite: 122 passed / 0 failed across 42 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 122 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
