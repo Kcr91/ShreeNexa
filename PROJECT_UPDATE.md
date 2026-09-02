@@ -61,8 +61,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.7 | Done | Fast-forwarded into `main` at `469f6c0` after review. |
 | F9.1 | Done | Fast-forwarded into `main` at `4f94049` after review. |
 | F9.2 | Done | Fast-forwarded into `main` at `08ee58c` after review. |
-| F9.3 | Done | Fast-forwarded into `main` at `b9ad251` after review. |
-| F5.2, F9.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F9.3 | Done | Fast-forwarded into `main` at `102c606` after review. |
+| F9.4 | Done | Fast-forwarded into `main` at `3791da3` after review. |
+| F5.2, F9.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2111,4 +2112,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified `BarRecord` distribution (`on_bar`) fanning out to all strategy books and filling limit orders.
 - Full repository test suite: 468 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (241 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-02 — F9.4 Reuse Epic 3 metric registry for forward-test results completed
+
+- Implemented `backend/app/paper/adapter.py`:
+  - `paper_account_to_portfolio`: Adapts paper repository state (`PaperAccount`, `PaperFill`, `PaperPosition`, and time-series `EquityPoint` snapshots) directly into the canonical `Portfolio` contract consumed by the Epic 3 quantitative engine.
+  - `calculate_paper_metrics`: Computes forward-test performance metrics by reusing `app.backtest.metrics.calculate_backtest_metrics` directly, with zero calculation forks, zero duplicate formulae, and identical CAGR, Sharpe, Sortino, Calmar, Max Drawdown %, Win Rate, and Profit Factor calculations.
+  - `evaluate_paper_scorecard`: Directly evaluates `app.backtest.grading.evaluate_strategy_scorecard` for forward-tested paper trading strategies across all horizon profiles and deployment gate criteria.
+- Extended `backend/app/paper/repository.py`:
+  - Added time-series `EquityPoint` tracking via `record_equity_point` and `get_equity_curve`.
+  - Added `open_only` parameter to `list_positions` (default `False`), preserving closed positions and realized P&L records for historical metric analysis.
+- Extended `backend/app/api/paper.py`:
+  - `GET /api/v1/paper/metrics`: Returns authoritative `BacktestPerformanceMetrics` for a paper trading portfolio.
+  - `GET /api/v1/paper/scorecard`: Returns authoritative `StrategyScorecard` with deployment gate verdicts for a paper trading strategy.
+- Created independent parity fixture in `backend/tests/fixtures/trade_equity_parity_fixture.json`:
+  - Standardized benchmark containing initial capital, trade sequence with transaction costs and slippage, and time-series equity points.
+- Authored comprehensive parity unit tests in `backend/tests/unit/test_paper_metrics_registry_reuse.py` (4 tests passing):
+  - Proved bit-for-bit numeric parity between Backtest `Portfolio` and Paper `PaperRepository` across all return metrics, drawdown metrics, risk-adjusted ratios, trade counts, win rate, and profit factor.
+  - Proved scorecard parity across composite score, overall grade, individual metric scores, and deployment gate evaluations.
+  - Proved zero-trade boundary safety (no division by zero on empty paper accounts).
+  - Verified REST API endpoints (`/metrics`, `/scorecard`).
+- Authored acceptance contract in `docs/qa/acceptance/F9.4.md`.
+- Full repository test suite: 472 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (243 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
