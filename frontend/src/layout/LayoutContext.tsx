@@ -13,6 +13,7 @@ interface LayoutContextType {
   removeWidget: (tabId: string, instanceId: string) => void;
   updateWidgetPosition: (tabId: string, instanceId: string, position: Partial<GridPosition>) => void;
   updateWidgetSettings: (tabId: string, instanceId: string, settings: Record<string, unknown>) => void;
+  applyLayout: (layout: WorkspaceLayout) => void;
   resetToDefault: () => void;
 }
 
@@ -144,6 +145,10 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }));
   };
 
+  const applyLayout = (newLayout: WorkspaceLayout) => {
+    setLayout(newLayout);
+  };
+
   const resetToDefault = () => {
     const def = resetLayout();
     setLayout(def);
@@ -162,6 +167,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         removeWidget,
         updateWidgetPosition,
         updateWidgetSettings,
+        applyLayout,
         resetToDefault,
       }}
     >

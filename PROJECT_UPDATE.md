@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.7 | Done | Fast-forwarded into `main` at `14b6c82` after review. |
-| F4.8 | Ready for review | Comprehensive backtest visualizer widget presenting institutional quantitative analytics: performance tear sheet scorecards (Sharpe, Sortino, CAGR, Max Drawdown, Win Rate, Profit Factor, Calmar), cumulative equity curve vs benchmark, drawdown underwater chart, monthly return calendar heatmap, and trade PnL distribution histogram. 353 Python tests & 60 frontend tests passing. |
+| F4.8 | Done | Fast-forwarded into `main` at `941af97` after review. |
+| F4.9 | Ready for review | Advanced workspace dashboard management supporting pre-built trading templates (Day Trader, Options Desk, Quant Research), JSON layout serialization with export/import validation, and keyboard hotkeys (Alt+1...9, Alt+T, Alt+W, Alt+E) for rapid workspace navigation. 353 Python tests & 70 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1222,5 +1222,23 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 60 passed / 0 failed across 20 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 60 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `941af97`.
+
+### 2026-09-02 — F4.9 Dashboard templates, JSON export/import, and hotkeys completed
+
+- Implemented `frontend/src/layout/templates.ts`:
+  - Catalog of 3 pre-built institutional layouts: "Day Trader Terminal", "Options Derivatives Desk", and "Quant Research Lab".
+- Implemented `frontend/src/layout/exportImport.ts`:
+  - Pretty-printed JSON export and strict schema-validated JSON importer rejecting invalid structure, corrupt syntax, or missing tabs.
+- Implemented `frontend/src/layout/hotkeys.ts`:
+  - Global `useWorkspaceHotkeys` hook handling `Alt+1..9` tab switching, `Alt+T` template picker, `Alt+W` widget palette, and `Alt+E` JSON export/import.
+- Implemented `frontend/src/layout/TemplateModal.tsx` & `ExportImportModal.tsx`:
+  - Clean modals with clipboard copy, file import validation, and instant workspace layout application.
+- Integrated into `TabBar.tsx`, `LayoutContext.tsx` (`applyLayout`), and `LayoutManager.tsx`.
+- Authored acceptance contract `docs/qa/acceptance/F4.9.md` and added unit tests in `frontend/src/layout/templates.test.ts`, `exportImport.test.ts`, `hotkeys.test.ts`, and `TemplateManager.test.tsx`:
+  - Frontend test suite: 70 passed / 0 failed across 24 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 70 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

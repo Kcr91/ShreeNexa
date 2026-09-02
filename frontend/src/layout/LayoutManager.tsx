@@ -3,14 +3,39 @@ import { useLayout } from "./LayoutContext";
 import { TabBar } from "./TabBar";
 import { GridContainer } from "./GridContainer";
 import { WidgetPalette } from "../widgets/WidgetPalette";
+import { TemplateModal } from "./TemplateModal";
+import { ExportImportModal } from "./ExportImportModal";
+import { useWorkspaceHotkeys } from "./hotkeys";
+import { WorkspaceLayout } from "./types";
 
 export const LayoutManager: React.FC = () => {
-  const { activeTab, addWidget } = useLayout();
+  const { layout, activeTab, setActiveTab, addWidget, applyLayout } = useLayout();
   const [isPaletteOpen, setIsPaletteOpen] = useState<boolean>(false);
+  const [isTemplateOpen, setIsTemplateOpen] = useState<boolean>(false);
+  const [isExportImportOpen, setIsExportImportOpen] = useState<boolean>(false);
+
+  // Hook up global hotkeys
+  useWorkspaceHotkeys({
+    tabIds: layout.tabs.map((t) => t.id),
+    onSelectTab: (tabId) => setActiveTab(tabId),
+    onOpenTemplates: () => setIsTemplateOpen(true),
+    onOpenPalette: () => setIsPaletteOpen(true),
+    onOpenExportImport: () => setIsExportImportOpen(true),
+  });
 
   const handleAddWidget = (widgetId: string) => {
     addWidget(activeTab.id, widgetId);
     setIsPaletteOpen(false);
+  };
+
+  const handleApplyTemplate = (newLayout: WorkspaceLayout) => {
+    applyLayout(newLayout);
+    setIsTemplateOpen(false);
+  };
+
+  const handleImportLayout = (newLayout: WorkspaceLayout) => {
+    applyLayout(newLayout);
+    setIsExportImportOpen(false);
   };
 
   return (
@@ -24,7 +49,11 @@ export const LayoutManager: React.FC = () => {
         position: "relative",
       }}
     >
-      <TabBar onOpenPalette={() => setIsPaletteOpen(true)} />
+      <TabBar
+        onOpenPalette={() => setIsPaletteOpen(true)}
+        onOpenTemplates={() => setIsTemplateOpen(true)}
+        onOpenExportImport={() => setIsExportImportOpen(true)}
+      />
       <div style={{ flex: 1, overflow: "hidden" }}>
         <GridContainer />
       </div>
@@ -55,6 +84,19 @@ export const LayoutManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      <TemplateModal
+        isOpen={isTemplateOpen}
+        onClose={() => setIsTemplateOpen(false)}
+        onApplyTemplate={handleApplyTemplate}
+      />
+
+      <ExportImportModal
+        isOpen={isExportImportOpen}
+        onClose={() => setIsExportImportOpen(false)}
+        currentLayout={layout}
+        onImportLayout={handleImportLayout}
+      />
     </div>
   );
 };

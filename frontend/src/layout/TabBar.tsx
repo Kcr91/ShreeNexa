@@ -3,9 +3,15 @@ import { useLayout } from "./LayoutContext";
 
 interface Props {
   onOpenPalette: () => void;
+  onOpenTemplates: () => void;
+  onOpenExportImport: () => void;
 }
 
-export const TabBar: React.FC<Props> = ({ onOpenPalette }) => {
+export const TabBar: React.FC<Props> = ({
+  onOpenPalette,
+  onOpenTemplates,
+  onOpenExportImport,
+}) => {
   const { layout, activeTab, setActiveTab, addTab, removeTab, resetToDefault } = useLayout();
 
   const handleAddTab = () => {
@@ -32,7 +38,7 @@ export const TabBar: React.FC<Props> = ({ onOpenPalette }) => {
     >
       {/* Tabs list */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-1)", overflowX: "auto" }}>
-        {layout.tabs.map((tab) => {
+        {layout.tabs.map((tab, idx) => {
           const isActive = tab.id === activeTab.id;
           return (
             <div
@@ -57,6 +63,7 @@ export const TabBar: React.FC<Props> = ({ onOpenPalette }) => {
                 transition: "all 0.15s ease",
               }}
             >
+              <span style={{ opacity: 0.5, fontSize: "0.625rem" }}>{idx + 1}</span>
               <span>{tab.icon || "📁"}</span>
               <span>{tab.name}</span>
               {layout.tabs.length > 1 && (
@@ -104,23 +111,59 @@ export const TabBar: React.FC<Props> = ({ onOpenPalette }) => {
 
       {/* Action buttons */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)" }}>
-          <button
-            type="button"
-            aria-label="Add Widget"
-            onClick={onOpenPalette}
-            style={{
-              padding: "var(--spacing-1) var(--spacing-3)",
-              backgroundColor: "var(--color-primary)",
-              color: "var(--text-inverse)",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "var(--font-size-xs)",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            + Add Widget
-          </button>
+        <button
+          type="button"
+          aria-label="Workspace Templates"
+          onClick={onOpenTemplates}
+          style={{
+            padding: "var(--spacing-1) var(--spacing-2)",
+            backgroundColor: "var(--bg-surface)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-default)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--font-size-xs)",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          📋 Templates
+        </button>
+
+        <button
+          type="button"
+          aria-label="Export Import Layout"
+          onClick={onOpenExportImport}
+          style={{
+            padding: "var(--spacing-1) var(--spacing-2)",
+            backgroundColor: "var(--bg-surface)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-default)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--font-size-xs)",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          💾 JSON
+        </button>
+
+        <button
+          type="button"
+          aria-label="Add Widget"
+          onClick={onOpenPalette}
+          style={{
+            padding: "var(--spacing-1) var(--spacing-3)",
+            backgroundColor: "var(--color-primary)",
+            color: "var(--text-inverse)",
+            border: "none",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--font-size-xs)",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          + Add Widget
+        </button>
 
         <button
           type="button"
