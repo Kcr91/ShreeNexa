@@ -160,12 +160,8 @@ def compute_options_analytics(req: ComputeAnalyticsRequest) -> OptionsAnalyticsB
     iv_rank = calculate_iv_rank_and_percentile(
         atm_iv, req.historical_daily_ivs, min_history_days=30
     )
-    pcr = calculate_put_call_ratios(
-        req.call_ois, req.put_ois, req.call_vols, req.put_vols
-    )
-    max_pain = calculate_max_pain(
-        req.strikes, req.call_ois, req.put_ois, req.spot_price
-    )
+    pcr = calculate_put_call_ratios(req.call_ois, req.put_ois, req.call_vols, req.put_vols)
+    max_pain = calculate_max_pain(req.strikes, req.call_ois, req.put_ois, req.spot_price)
     skew = calculate_iv_skew_and_smile(
         req.spot_price,
         req.strikes,

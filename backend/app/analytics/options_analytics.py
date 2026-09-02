@@ -73,7 +73,7 @@ class IVSkewResult(BaseModel):
     expiry_date: date
     atm_iv: float
     risk_reversal_25d: float  # 25D Put IV - 25D Call IV
-    butterfly_25d: float      # (25D Call IV + 25D Put IV)/2 - ATM IV
+    butterfly_25d: float  # (25D Call IV + 25D Put IV)/2 - ATM IV
     smile_points: list[SmilePoint] = Field(default_factory=list)
 
 
@@ -291,9 +291,7 @@ def calculate_iv_skew_and_smile(
         strikes, call_ivs, put_ivs, call_deltas, put_deltas, strict=False
     ):
         moneyness = s / forward_price if forward_price > 0 else 1.0
-        blended = (
-            p_iv if s < spot_price else (c_iv if s > spot_price else 0.5 * (c_iv + p_iv))
-        )
+        blended = p_iv if s < spot_price else (c_iv if s > spot_price else 0.5 * (c_iv + p_iv))
         if blended <= 0:
             blended = max(c_iv, p_iv, atm_iv)
 

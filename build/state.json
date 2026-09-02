@@ -1,13 +1,38 @@
 {
-  "feature": "F8.4",
+  "feature": "F8.5",
   "status": "review",
-  "branch": "feature/F8.4-options-chain-analytics",
-  "commit": "d8067497987aedc56ada7f8e6713895786f4229b",
+  "branch": "feature/F8.5-multileg-option-strategy-builder",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F8.5": {
+      "status": "review",
+      "branch": "feature/F8.5-multileg-option-strategy-builder",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 466,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 170,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F8.5.md",
+        "backend/app/analytics/strategy_builder.py",
+        "backend/app/api/strategy_builder.py",
+        "frontend/src/widgets/builtin/OptionStrategyBuilderWidget.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F8.4": {
       "status": "review",
       "branch": "feature/F8.4-options-chain-analytics",

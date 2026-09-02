@@ -26,6 +26,7 @@ from app.api.instruments import router as instruments_router
 from app.api.options import router as options_router
 from app.api.options_analytics import router as options_analytics_router
 from app.api.screeners import router as screeners_router
+from app.api.strategy_builder import router as strategy_builder_router
 from app.api.universe import router as universe_router
 from app.api.watchlists import router as watchlists_router
 from app.contracts import heartbeat as hb
@@ -78,6 +79,7 @@ app.include_router(depth_router)
 app.include_router(options_router)
 app.include_router(calibration_router)
 app.include_router(options_analytics_router)
+app.include_router(strategy_builder_router)
 
 
 @app.get("/healthz")

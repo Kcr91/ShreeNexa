@@ -55,8 +55,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.1 | Done | Fast-forwarded into `main` at `d9f2833` after review. |
 | F8.2 | Done | Fast-forwarded into `main` at `381e38f` after review. |
 | F8.3 | Done | Fast-forwarded into `main` at `b567041` after review. |
-| F8.4 | Ready for review | ATM IV, IV rank/percentile, OI/volume PCR, max pain, skew/smile, and term structure. 461 Python tests & 165 frontend tests passing. |
-| F5.2, F8.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F8.4 | Done | Fast-forwarded into `main` at `d0f77a2` after review. |
+| F8.5 | Ready for review | Multi-leg option strategy builder with expiry/T+n payoff, breakevens, extrema, and position Greeks. 466 Python tests & 170 frontend tests passing. |
+| F5.2, F8.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1929,4 +1930,33 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Authored frontend unit tests in `frontend/src/optionchain/OptionsAnalyticsPanel.test.tsx` (5 tests passing).
 - Full repository test suite: 461 Python tests passed + 165 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (221 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `d0f77a2`.
+
+### 2026-09-02 — F8.5 Multi-leg option strategy builder with expiry/T+n payoff, breakevens, extrema, and position Greeks completed
+
+- Implemented `backend/app/analytics/strategy_builder.py`:
+  - `calculate_strategy_payoff_and_greeks`: Exact piecewise linear expiration payoff evaluation and analytical breakeven root solver across arbitrary multi-leg options combinations.
+  - $T+n$ target date valuation curve using Black-76 forward pricer with remaining annualized time to expiration.
+  - Extrema detection: Finite Max Profit and Max Loss calculations or explicit unbounded flagging with Risk:Reward ratio.
+  - Net Position Greeks: Exact linear aggregation of Delta, Gamma, Theta (₹/day), Vega (₹/1% vol), and Rho scaled by contract lot sizes (NIFTY 25, BANKNIFTY 15).
+  - Standard strategy templates generator `create_standard_strategy`: Bull Call Spread, Bear Put Spread, Long Straddle, Long Strangle, Iron Condor, and Iron Butterfly.
+- Implemented `backend/app/api/strategy_builder.py`:
+  - `POST /api/v1/options/strategy/analyze`: Strategy analytics calculation endpoint.
+  - `GET /api/v1/options/strategy/template`: Parameterized strategy template factory.
+- Mounted `strategy_builder_router` in `backend/app/main.py`.
+- Authored unit tests in `backend/tests/unit/test_option_strategy_builder.py` (5 tests passing):
+  - Verified Bull Call Spread debit, bounded loss, max profit, exact breakeven (25060 INR), and positive Delta.
+  - Verified Long Straddle debit, max loss (-7375 INR), unlimited profit, two symmetrical breakevens, and positive Gamma/Vega.
+  - Verified Iron Condor net credit, bounded profit/loss, positive Theta, and two breakevens.
+  - Verified disabled leg exclusion dynamically updating Greeks and payoffs.
+  - Verified REST API template retrieval and analysis endpoints.
+- Implemented `frontend/src/widgets/builtin/OptionStrategyBuilderWidget.tsx`:
+  - Interactive multi-leg strategy builder with template dropdown (Bull Call Spread, Straddle, Iron Condor).
+  - Live table of legs with enable/disable checkbox, BUY/SELL toggle, strike selector, lots, entry price, and delete/add controls.
+  - Top summary cards showing Net Premium (Debit/Credit), Max Profit, Max Loss, Breakevens list, and Net Position Greeks ($\Delta, \theta$).
+  - Target date $T+n$ days forward slider.
+  - Registered `optionStrategyBuilderDefinition` in `frontend/src/widgets/builtin/index.ts`.
+- Authored frontend unit tests in `frontend/src/widgets/builtin/OptionStrategyBuilderWidget.test.tsx` (5 tests passing).
+- Full repository test suite: 466 Python tests passed + 170 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (224 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
