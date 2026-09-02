@@ -11,6 +11,12 @@ from app.paper.models import (
     PaperOrderType,
     PaperPosition,
 )
+from app.paper.reconciliation import (
+    PortfolioSummary,
+    PositionSummaryItem,
+    RejectedOrderInfo,
+    reconcile_portfolio,
+)
 from app.paper.repository import PaperRepository, paper_repository
 
 __all__ = [
@@ -24,6 +30,10 @@ __all__ = [
     "PaperOrderType",
     "PaperPosition",
     "PaperRepository",
+    "PortfolioSummary",
+    "PositionSummaryItem",
+    "RejectedOrderInfo",
     "paper_broker",
     "paper_repository",
+    "reconcile_portfolio",
 ]

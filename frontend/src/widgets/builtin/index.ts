@@ -20,6 +20,7 @@ import { marketHeatmapDefinition } from "./MarketHeatmapWidget";
 import { marketDepthDefinition } from "./MarketDepthWidget";
 import { optionStrategyBuilderDefinition } from "./OptionStrategyBuilderWidget";
 import { optionsAnalyticsDefinition } from "../../optionchain/OptionsAnalyticsPanel";
+import { paperTradingDefinition } from "./PaperTradingWidget";
 
 export function registerBuiltinWidgets(): void {
   widgetRegistry.register(marketClockDefinition);
@@ -43,6 +44,7 @@ export function registerBuiltinWidgets(): void {
   widgetRegistry.register(gradingThresholdsDefinition);
   widgetRegistry.register(optionsAnalyticsDefinition);
   widgetRegistry.register(optionStrategyBuilderDefinition);
+  widgetRegistry.register(paperTradingDefinition);
 }
 
 // Auto-register built-in widgets

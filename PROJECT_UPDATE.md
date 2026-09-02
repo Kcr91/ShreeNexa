@@ -60,7 +60,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.6 | Done | Fast-forwarded into `main` at `3979235` after review. |
 | F8.7 | Done | Fast-forwarded into `main` at `469f6c0` after review. |
 | F9.1 | Done | Fast-forwarded into `main` at `4f94049` after review. |
-| F5.2, F9.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F9.2 | Ready for review | Paper order book, trade book, positions, live MTM, costs, and rejection/reason display. 462 Python tests & 179 frontend tests passing. |
+| F5.2, F9.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2050,3 +2051,29 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Code Review Graph 2.3.8 analysis: verified zero regression risk, 90% token savings across 14 analyzed files.
 - Full repository test suite: 460 Python tests passed (30 skipped due to absent local DB), 173 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (237 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-02 — F9.2 Paper order book, trade book, positions, live MTM, costs, and rejection/reason display completed
+
+- Implemented `backend/app/paper/reconciliation.py`:
+  - Mathematical accounting reconciliation engine (`reconcile_portfolio`) computing cash balance, blocked margin, realized P&L, live mark-to-market (MTM) unrealized P&L, net equity, itemized statutory transaction costs, and status breakdowns.
+  - Verified exact mathematical invariance across trade logs, orders, positions, and cash balance without rounding drift ($0.00$ discrepancy).
+- Extended `backend/app/api/paper.py`:
+  - Added `GET /api/v1/paper/portfolio/summary`: Aggregated portfolio status, order breakdown, and MTM summaries.
+  - Added `GET /api/v1/paper/reconcile`: Dedicated endpoint providing audit-grade mathematical accounting reconciliation.
+- Added independent accounting fixture:
+  - `backend/tests/fixtures/paper_accounting_fixture.json`: Comprehensive multi-order test scenario covering Buy, Sell, and Rejected (oversized) orders, proving UI/API/order/fill/position reconciliation.
+- Authored backend unit and API tests in `backend/tests/unit/test_paper_accounting_reconciliation.py` (2 tests passing):
+  - Verified mathematical invariance and parity against the independent accounting fixture.
+  - Verified REST endpoints for portfolio summary and reconciliation.
+- Implemented `frontend/src/widgets/builtin/PaperTradingWidget.tsx`:
+  - Real-time paper trading blotter with 4 dedicated views:
+    - **Positions View**: Open positions, Average Cost, LTP, Realized P&L, Live MTM Unrealized P&L, and Net P&L.
+    - **Order Book View**: Order ID, Symbol, Side, Type, Quantity, Filled Quantity, Price/Trigger, Status badges, active order Cancel action, and explicit **Rejection Reason** badges/alerts (e.g. "Insufficient funds...").
+    - **Trade Book View**: Chronological execution fills with Fill ID, Order ID, Execution Price, Slippage, and Itemized Statutory Costs (STT, GST, Brokerage, Turnover).
+    - **Reconciliation & Costs View**: Mathematical accounting invariants, initial capital, net cash flow, and pre-trade risk violation summaries.
+  - Top summary cards: Account Equity, Cash Available, Realized P&L, Live MTM Unrealized, Statutory Costs, and `🟢 Reconciled` status badge.
+- Registered `paperTradingDefinition` in `frontend/src/widgets/builtin/index.ts`.
+- Authored frontend Vitest unit tests in `frontend/src/widgets/builtin/PaperTradingWidget.test.tsx` (6 tests passing).
+- Authored acceptance contract in `docs/qa/acceptance/F9.2.md`.
+- Full repository test suite: 462 Python tests passed (30 skipped), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (239 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

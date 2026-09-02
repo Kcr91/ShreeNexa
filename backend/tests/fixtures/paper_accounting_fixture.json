@@ -1,0 +1,77 @@
+{
+  "account_id": "fixture-acc-1",
+  "initial_capital": 1000000.0,
+  "orders": [
+    {
+      "order_id": "ord-fix-1",
+      "symbol": "TCS",
+      "security_id": "11536",
+      "side": "BUY",
+      "order_type": "LIMIT",
+      "quantity": 50,
+      "price": 3500.0,
+      "expected_status": "FILLED"
+    },
+    {
+      "order_id": "ord-fix-2",
+      "symbol": "INFY",
+      "security_id": "1594",
+      "side": "BUY",
+      "order_type": "LIMIT",
+      "quantity": 100,
+      "price": 1600.0,
+      "expected_status": "FILLED"
+    },
+    {
+      "order_id": "ord-fix-3",
+      "symbol": "TCS",
+      "security_id": "11536",
+      "side": "SELL",
+      "order_type": "LIMIT",
+      "quantity": 20,
+      "price": 3600.0,
+      "expected_status": "FILLED"
+    },
+    {
+      "order_id": "ord-fix-4",
+      "symbol": "RELIANCE",
+      "security_id": "2885",
+      "side": "BUY",
+      "order_type": "LIMIT",
+      "quantity": 1000,
+      "price": 3000.0,
+      "expected_status": "REJECTED",
+      "expected_reject_reason": "Insufficient funds"
+    }
+  ],
+  "market_prices": {
+    "11536": 3650.0,
+    "1594": 1580.0
+  },
+  "expected_positions": {
+    "11536": {
+      "symbol": "TCS",
+      "quantity": 30,
+      "avg_entry_price": 3500.0,
+      "current_price": 3650.0,
+      "unrealized_pnl": 4500.0
+    },
+    "1594": {
+      "symbol": "INFY",
+      "quantity": 100,
+      "avg_entry_price": 1600.0,
+      "current_price": 1580.0,
+      "unrealized_pnl": -2000.0
+    }
+  },
+  "invariants": {
+    "total_orders": 4,
+    "working_orders_count": 0,
+    "filled_orders_count": 3,
+    "rejected_orders_count": 1,
+    "total_fills": 3,
+    "open_positions_count": 2,
+    "is_reconciled": true,
+    "max_cash_discrepancy": 0.01
+  }
+}

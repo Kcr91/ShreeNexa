@@ -17,6 +17,7 @@ from app.paper.models import (
     PaperOrderType,
     PaperPosition,
 )
+from app.paper.reconciliation import PortfolioSummary, reconcile_portfolio
 from app.paper.repository import paper_repository
 
 router = APIRouter(prefix="/api/v1/paper", tags=["Paper Trading"])
@@ -114,3 +115,15 @@ def list_positions(account_id: str = "default") -> list[PaperPosition]:
 def list_fills(account_id: str = "default") -> list[PaperFill]:
     """List trade fills for an account."""
     return paper_repository.list_fills(account_id=account_id)
+
+
+@router.get("/portfolio/summary", response_model=PortfolioSummary)
+def get_portfolio_summary(account_id: str = "default") -> PortfolioSummary:
+    """Get aggregated portfolio status and MTM summary."""
+    return reconcile_portfolio(account_id=account_id, repository=paper_repository)
+
+
+@router.get("/reconcile", response_model=PortfolioSummary)
+def get_reconciliation_report(account_id: str = "default") -> PortfolioSummary:
+    """Run mathematical accounting reconciliation across orders, fills, and cash balance."""
+    return reconcile_portfolio(account_id=account_id, repository=paper_repository)
