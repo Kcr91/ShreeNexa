@@ -66,9 +66,7 @@ class RebalanceTransferRecord(BaseModel):
     strategy_id: str
     pre_rebalance_capital: float
     target_capital: float
-    delta_cash: float = Field(
-        description="Net cash transferred (+ = infused, - = harvested)"
-    )
+    delta_cash: float = Field(description="Net cash transferred (+ = infused, - = harvested)")
 
 
 class PortfolioDailySnapshot(BaseModel):
@@ -97,3 +95,60 @@ class PortfolioRunSummary(BaseModel):
     rebalance_events: list[RebalanceTransferRecord]
     daily_snapshots: list[PortfolioDailySnapshot]
     executed_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
+
+
+class DrawdownPoint(BaseModel):
+    """High-water mark and drawdown point in portfolio equity time series."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    timestamp: datetime
+    equity: float
+    high_water_mark: float
+    drawdown_abs: float = Field(le=0.0)
+    drawdown_pct: float = Field(le=0.0)
+
+
+class PortfolioRiskCaps(BaseModel):
+    """Risk constraints and guardrail caps applied to multi-strategy portfolios."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    max_drawdown_pct_cap: float = Field(default=0.20, gt=0.0, le=1.0)
+    max_strategy_concentration_pct: float = Field(default=0.70, gt=0.0, le=1.0)
+    max_leverage_cap: float = Field(default=2.0, gt=0.0)
+
+
+class StrategyRiskAttribution(BaseModel):
+    """Marginal risk and return contribution metrics for an individual sub-strategy."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    strategy_id: str
+    strategy_name: str
+    target_weight: float
+    actual_weight: float
+    total_return_pct: float
+    return_contribution_pct: float
+    volatility: float
+    marginal_contribution_to_risk: float
+    percentage_risk_contribution: float
+
+
+class PortfolioAnalyticsReport(BaseModel):
+    """Comprehensive portfolio analytics, drawdown profile, caps compliance, and attribution."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    portfolio_name: str
+    initial_capital: float
+    final_capital: float
+    total_return_pct: float
+    annualized_return_pct: float
+    portfolio_volatility: float
+    portfolio_sharpe: float
+    max_drawdown_pct: float
+    max_drawdown_duration_days: int
+    drawdown_curve: list[DrawdownPoint]
+    attributions: list[StrategyRiskAttribution]
+    caps_breaches: list[str]

@@ -82,9 +82,7 @@ def test_isolated_strategy_books_prevent_cross_contamination() -> None:
     assert orchestrator.total_portfolio_cash == 1_000_000.0
 
     # Execute trade strictly in strat_0
-    trades = {
-        "strat_0": [{"symbol": "RELIANCE", "qty": 100, "price": 2500.0, "fee": 50.0}]
-    }
+    trades = {"strat_0": [{"symbol": "RELIANCE", "qty": 100, "price": 2500.0, "fee": 50.0}]}
     prices = {"RELIANCE": 2500.0, "TCS": 3500.0}
 
     orchestrator.step_day(
@@ -112,9 +110,7 @@ def test_deterministic_rebalancing_with_zero_sum_transfers() -> None:
     orchestrator = PortfolioOrchestrator(config)
 
     # Day 1: strat_0 buys 200 RELIANCE at 2500 (500,000 cost), strat_1 stays in cash
-    trades = {
-        "strat_0": [{"symbol": "RELIANCE", "qty": 200, "price": 2500.0, "fee": 0.0}]
-    }
+    trades = {"strat_0": [{"symbol": "RELIANCE", "qty": 200, "price": 2500.0, "fee": 0.0}]}
     prices_day1 = {"RELIANCE": 2500.0}
     orchestrator.step_day(date(2026, 9, 1), prices=prices_day1, trades=trades)
 

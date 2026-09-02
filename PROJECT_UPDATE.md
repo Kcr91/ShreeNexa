@@ -39,8 +39,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
 | F3.11 | Done | Fast-forwarded into `main` at `49d0a93` after review. |
 | F5.1 | Done | Fast-forwarded into `main` at `a690495` after review. |
-| F6.1 | Ready for review | Multi-strategy capital allocation engine with strict weight validation, no double-spend guarantees, isolated StrategyBook ledgers, deterministic rebalancing with zero-sum capital transfers, and synchronized daily orchestration. 365 Python tests & 122 frontend tests passing. |
-| F5.2, F6.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F6.1 | Done | Fast-forwarded into `main` at `789a6aa` after review. |
+| F6.2 | Ready for review | Combined portfolio equity curve reconciliation, high water mark and drawdown curve, aggregate risk caps (leverage, concentration, max DD), and marginal risk/return attribution (Euler risk decomposition). 370 Python tests & 122 frontend tests passing. |
+| F5.2, F6.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1465,4 +1466,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Simulation replay determinism verified.
 - Full repository test suite: 365 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (180 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `789a6aa`.
+
+### 2026-09-02 — F6.2 Combined equity curve, drawdown, caps, and marginal contribution completed
+
+- Implemented `backend/app/portfolio/models.py`:
+  - `DrawdownPoint`: High-water mark, absolute drawdown, and drawdown percentage time series records.
+  - `PortfolioRiskCaps`: Risk constraints and guardrail caps (Max Drawdown Cap, Strategy Concentration Cap, Leverage Cap).
+  - `StrategyRiskAttribution`: Volatility, Marginal Contribution to Risk (MCR), Percentage Risk Contribution (PCR), and return attribution.
+  - `PortfolioAnalyticsReport`: Combined analytics, drawdown duration, Sharpe, volatility, attributions, and caps compliance breaches.
+- Implemented `backend/app/portfolio/analytics.py`:
+  - `compute_drawdown_curve`: Tracks dynamic HWM, drawdown series ($\le 0$), max drawdown %, and peak-to-recovery duration in days.
+  - `check_risk_caps`: Validates drawdown circuit breaker thresholds and strategy concentration limits across daily snapshots.
+  - `compute_marginal_risk_return_attribution`: Implements Euler marginal risk decomposition theorem:
+    $$\text{MCR}_i = \frac{\text{Cov}(R_i, R_p)}{\sigma_p}, \quad \text{PCR}_i = \frac{w_i \times \text{MCR}_i}{\sigma_p}$$
+    Guarantees $\sum \text{PCR}_i = 100\%$ and return contributions sum to portfolio total return.
+  - `generate_portfolio_analytics_report`: High-level analytics compiler generating full portfolio report from orchestrator state.
+- Authored acceptance contract `docs/qa/acceptance/F6.2.md` and added unit tests in `backend/tests/unit/test_portfolio_analytics.py`:
+  - Combined cash and equity reconciliation to individual strategy fixtures verified.
+  - Drawdown curve and HWM verified against independent manual values.
+  - Aggregate risk caps breaches verified.
+  - Euler marginal risk decomposition ($\sum \text{PCR}_i = 100\%$) and return attribution verified.
+- Full repository test suite: 370 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (182 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
