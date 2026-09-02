@@ -59,7 +59,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.5 | Done | Fast-forwarded into `main` at `3eff7a5` after review. |
 | F8.6 | Done | Fast-forwarded into `main` at `3979235` after review. |
 | F8.7 | Done | Fast-forwarded into `main` at `469f6c0` after review. |
-| F9.1 | Ready for review | PaperBroker using live data source, realistic fill policy, persisted orders/fills, and restart recovery. 460 Python tests & 173 frontend tests passing. |
+| F9.1 | Done | Fast-forwarded into `main` at `4f94049` after review. |
 | F5.2, F9.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
