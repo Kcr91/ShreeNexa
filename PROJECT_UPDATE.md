@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.12 | Done | Fast-forwarded into `main` at `273be8c` after review. |
-| F4.13 | Ready for review | Quant strategy marketplace and library browser widget featuring curated Indian market strategies, category filtering, verified author cards, backtest tear sheet modal previews, and one-click clone to workspace. 353 Python tests & 95 frontend tests passing. |
+| F4.13 | Done | Fast-forwarded into `main` at `e2a8931` after review. |
+| F4.14 | Ready for review | Integrated end-to-end terminal workflow executing streaming tick ingestion, technical indicator calculation (fast/slow EMA, RSI), StrategyIR golden cross rule trigger, automated paper order creation, Blotter position updates, real-time mark-to-market PnL reconciliation, and notification dispatch. 353 Python tests & 97 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1315,5 +1315,19 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 95 passed / 0 failed across 33 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 95 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `e2a8931`.
+
+### 2026-09-02 — F4.14 Integrated E2E terminal workflow completed
+
+- Implemented `frontend/src/workflow/types.ts`:
+  - `WorkflowStep`, `WorkflowEvent`, and `WorkflowEvaluationResult`.
+- Implemented `frontend/src/workflow/engine.ts`:
+  - `TerminalWorkflowEngine` orchestrating streaming price tick ingestion -> incremental technical indicator calculation (fast EMA, slow EMA, RSI) -> StrategyIR golden cross rule evaluation -> automated paper order dispatch -> Blotter position tracking -> real-time mark-to-market PnL reconciliation.
+- Authored acceptance contract `docs/qa/acceptance/F4.14.md` and added unit & E2E integration tests in `frontend/src/workflow/engine.test.ts` and `TerminalWorkflow.test.tsx`:
+  - Synthetic tick series verified: golden cross triggered, order filled, position created in blotter, unrealized PnL updated, and toast notification dispatched.
+  - Frontend test suite: 97 passed / 0 failed across 35 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 97 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
