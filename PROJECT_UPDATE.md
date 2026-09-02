@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.11 | Done | Fast-forwarded into `main` at `1c726ca` after review. |
-| F4.12 | Ready for review | Visual quantitative strategy builder with block-based IR editor, parameter tuning, live StrategyIR JSON compiler, and vector backtest simulation runner trigger. 353 Python tests & 90 frontend tests passing. |
+| F4.12 | Done | Fast-forwarded into `main` at `273be8c` after review. |
+| F4.13 | Ready for review | Quant strategy marketplace and library browser widget featuring curated Indian market strategies, category filtering, verified author cards, backtest tear sheet modal previews, and one-click clone to workspace. 353 Python tests & 95 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1297,5 +1297,23 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 90 passed / 0 failed across 31 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 90 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `273be8c`.
+
+### 2026-09-02 — F4.13 Strategy marketplace browser completed
+
+- Implemented `frontend/src/marketplace/types.ts`:
+  - `StrategyCategory`, `StrategyAuthor`, `StrategyPerformance`, `MarketplaceStrategy`, and `MarketplaceWidgetSettings`.
+- Implemented `frontend/src/marketplace/catalog.ts`:
+  - Curated collection of production-grade Indian market quant strategies (NIFTY Weekly Iron Condor, BankNifty Supertrend Breakout, NIFTY 50 Golden Cross Momentum, FinNifty Gamma Scalper 0DTE) with verified author badges, performance scorecards, and valid `StrategyIR`.
+- Implemented `frontend/src/marketplace/TearSheetModal.tsx`:
+  - Deep-dive performance modal displaying CAGR %, Sharpe Ratio, Max Drawdown, Win Rate %, Profit Factor, and StrategyIR logic tree.
+- Implemented `frontend/src/widgets/builtin/StrategyMarketplaceWidget.tsx`:
+  - Searchable multi-facet grid browser with category pills (`Options Income`, `Momentum`, `Breakout`, `Volatility`), asset filter buttons, tear sheet preview trigger, and one-click workspace cloning with toast notifications.
+  - Registered in `widgetRegistry` under category `analytics`.
+- Authored acceptance contract `docs/qa/acceptance/F4.13.md` and added unit tests in `frontend/src/marketplace/catalog.test.ts` and `StrategyMarketplaceWidget.test.tsx`:
+  - Frontend test suite: 95 passed / 0 failed across 33 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 95 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

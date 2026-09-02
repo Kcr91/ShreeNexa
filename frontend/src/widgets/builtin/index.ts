@@ -11,6 +11,7 @@ import { backtestAnalyticsDefinition } from "./BacktestAnalyticsWidget";
 import { liveFeedStatusDefinition } from "./LiveFeedStatusWidget";
 import { alertsLogDefinition } from "./AlertsLogWidget";
 import { strategyBuilderDefinition } from "./StrategyBuilderWidget";
+import { strategyMarketplaceDefinition } from "./StrategyMarketplaceWidget";
 
 export function registerBuiltinWidgets(): void {
   widgetRegistry.register(marketClockDefinition);
@@ -25,6 +26,7 @@ export function registerBuiltinWidgets(): void {
   widgetRegistry.register(liveFeedStatusDefinition);
   widgetRegistry.register(alertsLogDefinition);
   widgetRegistry.register(strategyBuilderDefinition);
+  widgetRegistry.register(strategyMarketplaceDefinition);
 }
 
 // Auto-register built-in widgets
