@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.9 | Done | Fast-forwarded into `main` at `94fc04c` after review. |
-| F4.10 | Ready for review | Real-time frontend WebSocket client featuring channel multiplexing (quotes, depth, orders, positions, pnl), topic subscription management, automatic exponential-backoff reconnection, latency monitoring, and a Live Feed Status & Telemetry widget. 353 Python tests & 76 frontend tests passing. |
+| F4.10 | Done | Fast-forwarded into `main` at `e3e7583` after review. |
+| F4.11 | Ready for review | Audio/visual notification and alert manager featuring floating toast stacks, synthesized multi-tone Web Audio chimes (Order Fill, Reject, Margin Warning, Risk Breach), top risk event banners, sound mute/unmute toggles, and an audit-trailed Alerts Log widget. 353 Python tests & 82 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1258,5 +1258,26 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 76 passed / 0 failed across 26 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 76 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `e3e7583`.
+
+### 2026-09-02 — F4.11 Notification and alert manager completed
+
+- Implemented `frontend/src/notifications/types.ts`:
+  - `AlertSeverity`, `AlertCategory`, `NotificationItem`, `NotificationSettings`, and `AlertsLogWidgetSettings`.
+- Implemented `frontend/src/notifications/audio.ts`:
+  - Synthesized tone engine using Web Audio API (`AudioContext` / `OscillatorNode`) producing distinct chords and alert pulses for `ORDER_FILL`, `ORDER_REJECT`, `MARGIN_CALL`, and `RISK_BREACH`.
+- Implemented `frontend/src/notifications/NotificationContext.tsx`:
+  - Context provider with toast stack queue, unread counters, sound toggles, and auto-dismiss timers.
+- Implemented `frontend/src/notifications/ToastContainer.tsx`:
+  - Floating bottom-right toast stack and top persistent risk limit breach alert banner.
+- Implemented `frontend/src/widgets/builtin/AlertsLogWidget.tsx`:
+  - Filterable audit history log, sound mute toggle, test chime action, and mark all read / clear actions.
+  - Registered in `widgetRegistry` under category `analytics`.
+- Wrapped application shell in `frontend/src/App.tsx` with `NotificationProvider` and `ToastContainer`.
+- Authored acceptance contract `docs/qa/acceptance/F4.11.md` and added unit tests in `frontend/src/notifications/audio.test.ts`, `notifications.test.tsx`, and `AlertsLogWidget.test.tsx`:
+  - Frontend test suite: 82 passed / 0 failed across 29 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 82 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
