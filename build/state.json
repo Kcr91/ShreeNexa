@@ -2,7 +2,7 @@
   "feature": "F4.4",
   "status": "review",
   "branch": "feature/F4.4-chart-indicators-session-breaks",
-  "commit": null,
+  "commit": "0e36cbb54d86b72a6b471676643694f48ff3c690",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -387,7 +387,7 @@
     "F4.4": {
       "status": "review",
       "branch": "feature/F4.4-chart-indicators-session-breaks",
-      "commit": null,
+      "commit": "0e36cbb54d86b72a6b471676643694f48ff3c690",
       "tests": {},
       "evidence": [],
       "verified_at": null,
