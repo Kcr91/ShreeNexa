@@ -150,9 +150,8 @@ def calculate_basket_margin(
             spread_width = abs(s_leg.strike - l_leg.strike)
             max_spread_risk = spread_width * units
 
-            unhedged_short_cost = (
-                (spot_price * units * (span_rate_pct + exposure_rate_pct))
-                + (s_leg.entry_price * units)
+            unhedged_short_cost = (spot_price * units * (span_rate_pct + exposure_rate_pct)) + (
+                s_leg.entry_price * units
             )
             long_prem_cost = l_leg.entry_price * units
             unhedged_total = unhedged_short_cost + long_prem_cost
@@ -171,9 +170,8 @@ def calculate_basket_margin(
             spread_width = abs(s_leg.strike - l_leg.strike)
             max_spread_risk = spread_width * units
 
-            unhedged_short_cost = (
-                (spot_price * units * (span_rate_pct + exposure_rate_pct))
-                + (s_leg.entry_price * units)
+            unhedged_short_cost = (spot_price * units * (span_rate_pct + exposure_rate_pct)) + (
+                s_leg.entry_price * units
             )
             long_prem_cost = l_leg.entry_price * units
             unhedged_total = unhedged_short_cost + long_prem_cost

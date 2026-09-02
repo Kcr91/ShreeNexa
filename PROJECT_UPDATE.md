@@ -57,8 +57,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.3 | Done | Fast-forwarded into `main` at `b567041` after review. |
 | F8.4 | Done | Fast-forwarded into `main` at `d0f77a2` after review. |
 | F8.5 | Done | Fast-forwarded into `main` at `3eff7a5` after review. |
-| F8.6 | Ready for review | Net Greeks plus Dhan margin adapter and reconciliation. 473 Python tests & 170 frontend tests passing. |
-| F5.2, F8.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F8.6 | Done | Fast-forwarded into `main` at `3979235` after review. |
+| F8.7 | Ready for review | Visual stock strategy builder mapping exactly to StrategyIR nodes. 476 Python tests & 173 frontend tests passing. |
+| F5.2, F9.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1986,4 +1987,29 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Authored frontend unit tests in `frontend/src/widgets/builtin/OptionStrategyBuilderWidget.test.tsx` (5 tests passing).
 - Full repository test suite: 473 Python tests passed + 170 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (228 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `3979235`.
+
+### 2026-09-02 — F8.7 Visual stock strategy builder mapping exactly to StrategyIR nodes completed
+
+- Implemented `frontend/src/strategybuilder/canonical.ts`:
+  - `compileVisualToCanonicalIR`: Compiles visual strategy builder state into canonical backend StrategyIR format (`CrossOver`, `CrossUnder`, `IndicatorCompare`, `And`, `Or`, `Not`, `TimeWindow`, `PriceLevelBreak`).
+  - `decompileCanonicalIRToVisual`: Losslessly reconstructs visual builder blocks (indicators, entry/exit rules, combinators, risk controls) from canonical StrategyIR without semantic degradation.
+- Authored frontend unit tests in `frontend/src/strategybuilder/canonical.test.ts` (3 tests passing):
+  - Verified `UI -> IR` compilation for dual EMA momentum.
+  - Verified lossless `UI -> IR -> UI` round-trip preserving indicators, operands, comparisons, and risk thresholds.
+  - Verified composite nested boolean logic (`And` / `Or` disjunctions).
+- Implemented `backend/app/api/strategy_ir.py`:
+  - `POST /api/v1/strategy/validate`: Validates StrategyIR AST against Pydantic schema and `CompiledStrategy` graph execution engine.
+  - `GET /api/v1/strategy/schema`: Exports complete OpenAPI/JSON schema for StrategyIR.
+  - `GET /api/v1/strategy/templates`: Provides standard pre-built stock strategy templates (Dual EMA Crossover, RSI Mean Reversion).
+- Mounted `strategy_ir_router` in `backend/app/main.py`.
+- Authored unit tests in `backend/tests/unit/test_visual_strategy_ir_roundtrip.py` (3 tests passing):
+  - Verified schema serialization, deserialization, and `CompiledStrategy` compilation.
+  - Verified `/api/v1/strategy/validate` endpoint.
+  - Verified schema export and templates API.
+- Updated `frontend/src/widgets/builtin/StrategyBuilderWidget.tsx`:
+  - Integrated canonical AST preview with `🟢 Valid AST` badge and one-click `Copy IR` button.
+- Updated `frontend/src/widgets/builtin/StrategyBuilderWidget.test.tsx` (4 tests passing).
+- Full repository test suite: 476 Python tests passed + 173 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (230 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

@@ -20,6 +20,8 @@ describe("StrategyBuilderWidget Component", () => {
     expect(screen.getByTestId("indicator-card-fast_ema")).toBeInTheDocument();
     expect(screen.getByTestId("rule-block-rule-entry")).toBeInTheDocument();
     expect(screen.getByTestId("strategy-ir-preview")).toHaveTextContent('"ir_version": 1');
+    expect(screen.getByText("🟢 Valid AST")).toBeInTheDocument();
+    expect(screen.getByText("Copy IR")).toBeInTheDocument();
   });
 
   it("clicks run vector backtest button and renders results card", () => {

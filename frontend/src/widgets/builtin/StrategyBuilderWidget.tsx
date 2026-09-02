@@ -11,6 +11,9 @@ import {
   validateStrategyBuilderState,
   runClientSideVectorBacktest,
 } from "../../strategybuilder/compiler";
+import {
+  compileVisualToCanonicalIR,
+} from "../../strategybuilder/canonical";
 
 const DEFAULT_STATE: StrategyBuilderState = {
   strategyName: "EMA Golden Cross Momentum",
@@ -336,7 +339,32 @@ export const StrategyBuilderWidget: React.FC<
             </div>
           )}
 
-          <strong style={{ fontSize: "var(--font-size-xs)" }}>StrategyIR JSON Schema</strong>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <strong style={{ fontSize: "var(--font-size-xs)" }}>Canonical StrategyIR (AST)</strong>
+            <div style={{ display: "flex", gap: "4px" }}>
+              <span style={{ fontSize: "10px", color: validation.isValid ? "#34d399" : "#f87171" }}>
+                {validation.isValid ? "🟢 Valid AST" : "🔴 Invalid AST"}
+              </span>
+              <button
+                onClick={() => {
+                  const canonical = compileVisualToCanonicalIR(state);
+                  const jsonStr = JSON.stringify(canonical, null, 2);
+                  navigator.clipboard?.writeText(jsonStr);
+                }}
+                style={{
+                  fontSize: "10px",
+                  padding: "1px 4px",
+                  backgroundColor: "var(--bg-surface)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "2px",
+                  cursor: "pointer",
+                  color: "var(--text-primary)",
+                }}
+              >
+                Copy IR
+              </button>
+            </div>
+          </div>
           <pre
             data-testid="strategy-ir-preview"
             style={{
@@ -351,7 +379,9 @@ export const StrategyBuilderWidget: React.FC<
               margin: 0,
             }}
           >
-            {compiledIR ? JSON.stringify(compiledIR, null, 2) : "Invalid Strategy State"}
+            {validation.isValid
+              ? JSON.stringify(compileVisualToCanonicalIR(state), null, 2)
+              : "Invalid Strategy State"}
           </pre>
         </div>
       </div>

@@ -1,13 +1,38 @@
 {
-  "feature": "F8.6",
+  "feature": "F8.7",
   "status": "review",
-  "branch": "feature/F8.6-net-greeks-dhan-margin-adapter",
-  "commit": "7e4527dbf053667c2cd7a028d71cd3d10b611a2c",
+  "branch": "feature/F8.7-visual-strategy-builder-ir",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F8.7": {
+      "status": "review",
+      "branch": "feature/F8.7-visual-strategy-builder-ir",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 476,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 173,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F8.7.md",
+        "frontend/src/strategybuilder/canonical.ts",
+        "backend/app/api/strategy_ir.py",
+        "frontend/src/widgets/builtin/StrategyBuilderWidget.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F8.6": {
       "status": "review",
       "branch": "feature/F8.6-net-greeks-dhan-margin-adapter",
