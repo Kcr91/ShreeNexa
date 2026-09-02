@@ -2,7 +2,7 @@
   "feature": "F7.7",
   "status": "review",
   "branch": "feature/F7.7-live-minute-bar-builder",
-  "commit": null,
+  "commit": "0b832df75fe5f2fedcf5018a1632bc85f0b9a145",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F7.7": {
       "status": "review",
       "branch": "feature/F7.7-live-minute-bar-builder",
-      "commit": null,
+      "commit": "0b832df75fe5f2fedcf5018a1632bc85f0b9a145",
       "tests": {
         "pytest": {
           "passed": 433,
