@@ -2,7 +2,7 @@
   "feature": "F3.1",
   "status": "review",
   "branch": "feature/F3.1-engine-contracts",
-  "commit": null,
+  "commit": "bb50e5eb1d2e16eb303bfa861877d4c2079bb1f7",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -261,7 +261,7 @@
     "F3.1": {
       "status": "review",
       "branch": "feature/F3.1-engine-contracts",
-      "commit": null,
+      "commit": "bb50e5eb1d2e16eb303bfa861877d4c2079bb1f7",
       "tests": {},
       "evidence": [],
       "verified_at": null,
