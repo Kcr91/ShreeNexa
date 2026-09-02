@@ -1,4 +1,4 @@
-"""Backtest execution, performance analytics, strategy simulation, options, and futures modeling."""
+"""Backtest execution, performance analytics, multi-asset, and portfolio modeling."""
 
 from __future__ import annotations
 
@@ -27,6 +27,15 @@ from app.backtest.options_runner import (
     OptionStrategyBacktestRunner,
     calculate_option_margin,
 )
+from app.backtest.portfolio_models import (
+    PortfolioBacktestConfig,
+    PortfolioBacktestResult,
+    PortfolioRebalanceEvent,
+    RebalanceFrequency,
+    StrategyAllocation,
+    StrategyContribution,
+)
+from app.backtest.portfolio_runner import PortfolioBacktestRunner
 from app.backtest.runner import StockStrategyBacktestRunner
 from app.backtest.store import (
     BacktestStore,
@@ -49,8 +58,15 @@ __all__ = [
     "OptionLegConfig",
     "OptionStrategyBacktestRunner",
     "OptionStrategyConfig",
+    "PortfolioBacktestConfig",
+    "PortfolioBacktestResult",
+    "PortfolioBacktestRunner",
     "PortfolioGreeks",
+    "PortfolioRebalanceEvent",
+    "RebalanceFrequency",
     "StockStrategyBacktestRunner",
+    "StrategyAllocation",
+    "StrategyContribution",
     "backtest_store",
     "calculate_backtest_metrics",
     "calculate_option_margin",

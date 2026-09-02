@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.5 | Done | Fast-forwarded into `main` at `d9c0907` after review. |
-| F3.6 | Ready for review | Futures strategy backtest runner with continuous contract rollover execution, contango/backwardation spread reconciliation, daily mark-to-market accounting, and exchange initial margin tracking. 332/332 tests passing. |
-| F3.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.6 | Done | Fast-forwarded into `main` at `817ef71` after review. |
+| F3.7 | Ready for review | Multi-strategy portfolio backtest runner with capital allocation, equity curve merging, strategy contribution attribution, and drift-based rebalancing. 335/335 tests passing. |
+| F3.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -978,4 +978,21 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_futures_backtest_runner.py`: 3 passed
 - Full repository test suite: 332 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (154 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `817ef71`.
+
+### 2026-09-02 — F3.7 Portfolio backtest runner with capital allocation completed
+
+- Implemented `backend/app/backtest/portfolio_models.py`:
+  - `StrategyAllocation`: Multi-asset strategy allocation config with weight validation and sub-configs (`stock_config`, `option_config`, `futures_config`).
+  - `PortfolioBacktestConfig` & `PortfolioBacktestResult`: Multi-strategy execution specification, aggregate risk metrics, and contribution attribution.
+  - `StrategyContribution`: Individual strategy performance attribution (allocated capital, final equity, return %, initial vs final weight drift).
+  - `PortfolioRebalanceEvent`: Audit record capturing portfolio capital rebalancing transactions upon tolerance-band trigger.
+  - `RebalanceFrequency`: Enumeration of rebalancing policies (`NEVER`, `DAILY`, `WEEKLY`, `MONTHLY`).
+- Implemented `backend/app/backtest/portfolio_runner.py`:
+  - `PortfolioBacktestRunner`: Coordinates concurrent execution of stock, option, and futures strategies, merges multi-asset daily equity curves into a combined master equity time series, computes aggregate risk/return metrics, and evaluates tolerance drift rebalancing.
+- Exported portfolio backtest tools in `backend/app/backtest/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.7.md` and added 3 new unit tests covering 60/40 Stock/Option allocation and equity curve aggregation, 3-way multi-asset portfolio attribution, and drift-based rebalancing:
+  - `backend/tests/unit/test_portfolio_backtest_runner.py`: 3 passed
+- Full repository test suite: 335 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (157 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

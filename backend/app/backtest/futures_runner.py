@@ -77,9 +77,7 @@ class FuturesStrategyBacktestRunner:
         for b_list in bars_by_contract.values():
             all_bars.extend(b_list)
 
-        filtered_bars = [
-            b for b in all_bars if config.start_date <= b.timestamp <= config.end_date
-        ]
+        filtered_bars = [b for b in all_bars if config.start_date <= b.timestamp <= config.end_date]
         sorted_timestamps = sorted({b.timestamp for b in filtered_bars})
 
         if not sorted_timestamps:
@@ -147,9 +145,8 @@ class FuturesStrategyBacktestRunner:
             curr_price = curr_bar.close if curr_bar else entry_price
 
             # Check contract roll condition
-            roll_date_threshold = (
-                active_contract.expiry_date.date()
-                - timedelta(days=strategy.days_before_expiry_roll)
+            roll_date_threshold = active_contract.expiry_date.date() - timedelta(
+                days=strategy.days_before_expiry_roll
             )
             has_next_contract = contract_idx + 1 < len(sorted_contracts)
 
@@ -159,9 +156,7 @@ class FuturesStrategyBacktestRunner:
 
                 if next_bar:
                     # 1. Close current active contract position
-                    close_side = (
-                        OrderSide.SELL if strategy.side == OrderSide.BUY else OrderSide.BUY
-                    )
+                    close_side = OrderSide.SELL if strategy.side == OrderSide.BUY else OrderSide.BUY
                     close_price = curr_bar.close if curr_bar else curr_price
                     close_fee = cost_calculator.calculate_cost(
                         product_type=ProductType.FUTURES,

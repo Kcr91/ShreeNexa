@@ -1,8 +1,8 @@
 {
-  "feature": "F3.6",
+  "feature": "F3.7",
   "status": "review",
-  "branch": "feature/F3.6-futures-strategy-backtest-runner",
-  "commit": "9f290750239cf2c08a9fa64df457c4c1d428bf27",
+  "branch": "feature/F3.7-portfolio-backtest-runner",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -307,6 +307,15 @@
       "status": "review",
       "branch": "feature/F3.6-futures-strategy-backtest-runner",
       "commit": "9f290750239cf2c08a9fa64df457c4c1d428bf27",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F3.7": {
+      "status": "review",
+      "branch": "feature/F3.7-portfolio-backtest-runner",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

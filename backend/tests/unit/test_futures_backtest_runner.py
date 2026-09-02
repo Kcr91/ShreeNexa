@@ -92,16 +92,13 @@ def test_futures_contract_rollover_execution_and_spread_reconciliation() -> None
     # 1. Trade Ledger: 3 trades (Initial Entry c1, Roll Exit c1, Roll Entry c2)
     assert len(result.trades) == 3
     assert (
-        result.trades[0].security_id == "NIFTY26SEPFUT"
-        and result.trades[0].side == OrderSide.BUY
+        result.trades[0].security_id == "NIFTY26SEPFUT" and result.trades[0].side == OrderSide.BUY
     )
     assert (
-        result.trades[1].security_id == "NIFTY26SEPFUT"
-        and result.trades[1].side == OrderSide.SELL
+        result.trades[1].security_id == "NIFTY26SEPFUT" and result.trades[1].side == OrderSide.SELL
     )
     assert (
-        result.trades[2].security_id == "NIFTY26OCTFUT"
-        and result.trades[2].side == OrderSide.BUY
+        result.trades[2].security_id == "NIFTY26OCTFUT" and result.trades[2].side == OrderSide.BUY
     )
 
     # 2. Roll Record Verification
