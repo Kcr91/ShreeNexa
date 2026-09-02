@@ -1,8 +1,8 @@
 {
-  "feature": "F9.2",
+  "feature": "F9.3",
   "status": "review",
-  "branch": "feature/F9.2-paper-blotter-order-trade-book",
-  "commit": "08ee58ca206df7a0d4c9f1307b2260ff0d480dbf",
+  "branch": "feature/F9.3-multi-strategy-paper-isolation",
+  "commit": "c5a7bbd15d603358aed42233134415528c37cb68",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1012,6 +1012,20 @@
         "backend/tests/fixtures/paper_accounting_fixture.json",
         "frontend/src/widgets/builtin/PaperTradingWidget.tsx",
         "backend/app/api/paper.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F9.3": {
+      "status": "review",
+      "branch": "feature/F9.3-multi-strategy-paper-isolation",
+      "commit": "c5a7bbd15d603358aed42233134415528c37cb68",
+      "tests": {},
+      "evidence": [
+        "docs/qa/acceptance/F9.3.md",
+        "backend/app/paper/multi_strategy.py",
+        "backend/app/api/paper.py",
+        "backend/tests/unit/test_multi_strategy_paper_isolation.py"
       ],
       "verified_at": null,
       "blockers": []
