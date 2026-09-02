@@ -24,9 +24,7 @@ client = TestClient(app)
 
 def test_paper_and_backtest_trade_equity_parity() -> None:
     """Proof: The same trade/equity fixture produces identical metrics in backtest and paper."""
-    fixture_path = (
-        Path(__file__).parent.parent / "fixtures" / "trade_equity_parity_fixture.json"
-    )
+    fixture_path = Path(__file__).parent.parent / "fixtures" / "trade_equity_parity_fixture.json"
     with open(fixture_path, encoding="utf-8") as f:
         data = json.load(f)
 
