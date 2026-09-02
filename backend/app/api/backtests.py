@@ -57,7 +57,5 @@ def get_backtest(backtest_id: str) -> BacktestResult:
     """Retrieve detailed backtest result and equity curve by ID."""
     result = backtest_store.get_result(backtest_id)
     if not result:
-        raise HTTPException(
-            status_code=404, detail=f"Backtest '{backtest_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Backtest '{backtest_id}' not found")
     return result

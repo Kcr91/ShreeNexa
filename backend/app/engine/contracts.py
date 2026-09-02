@@ -81,7 +81,7 @@ class FillEvent(BaseModel):
     exchange_segment: str
     side: OrderSide
     quantity: int = Field(gt=0)
-    price: float = Field(gt=0.0)
+    price: float = Field(ge=0.0)
     timestamp: datetime
     brokerage: float = Field(default=0.0, ge=0.0)
     taxes: float = Field(default=0.0, ge=0.0)

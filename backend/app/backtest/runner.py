@@ -81,9 +81,7 @@ class StockStrategyBacktestRunner:
         if bars_dataset:
             for sec_id, b_list in bars_dataset.items():
                 filtered = [
-                    b
-                    for b in b_list
-                    if config.start_date <= b.timestamp <= config.end_date
+                    b for b in b_list if config.start_date <= b.timestamp <= config.end_date
                 ]
                 bars_by_sec[sec_id] = sorted(filtered, key=lambda b: b.timestamp)
                 all_bars.extend(filtered)

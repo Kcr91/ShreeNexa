@@ -141,8 +141,26 @@ def test_sma_crossover_strategy_reconciliation() -> None:
     # Sine/oscillating price series to generate crossover entries and exits
     bars: list[BarRecord] = []
     prices = [
-        100.0, 101.0, 102.0, 104.0, 106.0, 108.0, 107.0, 105.0, 103.0, 101.0,
-        102.0, 105.0, 109.0, 112.0, 110.0, 106.0, 103.0, 100.0, 102.0, 105.0,
+        100.0,
+        101.0,
+        102.0,
+        104.0,
+        106.0,
+        108.0,
+        107.0,
+        105.0,
+        103.0,
+        101.0,
+        102.0,
+        105.0,
+        109.0,
+        112.0,
+        110.0,
+        106.0,
+        103.0,
+        100.0,
+        102.0,
+        105.0,
     ]
     for i, p in enumerate(prices):
         bars.append(

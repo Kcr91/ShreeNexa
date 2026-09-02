@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.3 | Done | Fast-forwarded into `main` at `e7b2dc5` after review. |
-| F3.4 | Ready for review | Stock strategy backtest runner and persistence completing the first vertical slice (StrategyIR → VectorStrategyCompiler → SimClock/HistoricalDataSource → SimBroker with IndianCostCalculator → Portfolio Accounting → Metrics Engine → Persistence & Audit Trails). 326/326 tests passing. |
-| F3.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.4 | Done | Fast-forwarded into `main` at `3a69322` after review. |
+| F3.5 | Ready for review | Option strategy multi-leg backtest runner with Black-Scholes pricing, net portfolio Greeks aggregation (Delta, Gamma, Theta, Vega, Rho), SPAN/exposure margin requirement modeling, and expiration exercise/assignment lifecycle. 329/329 tests passing. |
+| F3.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -944,4 +944,22 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_backtest_runner.py`: 4 passed
 - Full repository test suite: 326 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (148 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `3a69322`.
+
+### 2026-09-02 — F3.5 Option-strategy backtest runner completed
+
+- Implemented `backend/app/backtest/options_models.py`:
+  - `OptionLegConfig`: Multi-leg strike, side, option type (Call/Put), expiry date, lot size, ratio.
+  - `OptionStrategyConfig`: Multi-leg strategy specification with underlying symbol, volatility, risk-free rate.
+  - `OptionBacktestConfig` & `OptionBacktestResult`: Options backtest configuration and execution result.
+  - `PortfolioGreeks`: Portfolio-level net Greeks snapshot ($\Delta_{net}, \Gamma_{net}, \Theta_{net}, \mathcal{V}_{net}, \rho_{net}$).
+- Implemented `backend/app/backtest/options_runner.py`:
+  - `OptionStrategyBacktestRunner`: Dynamic Black-Scholes pricing, net Greeks aggregation, and automated expiration exercise/assignment lifecycle (settling ITM options at intrinsic value and expiring OTM options).
+  - `calculate_option_margin`: SPAN/exposure exchange margin approximation for single and multi-leg option combinations.
+- Updated `FillEvent` price validation in `backend/app/engine/contracts.py` to allow `price >= 0.0` for expired contract settlements.
+- Exported options backtest tools in `backend/app/backtest/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.5.md` and added 3 new unit tests covering Bull Call Spread payoff bounds & Greeks, Iron Condor market-neutral Greeks & margin estimation, and expiry exercise/assignment settlement:
+  - `backend/tests/unit/test_option_backtest_runner.py`: 3 passed
+- Full repository test suite: 329 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (151 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
