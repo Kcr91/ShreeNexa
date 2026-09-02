@@ -2,7 +2,7 @@
   "feature": "F3.12",
   "status": "review",
   "branch": "feature/F3.12-shared-daily-pnl-model",
-  "commit": null,
+  "commit": "91f0a6a12b6f17c469b22e1ae0020bc8b3353cfc",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -351,7 +351,7 @@
     "F3.12": {
       "status": "review",
       "branch": "feature/F3.12-shared-daily-pnl-model",
-      "commit": null,
+      "commit": "91f0a6a12b6f17c469b22e1ae0020bc8b3353cfc",
       "tests": {},
       "evidence": [],
       "verified_at": null,
