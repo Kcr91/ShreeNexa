@@ -63,8 +63,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F9.2 | Done | Fast-forwarded into `main` at `08ee58c` after review. |
 | F9.3 | Done | Fast-forwarded into `main` at `102c606` after review. |
 | F9.4 | Done | Fast-forwarded into `main` at `c52c45d` after review. |
-| F9.5 | Done | Fast-forwarded into `main` at `f31f337` after review. |
-| F5.2, F9.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F9.5 | Done | Fast-forwarded into `main` at `561364f` after review. |
+| F9.6 | Done | Fast-forwarded into `main` at `1ca8762` after review. |
+| F5.2, F9.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2164,3 +2165,39 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified `/api/v1/paper/divergence-report` REST API endpoint.
 - Full repository test suite: 479 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (245 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-02 — F9.6 Deploy/pause/resume/stop lifecycle, engine ownership, restart reconciliation, and audit events completed
+
+- Implemented `backend/app/paper/lifecycle.py`:
+  - `DeploymentState`: `CREATED`, `RUNNING`, `PAUSED`, `STOPPED`, `FAILED`.
+  - `DeploymentAction`: `DEPLOY`, `PAUSE`, `RESUME`, `STOP`, `RECONCILE`, `FAIL`.
+  - `DeploymentAuditEvent`: Immutable audit trail entry capturing timestamps, actors, from/to states, action, reason, and arbitrary metadata.
+  - `StrategyDeployment`: Persistent deployment domain model owned by the engine runtime role.
+  - `DeploymentStore`: Thread-safe persistence store for deployments and audit records.
+  - `PaperDeploymentManager`:
+    - `deploy`: Spawns and activates a forward-test strategy deployment with isolated paper account and initial capital allocation.
+    - `pause`: Transitions active strategy from `RUNNING` to `PAUSED`, suspending signal execution while keeping positions monitored.
+    - `resume`: Restores paused strategy to `RUNNING` state.
+    - `stop`: Idempotently halts deployment, cancels active working orders, optionally closes open positions, and records completion timestamp. Subsequent stop requests succeed as safe no-ops.
+    - `reconcile_on_startup`: Reconciles persisted deployments and active orders against `PaperBroker` and `PaperRepository` upon process startup/restart, emitting `RECONCILE` audit records and preventing order duplication.
+- Extended `backend/app/api/paper.py`:
+  - `POST /api/v1/paper/deployments`: Deploy forward-test strategy.
+  - `GET /api/v1/paper/deployments`: List deployments with optional state filtering.
+  - `GET /api/v1/paper/deployments/{deployment_id}`: Query single deployment details.
+  - `POST /api/v1/paper/deployments/{deployment_id}/pause`: Pause strategy.
+  - `POST /api/v1/paper/deployments/{deployment_id}/resume`: Resume strategy.
+  - `POST /api/v1/paper/deployments/{deployment_id}/stop`: Idempotently halt strategy.
+  - `GET /api/v1/paper/deployments/{deployment_id}/audit`: Query audit history.
+- Extended `backend/app/paper/__init__.py`:
+  - Exported lifecycle models, store, and manager.
+- Authored acceptance contract in `docs/qa/acceptance/F9.6.md`.
+- Authored comprehensive unit test suite in `backend/tests/unit/test_paper_deployment_lifecycle.py` (6 tests passing):
+  - Verified complete lifecycle state transitions (`deploy -> pause -> resume -> stop`).
+  - Verified stop idempotency (multiple stops return current state safely with exactly one audit record).
+  - Verified invalid state transitions reject with clean validation errors.
+  - Verified API restart process independence (restarting API client never stops running engine deployment).
+  - Verified restart reconciliation recovers active working orders without duplicates.
+  - Verified end-to-end REST API deployment and audit endpoints.
+- Full repository test suite: 485 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (247 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
