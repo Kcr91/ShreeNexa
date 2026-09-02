@@ -58,8 +58,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.4 | Done | Fast-forwarded into `main` at `d0f77a2` after review. |
 | F8.5 | Done | Fast-forwarded into `main` at `3eff7a5` after review. |
 | F8.6 | Done | Fast-forwarded into `main` at `3979235` after review. |
-| F8.7 | Ready for review | Visual stock strategy builder mapping exactly to StrategyIR nodes. 476 Python tests & 173 frontend tests passing. |
-| F5.2, F9.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F8.7 | Done | Fast-forwarded into `main` at `469f6c0` after review. |
+| F9.1 | Ready for review | PaperBroker using live data source, realistic fill policy, persisted orders/fills, and restart recovery. 460 Python tests & 173 frontend tests passing. |
+| F5.2, F9.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2013,3 +2014,39 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Full repository test suite: 476 Python tests passed + 173 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (230 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
+### 2026-09-02 — F9.1 PaperBroker using live data source, realistic fill policy, persisted orders/fills, and restart recovery completed
+
+- Implemented `backend/app/paper/models.py`:
+  - Defined Pydantic models and StrEnums for Paper Trading: `PaperOrderSide`, `PaperOrderType` (`MARKET`, `LIMIT`, `STOP_LOSS_MARKET`, `STOP_LOSS_LIMIT`), `PaperOrderStatus` (`SUBMITTED`, `ACCEPTED`, `PARTIALLY_FILLED`, `FILLED`, `CANCELLED`, `REJECTED`, `EXPIRED`), `PaperAccount`, `PaperOrder`, `PaperFill`, and `PaperPosition`.
+- Implemented `backend/app/paper/fill_policy.py`:
+  - `calculate_indian_statutory_costs`: Full statutory cost breakdown including brokerage cap (₹20 or 0.03%), STT (0.1%), exchange turnover (0.00345%), SEBI turnover fees, stamp duty (0.015% on BUY), and GST (18%).
+  - `PaperFillPolicy`: Realistic matching policy for Market orders (slippage model integration), Limit orders (price reach/penetration), Stop Loss Market (trigger cross into Market), and Stop Loss Limit (trigger cross with limit execution guard).
+- Implemented `backend/app/paper/repository.py`:
+  - `PaperRepository`: Stateful thread-safe repository managing accounts, orders, fills, and open positions with filtering and reset capabilities.
+- Implemented `backend/app/paper/broker.py`:
+  - `PaperBroker`: Stateful simulated execution broker supporting order submission with pre-trade cash validation, active order cancellation, incoming tick/bar processing (`process_price_update` and `on_bar`), dynamic Mark-to-Market (MTM) and unrealized P&L updates on open positions.
+  - Idempotency guard: Tracks `_processed_fill_ids` preventing duplicate fill processing and cash double-counting (Proof G1).
+  - Restart recovery: `recover(account_id)` reconstitutes portfolio state and preloads processed fill IDs from persisted storage.
+- Implemented `backend/app/api/paper.py`:
+  - Mounted `paper_router` in `backend/app/main.py` exposing:
+    - `POST /api/v1/paper/accounts`
+    - `GET /api/v1/paper/accounts/{account_id}`
+    - `POST /api/v1/paper/orders`
+    - `DELETE /api/v1/paper/orders/{order_id}`
+    - `GET /api/v1/paper/orders`
+    - `GET /api/v1/paper/positions`
+    - `GET /api/v1/paper/fills`
+- Authored acceptance contract in `docs/qa/acceptance/F9.1.md`.
+- Authored comprehensive test suite in `backend/tests/unit/test_paper_broker_recovery.py` (14 tests passing):
+  - Order submission, pre-trade capital validation, and rejection.
+  - Market order execution and slippage computation.
+  - Buy/Sell Limit order execution and threshold penetration.
+  - Stop Loss Market and Stop Loss Limit triggers and boundary guards.
+  - Mark-to-Market unrealized P&L tracking across price movements.
+  - Live and historical `BarRecord` processing via `on_bar`.
+  - Fill idempotency guard rejecting duplicate fill events (Proof G1).
+  - Restart recovery reconstituting state without fill duplication.
+  - Full REST API endpoints and error responses (400 on bad cancel, 404 on missing account).
+- Code Review Graph 2.3.8 analysis: verified zero regression risk, 90% token savings across 14 analyzed files.
+- Full repository test suite: 460 Python tests passed (30 skipped due to absent local DB), 173 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (237 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

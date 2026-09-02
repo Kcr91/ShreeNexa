@@ -5,8 +5,6 @@ from __future__ import annotations
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi.testclient import TestClient
-
 from app.main import app
 from app.strategy.compiler import CompiledStrategy
 from app.strategy.ir import (
@@ -15,6 +13,7 @@ from app.strategy.ir import (
     StrategyKind,
     StrategyType,
 )
+from fastapi.testclient import TestClient
 
 IST = ZoneInfo("Asia/Kolkata")
 client = TestClient(app)

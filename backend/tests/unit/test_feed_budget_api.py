@@ -29,22 +29,22 @@ def test_api_get_budget_status() -> None:
     # Acquire 1 feed socket
     lease = mgr.acquire(SocketType.FEED, metadata={"purpose": "market_watch"})
 
-    with TestClient(app) as client:
-        response = client.get("/api/v1/feed/budget")
-        assert response.status_code == 200
-        data = response.json()
+    client = TestClient(app)
+    response = client.get("/api/v1/feed/budget")
+    assert response.status_code == 200
+    data = response.json()
 
-        assert data["pool_mode"] == "shared"
-        assert data["total_capacity"] == 5
-        assert data["feed_capacity"] == 3
-        assert data["depth_capacity"] == 2
-        assert data["active_feed"] == 1
-        assert data["active_depth"] == 0
-        assert data["total_active"] == 1
-        assert data["available_feed"] == 2
-        assert data["available_depth"] == 2
-        assert len(data["active_leases"]) == 1
-        assert data["active_leases"][0]["lease_id"] == lease.lease_id
+    assert data["pool_mode"] == "shared"
+    assert data["total_capacity"] == 5
+    assert data["feed_capacity"] == 3
+    assert data["depth_capacity"] == 2
+    assert data["active_feed"] == 1
+    assert data["active_depth"] == 0
+    assert data["total_active"] == 1
+    assert data["available_feed"] == 2
+    assert data["available_depth"] == 2
+    assert len(data["active_leases"]) == 1
+    assert data["active_leases"][0]["lease_id"] == lease.lease_id
 
     mgr.release(lease)
     app.dependency_overrides.clear()
