@@ -1070,7 +1070,7 @@
     "F9.5": {
       "status": "review",
       "branch": "feature/F9.5-same-session-paper-backtest-divergence",
-      "commit": "f31f337bf589aa94ae71a9bca38d4c5de5d22281",
+      "commit": "942f0ac5a32b6c2e4d2967ce049864d015521fff",
       "tests": {
         "pytest": {
           "passed": 479,
