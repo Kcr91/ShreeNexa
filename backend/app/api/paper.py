@@ -14,6 +14,12 @@ from app.backtest.models import BacktestPerformanceMetrics
 from app.engine.contracts import FillEvent, OrderSide
 from app.paper.adapter import calculate_paper_metrics, evaluate_paper_scorecard
 from app.paper.broker import paper_broker
+from app.paper.calendar import (
+    PaperCalendarResponse,
+    PaperReturnsTimelineSlice,
+    generate_paper_calendar_report,
+    generate_paper_returns_slice,
+)
 from app.paper.divergence import (
     DivergenceTolerances,
     SessionDivergenceReport,
@@ -446,3 +452,15 @@ def get_deployment_audit_trail(deployment_id: str) -> list[DeploymentAuditEvent]
     if not dep:
         raise HTTPException(status_code=404, detail=f"Deployment '{deployment_id}' not found")
     return paper_deployment_manager.store.list_audit_events(deployment_id)
+
+
+@router.get("/calendar", response_model=PaperCalendarResponse)
+def get_paper_calendar(account_id: str = "default") -> PaperCalendarResponse:
+    """Retrieve daily, monthly, and yearly P&L calendar summaries for paper trading."""
+    return generate_paper_calendar_report(account_id=account_id, repository=paper_repository)
+
+
+@router.get("/returns", response_model=PaperReturnsTimelineSlice)
+def get_paper_returns(account_id: str = "default") -> PaperReturnsTimelineSlice:
+    """Retrieve paper trading returns structured as TimelinePhaseSlice (phase=PAPER)."""
+    return generate_paper_returns_slice(account_id=account_id, repository=paper_repository)

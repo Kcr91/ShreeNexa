@@ -92,6 +92,20 @@ export const PnlCalendarWidget: React.FC<
           <strong style={{ fontSize: "var(--font-size-sm)", minWidth: "120px", textAlign: "center" }}>
             {monthNames[currentMonth - 1]} {currentYear}
           </strong>
+          <span
+            style={{
+              padding: "1px 6px",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "10px",
+              fontWeight: "var(--font-weight-semibold)",
+              backgroundColor: settings?.sourceKind === "paper" ? "rgba(16, 185, 129, 0.15)" : "rgba(59, 130, 246, 0.15)",
+              color: settings?.sourceKind === "paper" ? "var(--color-success)" : "var(--color-info)",
+              border: `1px solid ${settings?.sourceKind === "paper" ? "var(--color-success)" : "var(--color-info)"}`,
+              textTransform: "uppercase",
+            }}
+          >
+            {settings?.sourceKind === "paper" ? "Paper" : "Backtest"}
+          </span>
           <button
             type="button"
             onClick={handleNextMonth}
@@ -337,6 +351,16 @@ export const pnlCalendarDefinition: WidgetDefinition<PnlCalendarWidgetSettings> 
         label: "Show Weekends",
         type: "boolean",
         default: true,
+      },
+      {
+        name: "sourceKind",
+        label: "Execution Source",
+        type: "select",
+        default: "backtest",
+        options: [
+          { label: "Backtest", value: "backtest" },
+          { label: "Paper Trading", value: "paper" },
+        ],
       },
     ],
   },

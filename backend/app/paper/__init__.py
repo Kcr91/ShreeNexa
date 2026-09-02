@@ -6,6 +6,16 @@ from app.paper.adapter import (
     paper_account_to_portfolio,
 )
 from app.paper.broker import PaperBroker, paper_broker
+from app.paper.calendar import (
+    PaperCalendarResponse,
+    PaperReturnPoint,
+    PaperReturnsTimelineSlice,
+    generate_paper_calendar_report,
+    generate_paper_returns_slice,
+    get_or_create_paper_tracker,
+    record_paper_day,
+    reset_paper_trackers,
+)
 from app.paper.divergence import (
     DiscrepancyItem,
     DiscrepancyType,
@@ -67,6 +77,7 @@ __all__ = [
     "MultiStrategyStatus",
     "PaperAccount",
     "PaperBroker",
+    "PaperCalendarResponse",
     "PaperDeploymentManager",
     "PaperFill",
     "PaperFillPolicy",
@@ -76,6 +87,8 @@ __all__ = [
     "PaperOrderType",
     "PaperPosition",
     "PaperRepository",
+    "PaperReturnPoint",
+    "PaperReturnsTimelineSlice",
     "PnLComparisonSummary",
     "PortfolioSummary",
     "PositionSummaryItem",
@@ -91,9 +104,14 @@ __all__ = [
     "evaluate_paper_scorecard",
     "generate_account_divergence_report",
     "generate_divergence_report",
+    "generate_paper_calendar_report",
+    "generate_paper_returns_slice",
+    "get_or_create_paper_tracker",
     "paper_account_to_portfolio",
     "paper_broker",
     "paper_deployment_manager",
     "paper_repository",
     "reconcile_portfolio",
+    "record_paper_day",
+    "reset_paper_trackers",
 ]

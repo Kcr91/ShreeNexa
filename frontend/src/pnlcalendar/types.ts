@@ -36,4 +36,5 @@ export interface PnlCalendarWidgetSettings {
   defaultMonth: string;
   showCharges: boolean;
   showWeekends: boolean;
+  sourceKind?: "backtest" | "paper";
 }
