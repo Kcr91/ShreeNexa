@@ -2,7 +2,7 @@
   "feature": "F3.5",
   "status": "review",
   "branch": "feature/F3.5-option-strategy-backtest-runner",
-  "commit": null,
+  "commit": "5329457f59d57a5eb23b0ee649fb9893df82aa37",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -297,7 +297,7 @@
     "F3.5": {
       "status": "review",
       "branch": "feature/F3.5-option-strategy-backtest-runner",
-      "commit": null,
+      "commit": "5329457f59d57a5eb23b0ee649fb9893df82aa37",
       "tests": {},
       "evidence": [],
       "verified_at": null,
