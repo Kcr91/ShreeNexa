@@ -40,8 +40,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F3.11 | Done | Fast-forwarded into `main` at `49d0a93` after review. |
 | F5.1 | Done | Fast-forwarded into `main` at `a690495` after review. |
 | F6.1 | Done | Fast-forwarded into `main` at `789a6aa` after review. |
-| F6.2 | Ready for review | Combined portfolio equity curve reconciliation, high water mark and drawdown curve, aggregate risk caps (leverage, concentration, max DD), and marginal risk/return attribution (Euler risk decomposition). 370 Python tests & 122 frontend tests passing. |
-| F5.2, F6.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F6.2 | Done | Fast-forwarded into `main` at `1920b7c` after review. |
+| F6.3 | Ready for review | Cross-strategy return and signal correlation matrices with NumPy reference parity, DROP_COMMON / FILL_ZERO / FORWARD_FILL missing-period policies, and explicit constant/short series zero-variance handling. 375 Python tests & 122 frontend tests passing. |
+| F5.2, F6.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1489,4 +1490,24 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Euler marginal risk decomposition ($\sum \text{PCR}_i = 100\%$) and return attribution verified.
 - Full repository test suite: 370 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (182 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `1920b7c`.
+
+### 2026-09-02 — F6.3 Cross-strategy return and signal correlation matrices completed
+
+- Implemented `backend/app/portfolio/models.py`:
+  - `MissingPeriodPolicy`: Policy enum (`DROP_COMMON`, `FILL_ZERO`, `FORWARD_FILL`) for handling misaligned strategy series.
+  - `CorrelationMatrix`: Pairwise correlation matrix container with labels, values, overlapping sample counts, policy metadata, and warnings.
+- Implemented `backend/app/portfolio/correlation.py`:
+  - `compute_series_correlation`: Numerically stable Pearson correlation calculation with bounds clamping and explicit zero-variance detection for constant series.
+  - `align_pairwise_series`: Flexible alignment engine implementing `DROP_COMMON` (inner join), `FILL_ZERO` (union with zero return assumption), and `FORWARD_FILL`.
+  - `compute_correlation_matrix`: Pairwise symmetric correlation matrix engine guaranteeing $M_{ii} = 1.0$ and $M_{ij} = M_{ji}$.
+  - `compute_signal_correlation_matrix`: Discrete strategy trading signal correlation engine.
+- Authored acceptance contract `docs/qa/acceptance/F6.3.md` and added unit tests in `backend/tests/unit/test_portfolio_correlation.py`:
+  - Mathematical parity to reference calculations and golden fixtures verified within $10^{-6}$.
+  - Diagonal unity and matrix symmetry verified.
+  - Missing period policies (`DROP_COMMON`, `FILL_ZERO`) verified.
+  - Constant series zero-variance behavior and short-series edge case handling verified.
+  - Signal correlation with discrete trading signals (+1, 0, -1) verified.
+- Full repository test suite: 375 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (184 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

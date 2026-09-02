@@ -1,8 +1,8 @@
 {
-  "feature": "F6.2",
+  "feature": "F6.3",
   "status": "review",
-  "branch": "feature/F6.2-combined-equity-drawdown-caps-marginal-contribution",
-  "commit": "d3906c66657c793ff8082ae1fcb0ae601b339f40",
+  "branch": "feature/F6.3-cross-strategy-correlation-matrices",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -532,6 +532,15 @@
       "status": "review",
       "branch": "feature/F6.2-combined-equity-drawdown-caps-marginal-contribution",
       "commit": "d3906c66657c793ff8082ae1fcb0ae601b339f40",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F6.3": {
+      "status": "review",
+      "branch": "feature/F6.3-cross-strategy-correlation-matrices",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

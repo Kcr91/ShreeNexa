@@ -161,13 +161,9 @@ def compute_marginal_risk_return_attribution(
         std_i = math.sqrt(var_i) if var_i > 0 else 0.0
 
         # Covariance Cov(R_i, R_p)
-        cov_i_p = (
-            sum(
-                (r_series[t] - mean_i) * (portfolio_returns[t] - mean_p)
-                for t in range(num_periods)
-            )
-            / (num_periods - 1)
-        )
+        cov_i_p = sum(
+            (r_series[t] - mean_i) * (portfolio_returns[t] - mean_p) for t in range(num_periods)
+        ) / (num_periods - 1)
 
         w = target_weights.get(s_id, 0.0)
 
@@ -249,8 +245,7 @@ def generate_portfolio_analytics_report(
     ann_ret = tot_ret * (252.0 / num_days) if num_days > 0 else 0.0
 
     port_daily_rets = [
-        (snapshots[i].total_equity - snapshots[i - 1].total_equity)
-        / snapshots[i - 1].total_equity
+        (snapshots[i].total_equity - snapshots[i - 1].total_equity) / snapshots[i - 1].total_equity
         for i in range(1, len(snapshots))
         if snapshots[i - 1].total_equity > 0
     ]

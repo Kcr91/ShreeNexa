@@ -152,3 +152,23 @@ class PortfolioAnalyticsReport(BaseModel):
     drawdown_curve: list[DrawdownPoint]
     attributions: list[StrategyRiskAttribution]
     caps_breaches: list[str]
+
+
+class MissingPeriodPolicy(StrEnum):
+    """Policy for handling misaligned or missing periods between strategies."""
+
+    DROP_COMMON = "DROP_COMMON"
+    FILL_ZERO = "FILL_ZERO"
+    FORWARD_FILL = "FORWARD_FILL"
+
+
+class CorrelationMatrix(BaseModel):
+    """Pairwise correlation matrix with metadata, sample counts, and diagnostics."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    labels: list[str]
+    matrix: list[list[float]]
+    sample_counts: list[list[int]]
+    policy: MissingPeriodPolicy
+    warnings: list[str] = Field(default_factory=list)

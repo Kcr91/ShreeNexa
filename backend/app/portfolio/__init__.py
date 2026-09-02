@@ -13,8 +13,16 @@ from app.portfolio.analytics import (
     generate_portfolio_analytics_report,
 )
 from app.portfolio.book import PositionEntry, StrategyBook
+from app.portfolio.correlation import (
+    align_pairwise_series,
+    compute_correlation_matrix,
+    compute_series_correlation,
+    compute_signal_correlation_matrix,
+)
 from app.portfolio.models import (
+    CorrelationMatrix,
     DrawdownPoint,
+    MissingPeriodPolicy,
     PortfolioAllocationConfig,
     PortfolioAnalyticsReport,
     PortfolioDailySnapshot,
@@ -30,7 +38,9 @@ from app.portfolio.orchestrator import PortfolioOrchestrator
 
 __all__ = [
     "AllocationValidationError",
+    "CorrelationMatrix",
     "DrawdownPoint",
+    "MissingPeriodPolicy",
     "PortfolioAllocationConfig",
     "PortfolioAnalyticsReport",
     "PortfolioDailySnapshot",
@@ -44,10 +54,14 @@ __all__ = [
     "StrategyAllocationSpec",
     "StrategyBook",
     "StrategyRiskAttribution",
+    "align_pairwise_series",
     "check_risk_caps",
+    "compute_correlation_matrix",
     "compute_drawdown_curve",
     "compute_marginal_risk_return_attribution",
     "compute_rebalance_transfers",
+    "compute_series_correlation",
+    "compute_signal_correlation_matrix",
     "generate_portfolio_analytics_report",
     "split_initial_capital",
     "validate_allocation_config",

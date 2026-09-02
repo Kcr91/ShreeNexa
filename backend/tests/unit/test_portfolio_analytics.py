@@ -85,7 +85,7 @@ def test_drawdown_curve_and_high_water_mark_calculation() -> None:
         (datetime(2026, 9, 1, tzinfo=UTC), 100_000.0),
         (datetime(2026, 9, 2, tzinfo=UTC), 110_000.0),  # new HWM = 110k
         (datetime(2026, 9, 3, tzinfo=UTC), 105_000.0),  # DD = -5k (-4.545%)
-        (datetime(2026, 9, 4, tzinfo=UTC), 95_000.0),   # DD = -15k (-13.636%) -> Max DD
+        (datetime(2026, 9, 4, tzinfo=UTC), 95_000.0),  # DD = -15k (-13.636%) -> Max DD
         (datetime(2026, 9, 5, tzinfo=UTC), 100_000.0),  # DD = -10k (-9.091%)
         (datetime(2026, 9, 6, tzinfo=UTC), 120_000.0),  # new HWM = 120k (recovered)
     ]
