@@ -580,9 +580,7 @@ def generate_divergence_report(
         )
 
     p_realized = (
-        sum(p.realized_pnl for p in paper_portfolio.positions.values())
-        if paper_portfolio
-        else 0.0
+        sum(p.realized_pnl for p in paper_portfolio.positions.values()) if paper_portfolio else 0.0
     )
     bt_realized = (
         sum(p.realized_pnl for p in backtest_portfolio.positions.values())
@@ -595,9 +593,7 @@ def generate_divergence_report(
 
     p_final_eq = paper_portfolio.total_equity() if paper_portfolio else 1_000_000.0 + p_realized
     bt_final_eq = (
-        backtest_portfolio.total_equity()
-        if backtest_portfolio
-        else 1_000_000.0 + bt_realized
+        backtest_portfolio.total_equity() if backtest_portfolio else 1_000_000.0 + bt_realized
     )
 
     pnl_delta = round(p_realized - bt_realized, 2)
