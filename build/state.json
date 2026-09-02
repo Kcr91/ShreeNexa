@@ -1,8 +1,8 @@
 {
-  "feature": "F6.4",
+  "feature": "F6.5",
   "status": "review",
-  "branch": "feature/F6.4-strategy-signal-composition-cycle-detection",
-  "commit": "6b0ea00f6a53b61d02fb5ef5c98fa43b7cbab02e",
+  "branch": "feature/F6.5-versioned-regime-detectors-walk-forward-switching",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -550,6 +550,15 @@
       "status": "review",
       "branch": "feature/F6.4-strategy-signal-composition-cycle-detection",
       "commit": "6b0ea00f6a53b61d02fb5ef5c98fa43b7cbab02e",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F6.5": {
+      "status": "review",
+      "branch": "feature/F6.5-versioned-regime-detectors-walk-forward-switching",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

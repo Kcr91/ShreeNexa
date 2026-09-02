@@ -70,6 +70,16 @@ from app.strategy.ir import (
     export_strategy_ir_json_schema,
 )
 from app.strategy.migration import MigrationError, migrate_strategy_ir
+from app.strategy.regime import (
+    RegimeDetector,
+    RegimeDetectorRegistry,
+    TrendRegimeDetector_v1,
+    UnknownRegimeDetectorError,
+    VolRegimeDetector_v1,
+    WalkForwardEvidenceRequiredError,
+    has_regime_conditioning,
+    validate_headline_metrics_evidence,
+)
 
 __all__ = [
     "ATMStrike",
@@ -107,6 +117,8 @@ __all__ = [
     "PremiumStrike",
     "PriceLevelBreakNode",
     "RefOperand",
+    "RegimeDetector",
+    "RegimeDetectorRegistry",
     "RegimeNode",
     "RiskRule",
     "ScreenerUniverse",
@@ -127,10 +139,16 @@ __all__ = [
     "StrategyType",
     "StrikeSelector",
     "TimeWindowNode",
+    "TrendRegimeDetector_v1",
     "UniverseSelector",
+    "UnknownRegimeDetectorError",
     "VectorStrategyCompiler",
+    "VolRegimeDetector_v1",
+    "WalkForwardEvidenceRequiredError",
     "WatchlistUniverse",
     "export_strategy_ir_json_schema",
     "extract_strategy_dependencies",
+    "has_regime_conditioning",
     "migrate_strategy_ir",
+    "validate_headline_metrics_evidence",
 ]

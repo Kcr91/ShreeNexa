@@ -35,6 +35,7 @@ from app.strategy.ir import (
     StrategySignalNode,
     TimeWindowNode,
 )
+from app.strategy.regime import RegimeDetectorRegistry
 from app.warehouse.schema import BarRecord
 
 logger = logging.getLogger(__name__)
@@ -357,10 +358,20 @@ class IncrementalStrategyEngine:
                 return bool(external_signals[key])
             return False
 
-        elif isinstance(node, (RegimeNode, CustomPythonNode)):
-            return False
+        elif isinstance(node, RegimeNode):
+            detector = self._node_states.get(path)
+            if detector is None:
+                try:
+                    detector = RegimeDetectorRegistry.get(node.detector)
+                    self._node_states[path] = detector
+                except Exception as exc:
+                    logger.warning("Failed creating regime detector %s: %s", node.detector, exc)
+                    return False
+            st = detector.update_bar(close=bar.close, high=bar.high, low=bar.low)
+            return bool(st == node.state)
 
-        return False
+        elif isinstance(node, CustomPythonNode):
+            return False
 
     def get_state(self) -> dict[str, Any]:
         """Serialize complete engine state for checkpointing and failover recovery."""

@@ -36,6 +36,7 @@ from app.strategy.ir import (
     StrategySignalNode,
     TimeWindowNode,
 )
+from app.strategy.regime import RegimeDetectorRegistry
 from app.warehouse.schema import BarRecord
 
 logger = logging.getLogger(__name__)
@@ -501,10 +502,28 @@ class CompiledStrategy:
                 return [bool(x) for x in sig] + [False] * (length - len(sig))
             return [False] * length
 
-        elif isinstance(node, (RegimeNode, CustomPythonNode)):
-            return [False] * length
+        elif isinstance(node, RegimeNode):
+            regime_closes: list[float] = [float(x) for x in data.get("close", [])]
+            highs_raw = data.get("high")
+            regime_highs: list[float] | None = (
+                [float(x) for x in highs_raw] if highs_raw is not None else None
+            )
+            lows_raw = data.get("low")
+            regime_lows: list[float] | None = (
+                [float(x) for x in lows_raw] if lows_raw is not None else None
+            )
+            if not regime_closes:
+                return [False] * length
+            try:
+                detector = RegimeDetectorRegistry.get(node.detector)
+                states = detector.evaluate_series(regime_closes, regime_highs, regime_lows)
+                return [bool(st == node.state) for st in states]
+            except Exception as exc:
+                logger.warning("Failed evaluating regime detector %s: %s", node.detector, exc)
+                return [False] * length
 
-        return [False] * length
+        elif isinstance(node, CustomPythonNode):
+            return [False] * length
 
 
 class VectorStrategyCompiler:

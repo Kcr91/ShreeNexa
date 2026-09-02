@@ -42,8 +42,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F6.1 | Done | Fast-forwarded into `main` at `789a6aa` after review. |
 | F6.2 | Done | Fast-forwarded into `main` at `1920b7c` after review. |
 | F6.3 | Done | Fast-forwarded into `main` at `a832ee9` after review. |
-| F6.4 | Ready for review | StrategySignal nodes, signal-level And/Or/Not composition, DAG cycle detection, and proven G1/G2 vector vs incremental parity. 382 Python tests & 122 frontend tests passing. |
-| F5.2, F6.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F6.4 | Done | Fast-forwarded into `main` at `dff4fdc` after review. |
+| F6.5 | Ready for review | Versioned regime detectors (vol_v1, trend_v1), look-ahead prevention, RegimeNode G1/G2 parity, and enforced walk-forward verification for headline metrics. 387 Python tests & 122 frontend tests passing. |
+| F5.2, F7.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1535,4 +1536,26 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Proven G1 (vectorized) vs G2 (incremental) bit-for-bit parity across a multi-strategy composed graph.
 - Full repository test suite: 382 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (186 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `dff4fdc`.
+
+### 2026-09-02 — F6.5 Versioned regime detectors and enforced walk-forward switching completed
+
+- Implemented `backend/app/strategy/regime.py`:
+  - `RegimeDetector`: Abstract base class with versioning (`name`, `version`, `supported_states`) and strict point-in-time calculation.
+  - `VolRegimeDetector_v1`: Volatility regime detector categorizing markets into `low_vol`, `normal_vol`, `high_vol`.
+  - `TrendRegimeDetector_v1`: Trend regime detector categorizing markets into `trending_up`, `trending_down`, `ranging`.
+  - `RegimeDetectorRegistry`: Versioned detector registry managing and resolving registered detector models.
+  - `has_regime_conditioning`: Recursive AST visitor identifying strategies employing regime conditioning.
+  - `validate_headline_metrics_evidence`: Enforced verification guard ensuring headline backtest metrics (Scorecard grading, Sharpe, CAGR) are strictly refused for regime strategies without walk-forward proof.
+- Updated `backend/app/strategy/compiler.py`:
+  - Implemented point-in-time vectorized evaluation for `RegimeNode` via `RegimeDetectorRegistry`.
+- Updated `backend/app/strategy/incremental.py`:
+  - Implemented point-in-time incremental streaming evaluation for `RegimeNode`.
+- Authored acceptance contract `docs/qa/acceptance/F6.5.md` and added unit tests in `backend/tests/unit/test_strategy_regime.py`:
+  - Proof that no regime label uses future bars: evaluated on arbitrary truncated subsets $[0..t]$ and verified exact equality to the full dataset at bar $t$.
+  - Versioned regime detector registry and state inspection verified.
+  - Proven G1 (vectorized) vs G2 (incremental) bit-for-bit parity across historical bars for `RegimeNode`.
+  - Enforced walk-forward protection verified: refusing headline metrics when walk-forward evidence is absent or non-positive, and permitting publishing when valid evidence is provided.
+- Full repository test suite: 387 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (188 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

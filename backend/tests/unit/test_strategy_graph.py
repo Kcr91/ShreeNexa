@@ -203,86 +203,105 @@ def test_g1_g2_parity_across_composed_strategies() -> None:
     # Trend (Strat 1): SMA fast > SMA slow
     # Filter (Strat 2): Volume > 200
     # Exec (Strat 3): Strat 1 Entry AND Strat 2 Entry
-    strat_1 = StrategyIR.model_validate({
-        "ir_version": 1,
-        "name": "TrendStrategy",
-        "kind": "stock",
-        "horizon": "intraday",
-        "strategy_type": "trend_following",
-        "universe": {
-            "type": "static",
-            "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
-        },
-        "timeframe": "1m",
-        "indicators": {
-            "sma_fast": {"fn": "sma", "params": {"period": 3}},
-            "sma_slow": {"fn": "sma", "params": {"period": 5}},
-        },
-        "entries": [
-            {
-                "id": "e1",
-                "type": "buy",
-                "when": {"node": "CrossOver", "left": "sma_fast", "right": "sma_slow"},
-            }
-        ],
-    })
-    strat_2 = StrategyIR.model_validate({
-        "ir_version": 1,
-        "name": "VolFilter",
-        "kind": "stock",
-        "horizon": "intraday",
-        "strategy_type": "trend_following",
-        "universe": {
-            "type": "static",
-            "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
-        },
-        "timeframe": "1m",
-        "entries": [
-            {
-                "id": "e2",
-                "type": "buy",
-                "when": {
-                    "node": "IndicatorCompare",
-                    "left": {"field": "volume"},
-                    "op": ">",
-                    "right": 200.0,
-                },
-            }
-        ],
-    })
-    strat_3 = StrategyIR.model_validate({
-        "ir_version": 1,
-        "name": "ComposedComposite",
-        "kind": "stock",
-        "horizon": "intraday",
-        "strategy_type": "trend_following",
-        "universe": {
-            "type": "static",
-            "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
-        },
-        "timeframe": "1m",
-        "entries": [
-            {
-                "id": "e3",
-                "type": "buy",
-                "when": {
-                    "node": "And",
-                    "children": [
-                        {"node": "StrategySignal", "strategy_id": "strat_1", "signal": "entry"},
-                        {"node": "StrategySignal", "strategy_id": "strat_2", "signal": "entry"},
-                    ],
-                },
-            }
-        ],
-    })
+    strat_1 = StrategyIR.model_validate(
+        {
+            "ir_version": 1,
+            "name": "TrendStrategy",
+            "kind": "stock",
+            "horizon": "intraday",
+            "strategy_type": "trend_following",
+            "universe": {
+                "type": "static",
+                "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
+            },
+            "timeframe": "1m",
+            "indicators": {
+                "sma_fast": {"fn": "sma", "params": {"period": 3}},
+                "sma_slow": {"fn": "sma", "params": {"period": 5}},
+            },
+            "entries": [
+                {
+                    "id": "e1",
+                    "type": "buy",
+                    "when": {"node": "CrossOver", "left": "sma_fast", "right": "sma_slow"},
+                }
+            ],
+        }
+    )
+    strat_2 = StrategyIR.model_validate(
+        {
+            "ir_version": 1,
+            "name": "VolFilter",
+            "kind": "stock",
+            "horizon": "intraday",
+            "strategy_type": "trend_following",
+            "universe": {
+                "type": "static",
+                "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
+            },
+            "timeframe": "1m",
+            "entries": [
+                {
+                    "id": "e2",
+                    "type": "buy",
+                    "when": {
+                        "node": "IndicatorCompare",
+                        "left": {"field": "volume"},
+                        "op": ">",
+                        "right": 200.0,
+                    },
+                }
+            ],
+        }
+    )
+    strat_3 = StrategyIR.model_validate(
+        {
+            "ir_version": 1,
+            "name": "ComposedComposite",
+            "kind": "stock",
+            "horizon": "intraday",
+            "strategy_type": "trend_following",
+            "universe": {
+                "type": "static",
+                "instruments": [{"segment": "NSE_EQ", "security_id": "1333"}],
+            },
+            "timeframe": "1m",
+            "entries": [
+                {
+                    "id": "e3",
+                    "type": "buy",
+                    "when": {
+                        "node": "And",
+                        "children": [
+                            {"node": "StrategySignal", "strategy_id": "strat_1", "signal": "entry"},
+                            {"node": "StrategySignal", "strategy_id": "strat_2", "signal": "entry"},
+                        ],
+                    },
+                }
+            ],
+        }
+    )
 
     graph = StrategyGraph({"strat_1": strat_1, "strat_2": strat_2, "strat_3": strat_3})
 
     # Generate 15 test bars
     t0 = datetime(2026, 9, 1, 9, 15, tzinfo=UTC)
     prices = [
-        100.0, 101.0, 102.0, 101.5, 103.0, 105.0, 104.0, 106.0,
-        108.0, 110.0, 107.0, 109.0, 111.0, 112.0, 115.0,
+        100.0,
+        101.0,
+        102.0,
+        101.5,
+        103.0,
+        105.0,
+        104.0,
+        106.0,
+        108.0,
+        110.0,
+        107.0,
+        109.0,
+        111.0,
+        112.0,
+        115.0,
     ]
     volumes = [150, 250, 180, 300, 220, 400, 190, 250, 310, 150, 500, 210, 280, 320, 450]
 
