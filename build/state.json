@@ -1,13 +1,39 @@
 {
-  "feature": "F8.5",
+  "feature": "F8.6",
   "status": "review",
-  "branch": "feature/F8.5-multileg-option-strategy-builder",
-  "commit": "0364c34bd7f66a4d7a89d2d9a4fb948cfdd3a4f9",
+  "branch": "feature/F8.6-net-greeks-dhan-margin-adapter",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F8.6": {
+      "status": "review",
+      "branch": "feature/F8.6-net-greeks-dhan-margin-adapter",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 473,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 170,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F8.6.md",
+        "backend/app/analytics/options_margin.py",
+        "backend/app/dhan/margin_adapter.py",
+        "backend/app/api/margin.py",
+        "frontend/src/widgets/builtin/OptionStrategyBuilderWidget.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F8.5": {
       "status": "review",
       "branch": "feature/F8.5-multileg-option-strategy-builder",

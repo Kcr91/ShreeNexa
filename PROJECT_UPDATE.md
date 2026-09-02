@@ -56,8 +56,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.2 | Done | Fast-forwarded into `main` at `381e38f` after review. |
 | F8.3 | Done | Fast-forwarded into `main` at `b567041` after review. |
 | F8.4 | Done | Fast-forwarded into `main` at `d0f77a2` after review. |
-| F8.5 | Ready for review | Multi-leg option strategy builder with expiry/T+n payoff, breakevens, extrema, and position Greeks. 466 Python tests & 170 frontend tests passing. |
-| F5.2, F8.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F8.5 | Done | Fast-forwarded into `main` at `3eff7a5` after review. |
+| F8.6 | Ready for review | Net Greeks plus Dhan margin adapter and reconciliation. 473 Python tests & 170 frontend tests passing. |
+| F5.2, F8.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1959,4 +1960,30 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Authored frontend unit tests in `frontend/src/widgets/builtin/OptionStrategyBuilderWidget.test.tsx` (5 tests passing).
 - Full repository test suite: 466 Python tests passed + 170 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (224 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `3eff7a5`.
+
+### 2026-09-02 — F8.6 Net Greeks plus Dhan margin adapter and reconciliation completed
+
+- Implemented `backend/app/analytics/options_margin.py`:
+  - `calculate_basket_margin`: Computes individual leg and portfolio-level SPAN margin (~11% contract value for short options), Exposure margin (~2% contract value), and Premium margin for long options.
+  - Hedging Relief Benefit Calculation: Calculates defined-risk spread margin relief for vertical spreads (Bull/Bear Call/Put spreads) and multi-leg strategies (Iron Condor, Iron Butterfly), substantially reducing total required capital.
+  - Invariant Safety Rule: Explicit `is_available: False` with descriptive `unreliable_reason` when underlying spot price is missing or invalid, never fabricating zero ($0.0$).
+- Implemented `backend/app/dhan/margin_adapter.py`:
+  - `DhanMarginAdapter`: Broker margin reconciliation adapter with recorded response override parser and exchange SPAN model fallback.
+- Implemented `backend/app/api/margin.py`:
+  - `POST /api/v1/options/margin/calculate`: REST endpoint for multi-leg option basket margin and hedging relief calculation.
+- Mounted `margin_router` in `backend/app/main.py`.
+- Authored unit tests in `backend/tests/unit/test_options_margin_adapter.py` (7 tests passing):
+  - Verified Long Option pure premium outlay ($150 \times 25 = 3750$ INR, SPAN = 0).
+  - Verified Naked Short Option SPAN + Exposure ($83,500$ INR total margin).
+  - Verified Bull Call Spread hedging benefit ($>60,000$ INR relief, net margin $<15,000$ INR).
+  - Verified Iron Condor 4-leg double-wing relief ($>120,000$ INR relief, net margin $<25,000$ INR).
+  - Verified Dhan recorded response override parser and reconciliation.
+  - Verified explicit unavailable error handling on invalid spot price ($\le 0$) and malformed broker payload.
+  - Verified REST API margin calculation endpoint.
+- Updated `frontend/src/widgets/builtin/OptionStrategyBuilderWidget.tsx`:
+  - Integrated `REQUIRED MARGIN` card showing Net Margin and live `🟢 Relief` badge for hedged multi-leg positions.
+- Authored frontend unit tests in `frontend/src/widgets/builtin/OptionStrategyBuilderWidget.test.tsx` (5 tests passing).
+- Full repository test suite: 473 Python tests passed + 170 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (228 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

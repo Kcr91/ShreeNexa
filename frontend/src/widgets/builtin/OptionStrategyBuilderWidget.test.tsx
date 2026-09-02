@@ -17,6 +17,7 @@ describe("OptionStrategyBuilderWidget Component", () => {
     expect(screen.getByText("NET PREMIUM")).toBeDefined();
     expect(screen.getByText("MAX PROFIT")).toBeDefined();
     expect(screen.getByText("MAX LOSS")).toBeDefined();
+    expect(screen.getByText("REQUIRED MARGIN")).toBeDefined();
     expect(screen.getByText("BREAKEVENS")).toBeDefined();
     expect(screen.getByText("NET GREEKS")).toBeDefined();
     expect(screen.getByText("+ Add Option Leg")).toBeDefined();

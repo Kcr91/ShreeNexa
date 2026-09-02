@@ -239,9 +239,7 @@ def calculate_strategy_payoff_and_greeks(
     slope_left = (y_min1 - y_min0) / 100.0
     if abs(slope_left) > 1e-4:
         root_left = min_price - y_min1 / slope_left
-        if root_left < min_price and (
-            (y_min0 < 0 < y_min1) or (y_min0 > 0 > y_min1)
-        ):
+        if root_left < min_price and ((y_min0 < 0 < y_min1) or (y_min0 > 0 > y_min1)):
             exact_breakevens.append(round(root_left, 2))
 
     # Right ray (S > max_price)
@@ -250,9 +248,7 @@ def calculate_strategy_payoff_and_greeks(
     slope_right = (y_max1 - y_max0) / 100.0
     if abs(slope_right) > 1e-4:
         root_right = max_price - y_max0 / slope_right
-        if root_right > max_price and (
-            (y_max0 < 0 < y_max1) or (y_max0 > 0 > y_max1)
-        ):
+        if root_right > max_price and ((y_max0 < 0 < y_max1) or (y_max0 > 0 > y_max1)):
             exact_breakevens.append(round(root_right, 2))
 
     # 4. Compute Extrema (Max Profit and Max Loss)
@@ -268,16 +264,10 @@ def calculate_strategy_payoff_and_greeks(
     unbounded_loss_downside = (pnl_values[0] - pnl_values[1]) < -5.0
 
     final_max_profit = None if (unbounded_upside or unbounded_downside) else round(max_p, 2)
-    final_max_loss = (
-        None if (unbounded_loss_upside or unbounded_loss_downside) else round(min_p, 2)
-    )
+    final_max_loss = None if (unbounded_loss_upside or unbounded_loss_downside) else round(min_p, 2)
 
     rr_ratio: float | None = None
-    if (
-        final_max_profit is not None
-        and final_max_loss is not None
-        and abs(final_max_loss) > 0.01
-    ):
+    if final_max_profit is not None and final_max_loss is not None and abs(final_max_loss) > 0.01:
         rr_ratio = round(abs(final_max_profit / final_max_loss), 2)
 
     return StrategyAnalyticsResult(

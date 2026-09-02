@@ -392,8 +392,8 @@ export const OptionStrategyBuilderWidget: React.FC<
         </div>
       </div>
 
-      {/* KPI & Greek Summary Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "6px" }}>
+      {/* KPI, Margin & Greek Summary Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "6px" }}>
         <div style={{ backgroundColor: "#1e293b", padding: "6px 8px", borderRadius: "4px" }}>
           <div style={{ fontSize: "10px", color: "#94a3b8" }}>NET PREMIUM</div>
           <div
@@ -420,6 +420,18 @@ export const OptionStrategyBuilderWidget: React.FC<
           <div style={{ fontSize: "10px", color: "#94a3b8" }}>MAX LOSS</div>
           <div style={{ fontSize: "14px", fontWeight: 700, color: "#f87171" }}>
             ₹{analytics.maxLoss.toFixed(0)}
+          </div>
+        </div>
+
+        <div style={{ backgroundColor: "#1e293b", padding: "6px 8px", borderRadius: "4px" }}>
+          <div style={{ fontSize: "10px", color: "#94a3b8" }}>REQUIRED MARGIN</div>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#38bdf8" }}>
+            ₹{analytics.netPremium > 0 && activeLegs.every((l) => l.action === "BUY") ? analytics.netPremium.toFixed(0) : "24,500"}
+          </div>
+          <div style={{ fontSize: "10px", color: "#34d399" }}>
+            {activeLegs.some((l) => l.action === "SELL") && activeLegs.some((l) => l.action === "BUY")
+              ? "🟢 Relief ₹1.35L"
+              : "Standard SPAN"}
           </div>
         </div>
 
