@@ -2,7 +2,7 @@
   "feature": "F3.7",
   "status": "review",
   "branch": "feature/F3.7-portfolio-backtest-runner",
-  "commit": null,
+  "commit": "a855604b90151125ae499ea50a04918e6900f6b4",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -315,7 +315,7 @@
     "F3.7": {
       "status": "review",
       "branch": "feature/F3.7-portfolio-backtest-runner",
-      "commit": null,
+      "commit": "a855604b90151125ae499ea50a04918e6900f6b4",
       "tests": {},
       "evidence": [],
       "verified_at": null,
