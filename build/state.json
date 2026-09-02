@@ -2,7 +2,7 @@
   "feature": "F6.5",
   "status": "review",
   "branch": "feature/F6.5-versioned-regime-detectors-walk-forward-switching",
-  "commit": null,
+  "commit": "47aa888173cb4f315e58502206d890e07eda27f7",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -558,7 +558,7 @@
     "F6.5": {
       "status": "review",
       "branch": "feature/F6.5-versioned-regime-detectors-walk-forward-switching",
-      "commit": null,
+      "commit": "47aa888173cb4f315e58502206d890e07eda27f7",
       "tests": {},
       "evidence": [],
       "verified_at": null,
