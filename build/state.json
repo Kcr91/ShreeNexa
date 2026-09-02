@@ -2,7 +2,7 @@
   "feature": "F4.7",
   "status": "review",
   "branch": "feature/F4.7-option-chain-greeks-iv-strike-selection",
-  "commit": null,
+  "commit": "c139727a29a0090956b6680a6b682669e46a782e",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -414,7 +414,7 @@
     "F4.7": {
       "status": "review",
       "branch": "feature/F4.7-option-chain-greeks-iv-strike-selection",
-      "commit": null,
+      "commit": "c139727a29a0090956b6680a6b682669e46a782e",
       "tests": {},
       "evidence": [],
       "verified_at": null,
