@@ -1,13 +1,39 @@
 {
-  "feature": "F8.1",
+  "feature": "F8.2",
   "status": "review",
-  "branch": "feature/F8.1-black76-iv-solver-greeks",
-  "commit": "78aacd4abbb8fc2ef17db1122fa34f344c8a80c0",
+  "branch": "feature/F8.2-dhan-chain-calibration-drift",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F8.2": {
+      "status": "review",
+      "branch": "feature/F8.2-dhan-chain-calibration-drift",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 454,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 155,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F8.2.md",
+        "backend/app/analytics/calibration.py",
+        "backend/app/analytics/calibration_store.py",
+        "backend/app/api/calibration.py",
+        "frontend/src/optionchain/DriftBadge.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F8.1": {
       "status": "review",
       "branch": "feature/F8.1-black76-iv-solver-greeks",

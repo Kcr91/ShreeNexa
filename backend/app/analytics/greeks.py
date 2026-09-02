@@ -206,9 +206,7 @@ def price_black76_scalar(
     sqrt_t = math.sqrt(t_years)
     df_r = math.exp(-rate * t_years)
 
-    d1 = (math.log(forward / strike) + 0.5 * safe_vol * safe_vol * t_years) / (
-        safe_vol * sqrt_t
-    )
+    d1 = (math.log(forward / strike) + 0.5 * safe_vol * safe_vol * t_years) / (safe_vol * sqrt_t)
     d2 = d1 - safe_vol * sqrt_t
 
     pdf_d1 = norm_pdf(d1)
@@ -219,9 +217,11 @@ def price_black76_scalar(
         price_val = df_r * (forward * nd1 - strike * nd2)
         delta = df_r * nd1
         # Theta per calendar day
-        theta_annual = -(forward * df_r * pdf_d1 * safe_vol) / (2.0 * sqrt_t) - (
-            rate * df_r * strike * nd2
-        ) + (rate * df_r * forward * nd1)
+        theta_annual = (
+            -(forward * df_r * pdf_d1 * safe_vol) / (2.0 * sqrt_t)
+            - (rate * df_r * strike * nd2)
+            + (rate * df_r * forward * nd1)
+        )
         # Rho per 1% change
         rho = -t_years * df_r * (forward * nd1 - strike * nd2) * 0.01
     else:
@@ -230,9 +230,11 @@ def price_black76_scalar(
         price_val = df_r * (strike * n_neg_d2 - forward * n_neg_d1)
         delta = -df_r * n_neg_d1
         # Theta per calendar day
-        theta_annual = -(forward * df_r * pdf_d1 * safe_vol) / (2.0 * sqrt_t) + (
-            rate * df_r * strike * n_neg_d2
-        ) - (rate * df_r * forward * n_neg_d1)
+        theta_annual = (
+            -(forward * df_r * pdf_d1 * safe_vol) / (2.0 * sqrt_t)
+            + (rate * df_r * strike * n_neg_d2)
+            - (rate * df_r * forward * n_neg_d1)
+        )
         # Rho per 1% change
         rho = -t_years * df_r * (strike * n_neg_d2 - forward * n_neg_d1) * 0.01
 

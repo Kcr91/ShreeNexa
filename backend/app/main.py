@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.backtests import router as backtests_router
+from app.api.calibration import router as calibration_router
 from app.api.depth import router as depth_router
 from app.api.feed import router as feed_router
 from app.api.heatmap import router as heatmap_router
@@ -74,6 +75,7 @@ app.include_router(watchlists_router)
 app.include_router(heatmap_router)
 app.include_router(depth_router)
 app.include_router(options_router)
+app.include_router(calibration_router)
 
 
 @app.get("/healthz")

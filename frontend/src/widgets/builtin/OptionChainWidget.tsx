@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { WidgetComponentProps, WidgetDefinition } from "../types";
 import { OptionChainWidgetSettings, OptionContract } from "../../optionchain/types";
 import { generateOptionChain } from "../../optionchain/greeks";
+import { DriftBadge } from "../../optionchain/DriftBadge";
 
 export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetSettings>> = ({
   settings,
@@ -87,7 +88,8 @@ export const OptionChainWidget: React.FC<WidgetComponentProps<OptionChainWidgetS
         </div>
 
         {/* Analytics Badges */}
-        <div style={{ display: "flex", gap: "var(--spacing-3)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-3)" }}>
+          <DriftBadge underlying={underlying} />
           <div>
             <span style={{ color: "var(--text-muted)", marginRight: "4px" }}>PCR:</span>
             <strong style={{ fontFamily: "var(--font-family-mono)" }}>{chainData.pcrRatio}</strong>

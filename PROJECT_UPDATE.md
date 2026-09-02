@@ -52,8 +52,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F7.7 | Done | Fast-forwarded into `main` at `66d525f` after review. |
 | F7.8 | Done | Fast-forwarded into `main` at `f14645b` after review. |
 | F7.9 | Done | Fast-forwarded into `main` at `1221ac5` after review. |
-| F8.1 | Ready for review | Black-76 pricing model, forward price selection, Brent IV solver with vega guard, closed-form Greeks, Indian conventions (ACT/365, calendar hours to 15:30 IST), reliability flags, and vector/incremental forms. 449 Python tests & 152 frontend tests passing. |
-| F5.2, F8.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F8.1 | Done | Fast-forwarded into `main` at `d9f2833` after review. |
+| F8.2 | Ready for review | Dhan-chain calibration, convention fitting, tolerance policy, persistence, and drift badge API/UI. 454 Python tests & 155 frontend tests passing. |
+| F5.2, F8.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1844,3 +1845,32 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Authored frontend unit tests in `frontend/src/optionchain/greeks.test.ts` (4 unit tests passing).
 - Full repository test suite: 449 Python tests passed + 152 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (214 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `d9f2833`.
+
+### 2026-09-02 — F8.2 Dhan-chain calibration, convention fitting, tolerance policy, persistence, and drift badge completed
+
+- Implemented `backend/app/analytics/calibration.py`:
+  - Continuous option chain calibration engine fitting convention parameters (Forward Source: `FUTURES_LTP` vs `SYNTHETIC_PCP` vs `SPOT_COC`, Day Count: `ACT_365` vs `ACT_252`, Time Mode: `CALENDAR_HOURS_TO_CLOSE` vs `CALENDAR_DAYS`, Risk-Free Rate: 6.0% to 7.5%) to reproduce Dhan's published option chain snapshot Greeks.
+  - Acceptance requirement explicitly validated: Theta agreement verified on at least 20 liquid strikes ($\text{Theta RMSE} \le 0.50$ INR / $< 8\%$ relative drift).
+  - Unreliable quote exclusion filtering (`ExclusionReason`): `ZERO_PRICE`, `ZERO_LIQUIDITY`, `DEEP_OTM_ITM` ($>18\%$ away from spot), `WIDE_SPREAD` ($>35\%$ spread), `BELOW_INTRINSIC`, and `VEGA_NEAR_ZERO`.
+  - Drift policy evaluation (`DriftStatus`): `CALIBRATED` (Green), `WARNING` (Amber), `DRIFT_DETECTED` (Red).
+  - Summary metrics: Theta RMSE, Theta MAE, Delta MAE, IV MAE, Max Theta Drift %, Reconciled Strikes Count, and Excluded Strikes Summary.
+- Implemented `backend/app/analytics/calibration_store.py`:
+  - Persistent cache store for calibrated option conventions per underlying with in-memory store and Redis TTL fallback.
+- Implemented `backend/app/api/calibration.py`:
+  - `GET /api/v1/options/calibration/{underlying}`: Retrieves current calibration report, drift badge status, and per-strike reconciliation report.
+  - `POST /api/v1/options/calibration/calibrate`: Triggers on-demand convention fitting against custom or captured Dhan option chain quotes.
+- Mounted `calibration_router` in `backend/app/main.py`.
+- Authored unit tests in `backend/tests/unit/test_dhan_chain_calibration.py`:
+  - Verified reconciliation of at least 20 strikes (`reconciled_strikes_count >= 20`).
+  - Verified explicit Theta convention validation with $< 0.50$ INR RMSE.
+  - Verified quote exclusion with categorized reasons (`ZERO_LIQUIDITY`, `WIDE_SPREAD`, `DEEP_OTM_ITM`).
+  - Verified drift detection and warning threshold transitions.
+  - Verified REST API endpoints (`GET /api/v1/options/calibration/{underlying}` and `POST /api/v1/options/calibration/calibrate`).
+- Implemented frontend `DriftBadge` in `frontend/src/optionchain/DriftBadge.tsx`:
+  - Visual drift badge indicator (`🟢 Calibrated`, `🟡 Minor Drift`, `🔴 Drift Detected`) with real-time Theta error.
+  - Detailed inspection popover displaying active convention parameters, reconciliation metrics (Theta MAE, Delta MAE, IV MAE), excluded strike breakdown, and on-demand recalibrate button.
+- Integrated `DriftBadge` into `frontend/src/widgets/builtin/OptionChainWidget.tsx` header toolbar.
+- Authored frontend unit tests in `frontend/src/optionchain/DriftBadge.test.tsx` (3 tests passing).
+- Full repository test suite: 454 Python tests passed + 155 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (218 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
