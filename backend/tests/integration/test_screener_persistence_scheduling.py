@@ -78,8 +78,7 @@ def test_offline_scheduled_execution_reproducibility() -> None:
     assert snapshot1.result.matched_count == snapshot2.result.matched_count
     assert snapshot1.result.matches[0].security_id == snapshot2.result.matches[0].security_id
     assert (
-        snapshot1.result.matches[0].indicator_values
-        == snapshot2.result.matches[0].indicator_values
+        snapshot1.result.matches[0].indicator_values == snapshot2.result.matches[0].indicator_values
     )
 
     # Check store audit trail history

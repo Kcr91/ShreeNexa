@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.8 | Done | Fast-forwarded into `main` at `1856dd0` after review. |
-| F2.9 | Ready for review | Screener persistence layer, offline scheduled execution engine, snapshot audit trails, CSV/JSON export formats, routing to watchlists/StrategyIR universes, and FastAPI REST endpoints. 310/310 tests passing. |
-| F3.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.9 | Done | Fast-forwarded into `main` at `cdae0c5` after review. |
+| F3.1 | Ready for review | Core engine execution abstractions for clock, data source, broker, orders, fills, portfolio accounting, position state machine (with position flips and mark-to-market), and checkpoint restore state machine equivalence. 314/314 tests passing. |
+| F3.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -876,4 +876,19 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/integration/test_screener_persistence_scheduling.py`: 1 passed
 - Full repository test suite: 310 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (134 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `cdae0c5`.
+
+### 2026-09-02 — F3.1 Engine contracts for clock, data source, broker, portfolio, events, and persistence completed
+
+- Implemented `backend/app/engine/contracts.py`:
+  - `Clock`, `SimClock`, and `RealClock`: Discrete simulation stepping over historical timestamps with state checkpointing/restoration.
+  - `DataSource` and `HistoricalDataSource`: Chronological bar-by-bar playback preventing future lookahead with state serialization.
+  - `OrderRequest`, `OrderResult`, `FillEvent`: Strongly-typed order and fill specifications with fee attribution.
+  - `Position` and `Portfolio`: Complete multi-asset accounting state machine handling Long additions, Short additions, partial exits, position flips (Long <-> Short in a single fill), mark-to-market valuations, realized/unrealized PnL, and equity curve recording.
+  - `EngineCheckpoint`: Snapshot schema for complete engine runtime state.
+- Exported engine contracts in `backend/app/engine/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.1.md` and added 4 new unit tests covering clock advancement/restoration, historical data source playback with no lookahead, portfolio position flips & PnL accounting, and state machine checkpoint restore equivalence:
+  - `backend/tests/unit/test_engine_contracts.py`: 4 passed
+- Full repository test suite: 314 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (136 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

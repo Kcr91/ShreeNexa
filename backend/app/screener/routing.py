@@ -75,7 +75,6 @@ def route_to_static_universe(result: ScreenerResult) -> StaticUniverse:
             "Cannot route empty screener matches to StaticUniverse; at least 1 match is required."
         )
     instruments = [
-        InstrumentRef(segment=m.exchange_segment, security_id=m.security_id)
-        for m in result.matches
+        InstrumentRef(segment=m.exchange_segment, security_id=m.security_id) for m in result.matches
     ]
     return StaticUniverse(instruments=instruments)
