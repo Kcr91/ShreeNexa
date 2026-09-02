@@ -1,8 +1,8 @@
 {
-  "feature": "F9.1",
+  "feature": "F9.2",
   "status": "review",
-  "branch": "feature/F9.1-paper-broker-fill-policy-recovery",
-  "commit": "4f940490c6975ead1c3bb744855742728a88c923",
+  "branch": "feature/F9.2-paper-blotter-order-trade-book",
+  "commit": "08ee58ca206df7a0d4c9f1307b2260ff0d480dbf",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -985,6 +985,32 @@
         "backend/app/paper/fill_policy.py",
         "backend/app/paper/models.py",
         "backend/app/paper/repository.py",
+        "backend/app/api/paper.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F9.2": {
+      "status": "review",
+      "branch": "feature/F9.2-paper-blotter-order-trade-book",
+      "commit": "08ee58ca206df7a0d4c9f1307b2260ff0d480dbf",
+      "tests": {
+        "pytest": {
+          "passed": 462,
+          "failed": 0,
+          "skipped": 30
+        },
+        "frontend_vitest": {
+          "passed": 179,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F9.2.md",
+        "backend/app/paper/reconciliation.py",
+        "backend/tests/fixtures/paper_accounting_fixture.json",
+        "frontend/src/widgets/builtin/PaperTradingWidget.tsx",
         "backend/app/api/paper.py"
       ],
       "verified_at": null,
