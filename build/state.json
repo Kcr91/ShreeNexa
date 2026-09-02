@@ -2,7 +2,7 @@
   "feature": "F6.4",
   "status": "review",
   "branch": "feature/F6.4-strategy-signal-composition-cycle-detection",
-  "commit": null,
+  "commit": "6b0ea00f6a53b61d02fb5ef5c98fa43b7cbab02e",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -549,7 +549,7 @@
     "F6.4": {
       "status": "review",
       "branch": "feature/F6.4-strategy-signal-composition-cycle-detection",
-      "commit": null,
+      "commit": "6b0ea00f6a53b61d02fb5ef5c98fa43b7cbab02e",
       "tests": {},
       "evidence": [],
       "verified_at": null,
