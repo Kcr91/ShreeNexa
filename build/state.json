@@ -2,7 +2,7 @@
   "feature": "F7.6",
   "status": "review",
   "branch": "feature/F7.6-sector-watchlists-index-drill-in",
-  "commit": null,
+  "commit": "953c0c9df1acb7f8038724571c85bb3ee5451b9b",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F7.6": {
       "status": "review",
       "branch": "feature/F7.6-sector-watchlists-index-drill-in",
-      "commit": null,
+      "commit": "953c0c9df1acb7f8038724571c85bb3ee5451b9b",
       "tests": {
         "pytest": {
           "passed": 427,
