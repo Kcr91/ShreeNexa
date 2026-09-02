@@ -6,6 +6,18 @@ from app.paper.adapter import (
     paper_account_to_portfolio,
 )
 from app.paper.broker import PaperBroker, paper_broker
+from app.paper.divergence import (
+    DiscrepancyItem,
+    DiscrepancyType,
+    DivergenceSeverity,
+    DivergenceTolerances,
+    ExecutionComparisonItem,
+    PnLComparisonSummary,
+    SessionDivergenceReport,
+    SignalComparisonItem,
+    generate_account_divergence_report,
+    generate_divergence_report,
+)
 from app.paper.fill_policy import PaperFillPolicy
 from app.paper.models import (
     PaperAccount,
@@ -32,6 +44,11 @@ from app.paper.reconciliation import (
 from app.paper.repository import PaperRepository, paper_repository
 
 __all__ = [
+    "DiscrepancyItem",
+    "DiscrepancyType",
+    "DivergenceSeverity",
+    "DivergenceTolerances",
+    "ExecutionComparisonItem",
     "MultiStrategyPaperCoordinator",
     "MultiStrategyStatus",
     "PaperAccount",
@@ -44,14 +61,19 @@ __all__ = [
     "PaperOrderType",
     "PaperPosition",
     "PaperRepository",
+    "PnLComparisonSummary",
     "PortfolioSummary",
     "PositionSummaryItem",
     "RejectedOrderInfo",
+    "SessionDivergenceReport",
     "SharedAccountCaps",
+    "SignalComparisonItem",
     "StrategyAllocationConfig",
     "StrategyBookSummary",
     "calculate_paper_metrics",
     "evaluate_paper_scorecard",
+    "generate_account_divergence_report",
+    "generate_divergence_report",
     "paper_account_to_portfolio",
     "paper_broker",
     "paper_repository",

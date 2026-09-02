@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -11,8 +11,14 @@ from pydantic import BaseModel, Field
 
 from app.backtest.grading import StrategyHorizon, StrategyScorecard
 from app.backtest.models import BacktestPerformanceMetrics
+from app.engine.contracts import FillEvent, OrderSide
 from app.paper.adapter import calculate_paper_metrics, evaluate_paper_scorecard
 from app.paper.broker import paper_broker
+from app.paper.divergence import (
+    DivergenceTolerances,
+    SessionDivergenceReport,
+    generate_account_divergence_report,
+)
 from app.paper.models import (
     PaperAccount,
     PaperFill,
@@ -280,5 +286,54 @@ def get_paper_scorecard(
         account_id=account_id,
         strategy_name=strategy_name,
         horizon=horizon,
+        repository=paper_repository,
+    )
+
+
+class DivergenceReportRequest(BaseModel):
+    account_id: str
+    strategy_name: str = "Live Forward Test Strategy"
+    backtest_fills: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Serialized FillEvent items from replay backtest",
+    )
+    paper_signals: list[dict[str, Any]] = Field(default_factory=list)
+    backtest_signals: list[dict[str, Any]] = Field(default_factory=list)
+    tolerances: DivergenceTolerances | None = None
+
+
+@router.post("/divergence-report", response_model=SessionDivergenceReport)
+def create_divergence_report(payload: DivergenceReportRequest) -> SessionDivergenceReport:
+    """Generate same-session paper-vs-backtest divergence report."""
+    parsed_bt_fills: list[FillEvent] = []
+    for f in payload.backtest_fills:
+        side_val = OrderSide.BUY if str(f.get("side", "")).upper() == "BUY" else OrderSide.SELL
+        ts = f.get("timestamp")
+        if isinstance(ts, str):
+            ts = datetime.fromisoformat(ts)
+        elif not isinstance(ts, datetime):
+            ts = datetime.now(UTC)
+        parsed_bt_fills.append(
+            FillEvent(
+                order_id=str(f.get("order_id", "")),
+                security_id=str(f.get("security_id", "")),
+                exchange_segment=str(f.get("exchange_segment", "NSE_EQ")),
+                side=side_val,
+                quantity=int(f.get("quantity", 0)),
+                price=float(f.get("price", 0.0)),
+                timestamp=ts,
+                brokerage=float(f.get("brokerage", 0.0)),
+                taxes=float(f.get("taxes", 0.0)),
+                slippage=float(f.get("slippage", 0.0)),
+            )
+        )
+
+    return generate_account_divergence_report(
+        account_id=payload.account_id,
+        strategy_name=payload.strategy_name,
+        backtest_fills=parsed_bt_fills,
+        paper_signals=payload.paper_signals,
+        backtest_signals=payload.backtest_signals,
+        tolerances=payload.tolerances,
         repository=paper_repository,
     )

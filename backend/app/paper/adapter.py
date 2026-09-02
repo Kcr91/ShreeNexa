@@ -61,6 +61,16 @@ def paper_account_to_portfolio(
             current_price=p.current_price,
         )
 
+    # If positions were not explicitly stored in repository, reconstruct from fills
+    if not pos_map and fill_events:
+        for fe in fill_events:
+            if fe.security_id not in pos_map:
+                pos_map[fe.security_id] = Position(
+                    security_id=fe.security_id,
+                    exchange_segment=fe.exchange_segment,
+                )
+            pos_map[fe.security_id].apply_fill(fe.side, fe.quantity, fe.price)
+
     # If no explicit equity points were recorded, construct a minimal 2-point boundary curve
     points = list(equity_points)
     if not points:
