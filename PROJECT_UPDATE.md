@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F2.5 | Done | Fast-forwarded into `main` at `8a685fc` after review. |
-| F2.6 | Ready for review | Vectorized StrategyIR compiler and batch execution engine with signal AST evaluators (And, Or, Not, Compare, CrossOver, PriceLevelBreak with after, Sequence, TimeWindow, PctChange, Persist), multi-bar dataset normalization, and G2 anti-lookahead invariance. 299/299 tests passing. |
-| F2.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F2.6 | Done | Fast-forwarded into `main` at `72b4283` after review. |
+| F2.7 | Ready for review | Stateful, real-time bar-by-bar streaming strategy compiler with incremental indicator evaluation, signal AST state tracking, checkpointing/state recovery, and repository vector/streaming parity suite. 303/303 tests passing. |
+| F2.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -824,4 +824,19 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_vector_strategy_compiler.py`: 4 passed
 - Full repository test suite: 299 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (122 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `72b4283`.
+
+### 2026-09-02 — F2.7 Incremental StrategyIR compiler/evaluator with state recovery completed
+
+- Implemented `backend/app/strategy/incremental.py`:
+  - `IncrementalStrategyCompiler` and `IncrementalStrategyEngine`: Stateful streaming strategy engine executing StrategyIR graphs in $O(1)$ time per bar.
+  - Integration with registered `IncrementalIndicator` instances and custom indicator pipelines.
+  - Streaming signal grammar evaluators: `AndNode`, `OrNode`, `NotNode`, `IndicatorCompareNode`, `CrossOverNode`, `CrossUnderNode`, `PriceLevelBreakNode` (with `after` condition gating), `SequenceNode` (with sliding step trigger deque), `TimeWindowNode`, `PctChangeNode`, `PersistNode`.
+  - State checkpointing & recovery: `get_state()` and `restore_state(checkpoint)` serializing/restoring indicator states, bar counters, and signal node buffers.
+  - Lifecycle management: `reset()` clearing all internal memory.
+- Exported incremental strategy tools in `backend/app/strategy/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F2.7.md` and added 4 new unit tests covering streaming bar-by-bar execution, exact vector/incremental signal parity, checkpoint/restore mid-stream recovery without signal drift, and reset lifecycle:
+  - `backend/tests/unit/test_incremental_strategy_engine.py`: 4 passed
+- Full repository test suite: 303 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (124 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

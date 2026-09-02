@@ -325,8 +325,7 @@ class CompiledStrategy:
             left_series = self._eval_operand(node.left, data, ind_values, length)
             right_series = self._eval_operand(node.right, data, ind_values, length)
             return [
-                _compare_values(left_series[i], node.op, right_series[i])
-                for i in range(length)
+                _compare_values(left_series[i], node.op, right_series[i]) for i in range(length)
             ]
 
         elif isinstance(node, CrossOverNode):

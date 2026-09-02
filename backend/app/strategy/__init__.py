@@ -7,6 +7,11 @@ from app.strategy.compiler import (
     StrategyEvaluationResult,
     VectorStrategyCompiler,
 )
+from app.strategy.incremental import (
+    IncrementalStrategyCompiler,
+    IncrementalStrategyEngine,
+    StrategyEvaluationStep,
+)
 from app.strategy.ir import (
     AbsoluteStrike,
     AndNode,
@@ -74,6 +79,8 @@ __all__ = [
     "ExitRule",
     "ExpiryRule",
     "FieldOperand",
+    "IncrementalStrategyCompiler",
+    "IncrementalStrategyEngine",
     "IndexUniverse",
     "IndicatorCompareNode",
     "IndicatorDef",
@@ -101,6 +108,7 @@ __all__ = [
     "SizingRule",
     "StaticUniverse",
     "StrategyEvaluationResult",
+    "StrategyEvaluationStep",
     "StrategyHorizon",
     "StrategyIR",
     "StrategyKind",

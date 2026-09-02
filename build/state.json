@@ -1,8 +1,8 @@
 {
-  "feature": "F2.6",
+  "feature": "F2.7",
   "status": "review",
-  "branch": "feature/F2.6-vector-strategy-compiler",
-  "commit": "3add329737ecae6412cfb53e7f6ea8f0d8ef5889",
+  "branch": "feature/F2.7-incremental-strategy-compiler",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -233,8 +233,8 @@
     },
     "F2.7": {
       "status": "review",
-      "branch": "feature/F2.7-composite-indicator-matrix",
-      "commit": "8a6bb5c68f121d1d87e02e0ea288db42ba6ec89d",
+      "branch": "feature/F2.7-incremental-strategy-compiler",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
