@@ -2,7 +2,7 @@
   "feature": "F5.1",
   "status": "review",
   "branch": "feature/F5.1-ai-provider-protocol-mock",
-  "commit": null,
+  "commit": "10eb0db862800539c3684a0d8fe1ba1d8ff89c3d",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -513,7 +513,7 @@
     "F5.1": {
       "status": "review",
       "branch": "feature/F5.1-ai-provider-protocol-mock",
-      "commit": null,
+      "commit": "10eb0db862800539c3684a0d8fe1ba1d8ff89c3d",
       "tests": {},
       "evidence": [],
       "verified_at": null,
