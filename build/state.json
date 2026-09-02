@@ -967,8 +967,26 @@
       "status": "review",
       "branch": "feature/F9.1-paper-broker-fill-policy-recovery",
       "commit": "4f940490c6975ead1c3bb744855742728a88c923",
-      "tests": {},
-      "evidence": [],
+      "tests": {
+        "pytest": {
+          "passed": 460,
+          "failed": 0,
+          "skipped": 30
+        },
+        "frontend_vitest": {
+          "passed": 173,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F9.1.md",
+        "backend/app/paper/broker.py",
+        "backend/app/paper/fill_policy.py",
+        "backend/app/paper/models.py",
+        "backend/app/paper/repository.py",
+        "backend/app/api/paper.py"
+      ],
       "verified_at": null,
       "blockers": []
     }
