@@ -2,7 +2,7 @@
   "feature": "F4.2",
   "status": "review",
   "branch": "feature/F4.2-typed-widget-registry",
-  "commit": null,
+  "commit": "8c9e820e18fc091f09c7b93198031d2ff2ffc241",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -369,7 +369,7 @@
     "F4.2": {
       "status": "review",
       "branch": "feature/F4.2-typed-widget-registry",
-      "commit": null,
+      "commit": "8c9e820e18fc091f09c7b93198031d2ff2ffc241",
       "tests": {},
       "evidence": [],
       "verified_at": null,
