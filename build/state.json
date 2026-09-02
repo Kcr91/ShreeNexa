@@ -2,7 +2,7 @@
   "feature": "F2.8",
   "status": "review",
   "branch": "feature/F2.8-point-in-time-screener-runner",
-  "commit": null,
+  "commit": "51c0c6f2c39556a3138b1f79f8863f82cbdf5780",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -243,7 +243,7 @@
     "F2.8": {
       "status": "review",
       "branch": "feature/F2.8-point-in-time-screener-runner",
-      "commit": null,
+      "commit": "51c0c6f2c39556a3138b1f79f8863f82cbdf5780",
       "tests": {},
       "evidence": [],
       "verified_at": null,
