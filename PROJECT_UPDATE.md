@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.12 | Done | Fast-forwarded into `main` at `acdb1d9` after review. |
-| F4.1 | Ready for review | React/TypeScript/Vite frontend shell with dark terminal theme tokens, typed API boundary, client routing (Dashboard, Research, Screener, P&L, Settings), error boundary, and development auth stub. 353 Python tests & 2 frontend tests passing. |
+| F4.1 | Done | Fast-forwarded into `main` at `ad70358` after review. |
+| F4.2 | Ready for review | Typed widget registry with settings-schema validation, dynamic palette discovery, lazy loading (`React.lazy` + `Suspense`), and built-in market widgets. 353 Python tests & 9 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1076,5 +1076,26 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 2 passed / 0 failed (App layout & navigation switching).
   - Production bundle build: `dist/assets/index-*.js` (357 kB raw / 104 kB gzip) created cleanly.
 - Full repository test suite: 353 Python tests passed + 2 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `ad70358`.
+
+### 2026-09-02 — F4.2 Typed widget registry with settings validation completed
+
+- Implemented `frontend/src/widgets/types.ts`:
+  - Typed widget metadata, categories (`chart`, `order`, `analytics`, `watchlist`, `system`, `custom`), settings schema fields, and `WidgetDefinition` contracts.
+- Implemented `frontend/src/widgets/registry.ts`:
+  - `WidgetRegistry`: Singleton manager supporting dynamic widget registration, categorization queries, default settings resolution, and strict schema validation (required fields, numeric min/max bounds, enum options).
+- Implemented Built-in Widgets:
+  - `MarketClockWidget.tsx`: Live market clock with timezone configuration (IST / UTC).
+  - `WatchlistWidget.tsx`: Live quotes table with symbol price movements and percentage changes.
+  - `BacktestSummaryWidget.tsx`: Key strategy performance metrics (Total Return, Sharpe, Max Drawdown, Win Rate).
+  - `FixtureTestWidget.tsx`: Test fixture verifying dynamic runtime widget discovery.
+- Implemented Widget Container & Palette:
+  - `WidgetFrame.tsx`: Widget container featuring header bar, action buttons, settings editor overlay, validation error display, and Suspense fallback.
+  - `WidgetPalette.tsx`: Categorized widget discovery picker with instant search and one-click add to workspace.
+- Authored acceptance contract `docs/qa/acceptance/F4.2.md` and added unit tests in `frontend/src/widgets/registry.test.ts`, `WidgetPalette.test.tsx`, and `WidgetFrame.test.tsx`:
+  - Frontend test suite: 9 passed / 0 failed across 5 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 9 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
