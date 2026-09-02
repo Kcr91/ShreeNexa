@@ -1,8 +1,8 @@
 {
-  "feature": "F9.3",
+  "feature": "F9.4",
   "status": "review",
-  "branch": "feature/F9.3-multi-strategy-paper-isolation",
-  "commit": "c5a7bbd15d603358aed42233134415528c37cb68",
+  "branch": "feature/F9.4-paper-metrics-registry-reuse",
+  "commit": "3791da31bc08751aa4ae1e341dc832eebcb0e570",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1037,6 +1037,32 @@
         "backend/app/paper/multi_strategy.py",
         "backend/app/api/paper.py",
         "backend/tests/unit/test_multi_strategy_paper_isolation.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F9.4": {
+      "status": "review",
+      "branch": "feature/F9.4-paper-metrics-registry-reuse",
+      "commit": "3791da31bc08751aa4ae1e341dc832eebcb0e570",
+      "tests": {
+        "pytest": {
+          "passed": 472,
+          "failed": 0,
+          "skipped": 30
+        },
+        "frontend_vitest": {
+          "passed": 179,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F9.4.md",
+        "backend/app/paper/adapter.py",
+        "backend/app/api/paper.py",
+        "backend/tests/fixtures/trade_equity_parity_fixture.json",
+        "backend/tests/unit/test_paper_metrics_registry_reuse.py"
       ],
       "verified_at": null,
       "blockers": []
