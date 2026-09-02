@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.14 | Done | Fast-forwarded into `main` at `7f5e274` after review. |
-| F3.11 | Ready for review | Configurable metric grading thresholds manager with horizon profiles, strict monotonic band validation, live preview before save, stale scorecard tracking, and explicit re-grade. 353 Python tests & 122 frontend tests passing. |
-| F5.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.11 | Done | Fast-forwarded into `main` at `49d0a93` after review. |
+| F5.1 | Ready for review | Product runtime AIProvider protocol, safe DisabledProvider default, deterministic MockProvider generating valid StrategyIR, aggressive prompt secret redaction, timeout handling, and usage accounting. 359 Python tests & 122 frontend tests passing. |
+| F5.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1416,4 +1416,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 122 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `49d0a93`.
+
+### 2026-09-02 — F5.1 AIProvider protocol and boundary completed
+
+- Implemented `backend/app/ai/protocol.py`:
+  - `AIProvider` Protocol with `generate_structured(prompt, *, schema, timeout_s)` and `get_status()`.
+  - `ProviderStatus`, `AIResult`, and dedicated exception hierarchy (`AIRuntimeError`, `AIRuntimeDisabledError`, `AITimeoutError`, `AISchemaValidationError`, `AISecretLeakageError`).
+- Implemented `backend/app/ai/redaction.py`:
+  - Regex secret scrubber: redacts Dhan client IDs/tokens, Bearer tokens, JWTs, private keys, API secrets, and passwords from prompts before any provider call.
+- Implemented `backend/app/ai/accounting.py`:
+  - Thread-safe `AIUsageAccounting` and global `usage_ledger` tracking total calls, tokens, latency, and estimated cost in USD.
+- Implemented `backend/app/ai/disabled.py`:
+  - `DisabledProvider`: Default runtime provider ensuring the terminal functions without external AI costs and raises `AIRuntimeDisabledError` on unauthorized invocations.
+- Implemented `backend/app/ai/mock.py`:
+  - `MockProvider`: Deterministic mock provider producing schema-valid `StrategyIR` structures for testing and offline development.
+- Implemented `backend/app/ai/factory.py`:
+  - Safe runtime provider factory `get_ai_provider()`, enforcing disabled default and strict isolation from developer interactive sessions.
+- Authored acceptance contract `docs/qa/acceptance/F5.1.md` and added unit tests in `backend/tests/unit/test_ai_provider.py`:
+  - Disabled provider reports clean status and rejects calls.
+  - Mock provider generates schema-valid StrategyIR and enforces timeouts.
+  - Secret redaction aggressively scrubs tokens and credentials.
+  - Usage accounting accurately aggregates metrics.
+- Full repository test suite: 359 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (174 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

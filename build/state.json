@@ -1,8 +1,8 @@
 {
-  "feature": "F3.11",
+  "feature": "F5.1",
   "status": "review",
-  "branch": "feature/F3.11-grading-thresholds-ui",
-  "commit": "ddbcb12aa31b539bf83457a15993d05ea7e3137a",
+  "branch": "feature/F5.1-ai-provider-protocol-mock",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -505,6 +505,15 @@
       "status": "review",
       "branch": "feature/F3.11-grading-thresholds-ui",
       "commit": "ddbcb12aa31b539bf83457a15993d05ea7e3137a",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F5.1": {
+      "status": "review",
+      "branch": "feature/F5.1-ai-provider-protocol-mock",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,
