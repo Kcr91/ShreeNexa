@@ -133,14 +133,7 @@ class DisconnectPacket:
     disconnect_code: int
 
 
-FeedPacket = (
-    IndexPacket
-    | TickerPacket
-    | QuotePacket
-    | OIPacket
-    | FullPacket
-    | DisconnectPacket
-)
+FeedPacket = IndexPacket | TickerPacket | QuotePacket | OIPacket | FullPacket | DisconnectPacket
 
 
 class DhanFeedParser:
@@ -404,9 +397,7 @@ class DhanFeedParser:
         return header + payload
 
     @classmethod
-    def build_oi_packet(
-        cls, exchange_segment: int, security_id: int, open_interest: int
-    ) -> bytes:
+    def build_oi_packet(cls, exchange_segment: int, security_id: int, open_interest: int) -> bytes:
         header = cls.build_header(
             FeedResponseCode.OI, cls.OI_PACKET_SIZE, exchange_segment, security_id
         )

@@ -43,9 +43,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F6.2 | Done | Fast-forwarded into `main` at `1920b7c` after review. |
 | F6.3 | Done | Fast-forwarded into `main` at `a832ee9` after review. |
 | F6.4 | Done | Fast-forwarded into `main` at `dff4fdc` after review. |
-| F6.5 | Done | Fast-forwarded into `main` at `898e436` after review. |
-| F7.1 | Ready for review | Dhan live-feed WebSocket client, binary packet parser, heartbeat, reconnect state machine, and captured golden packets. 402 Python tests & 122 frontend tests passing. |
-| F5.2, F7.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F7.1 | Done | Fast-forwarded into `main` at `0c4beda` after review. |
+| F7.2 | Ready for review | Subscription manager across connection budget, priority, batching (<=100), unsubscribe, reconnect resubscribe, and Hypothesis property invariants (<=5000/socket, <=100/message). 409 Python tests & 122 frontend tests passing. |
+| F5.2, F7.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1586,3 +1586,29 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Credential redaction in client representation and logs verified.
 - Full repository test suite: 402 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (193 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `0c4beda`.
+
+### 2026-09-02 — F7.2 Feed subscription manager across connection budget completed
+
+- Implemented `backend/app/feedd/subscriptions.py`:
+  - `SubscriptionManager`: Central manager allocating feed subscriptions across WebSocket leases.
+  - Enforced dual limits: $\le 5,000$ instruments per socket, $\le 100$ instruments per outbound wire message.
+  - Seamless integration with `ConnectionBudgetManager` (F0.9) to dynamically acquire feed socket leases when existing sockets reach capacity.
+  - Priority system: `CRITICAL` (0), `HIGH` (1), `MEDIUM` (2), `LOW` (3). Multi-subscriber reference counting with dynamic priority and mode escalation.
+  - Automatic wire message batching grouped by `SubscriptionMode` into chunks of $\le 100$.
+  - Unsubscribe ref-counting: releasing instruments only when all requesters have unsubscribed, generating batched unsubscribe messages.
+  - Reconnect resubscription: automatic generation of priority-ordered resubscription batches (`CRITICAL` first) upon socket reconnection.
+  - Telemetry and health status aggregation for each socket and total active subscriptions.
+- Authored acceptance contract `docs/qa/acceptance/F7.2.md` and added unit tests in `backend/tests/unit/test_feed_subscription_manager.py`:
+  - Message batching verified: 350 instruments cleanly partitioned into [100, 100, 100, 50].
+  - Capacity spillover verified: 5,001st instrument automatically allocates a new socket lease.
+  - Budget exhaustion verified: raises `SubscriptionCapacityExceededError` cleanly when all allowed sockets are full.
+  - Deduplication and subscriber reference counting verified.
+  - Reconnect resubscription priority ordering verified.
+  - Health status aggregation verified.
+- Authored property-based tests in `backend/tests/unit/test_feed_subscription_properties.py` using Hypothesis:
+  - Proven invariant $\forall \text{socket } s, \text{count}(s) \le 5,000$ under arbitrary sequences of random operations.
+  - Proven invariant $\forall \text{message } m, \text{count}(m) \le 100$ under arbitrary sequences of random operations.
+  - Proven invariant that no instrument is duplicated across sockets and subscription map exactly reconciles to active socket state.
+- Full repository test suite: 409 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (196 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

@@ -236,8 +236,7 @@ class DhanLiveFeedClient:
             )
 
         inst_list = [
-            {"ExchangeSegment": str(seg), "SecurityId": str(sec_id)}
-            for seg, sec_id in instruments
+            {"ExchangeSegment": str(seg), "SecurityId": str(sec_id)} for seg, sec_id in instruments
         ]
         return {
             "RequestCode": request_code,
