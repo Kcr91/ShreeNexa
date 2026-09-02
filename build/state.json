@@ -2,7 +2,7 @@
   "feature": "F7.2",
   "status": "review",
   "branch": "feature/F7.2-feed-subscription-manager",
-  "commit": null,
+  "commit": "db2dec0528940ba6ec68910d292108b250124146",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F7.2": {
       "status": "review",
       "branch": "feature/F7.2-feed-subscription-manager",
-      "commit": null,
+      "commit": "db2dec0528940ba6ec68910d292108b250124146",
       "tests": {
         "pytest": {
           "passed": 409,
