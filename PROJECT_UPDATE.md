@@ -44,8 +44,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F6.3 | Done | Fast-forwarded into `main` at `a832ee9` after review. |
 | F6.4 | Done | Fast-forwarded into `main` at `dff4fdc` after review. |
 | F7.1 | Done | Fast-forwarded into `main` at `0c4beda` after review. |
-| F7.2 | Ready for review | Subscription manager across connection budget, priority, batching (<=100), unsubscribe, reconnect resubscribe, and Hypothesis property invariants (<=5000/socket, <=100/message). 409 Python tests & 122 frontend tests passing. |
-| F5.2, F7.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F7.2 | Done | Fast-forwarded into `main` at `0cfe68e` after review. |
+| F7.3 | Ready for review | Redis quote/OI/depth hot cache with schema v1, staleness evaluation (threshold 5.0s), atomic composite pipeline writes, multi-quote batch queries, and feed health records. 416 Python tests & 122 frontend tests passing. |
+| F5.2, F7.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1612,3 +1613,24 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Proven invariant that no instrument is duplicated across sockets and subscription map exactly reconciles to active socket state.
 - Full repository test suite: 409 Python tests passed + 122 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (196 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `0cfe68e`.
+
+### 2026-09-02 — F7.3 Redis quote/OI/depth hot cache and feed-health records completed
+
+- Implemented `backend/app/feedd/cache.py`:
+  - `HotCache` protocol, `InMemoryHotCache` (fast unit testing), and `RedisHotCache` (production Redis-backed storage).
+  - Versioned schema: `CACHE_SCHEMA_VERSION = 1` with key namespaces `shreenexa:feed:v1:quote:{segment}:{security_id}`, `oi`, `depth`, and `health`.
+  - Stored models: `CachedQuote`, `CachedOI`, `CachedDepth` (5-level bid/ask ladder with price, quantity, order count), and `CachedFeedHealth`.
+  - Freshness invariant: configurable threshold (5.0s default); reads dynamically evaluate `elapsed = now - received_at`; expired data is explicitly marked `is_stale = True` with `staleness_seconds` and never presented as live.
+  - Atomic pipeline execution: `batch_update_packets` writes multi-packet and composite updates (`FullPacket` with Quote, Depth, and OI) in atomic Redis transactions.
+  - High-performance batch queries: `get_multi_quotes` uses `mget` pipeline reads to fetch tens of symbols in a single round-trip.
+  - Feed health management: socket connectivity, subscription counts, packet throughput, and heartbeat freshness.
+- Updated `backend/app/feedd/__init__.py` to export cache models and classes.
+- Authored acceptance contract `docs/qa/acceptance/F7.3.md` and added unit tests in `backend/tests/unit/test_feedd_hot_cache.py`:
+  - Verified packet ingestion across `QuotePacket`, `OIPacket`, and composite `FullPacket`.
+  - Verified freshness boundary: records at $t_0 + 4.9s$ marked fresh (`is_stale is False`), records at $t_0 + 5.1s$ marked stale (`is_stale is True`).
+  - Verified multi-quote queries with partial symbol presence.
+  - Verified socket health record tracking and staleness detection.
+  - Verified Redis pipeline execution on mock Redis storage.
+- Full repository test suite: 416 Python tests passed + 122 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (198 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

@@ -283,15 +283,19 @@ class SubscriptionManager:
         socket_stats = []
 
         for s_id, s in self.sockets.items():
-            socket_stats.append({
-                "socket_id": s_id,
-                "is_connected": s.is_connected,
-                "subscribed_count": s.subscribed_count,
-                "available_capacity": s.available_capacity(self.max_instruments_per_socket),
-                "reconnect_count": s.reconnect_count,
-                "last_packet_time": s.last_packet_time.isoformat() if s.last_packet_time else None,
-                "total_packets": s.total_packets,
-            })
+            socket_stats.append(
+                {
+                    "socket_id": s_id,
+                    "is_connected": s.is_connected,
+                    "subscribed_count": s.subscribed_count,
+                    "available_capacity": s.available_capacity(self.max_instruments_per_socket),
+                    "reconnect_count": s.reconnect_count,
+                    "last_packet_time": s.last_packet_time.isoformat()
+                    if s.last_packet_time
+                    else None,
+                    "total_packets": s.total_packets,
+                }
+            )
 
         return {
             "total_subscribed": total_subscribed,

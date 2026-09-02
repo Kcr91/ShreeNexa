@@ -1,13 +1,36 @@
 {
-  "feature": "F7.2",
+  "feature": "F7.3",
   "status": "review",
-  "branch": "feature/F7.2-feed-subscription-manager",
-  "commit": "db2dec0528940ba6ec68910d292108b250124146",
+  "branch": "feature/F7.3-redis-quote-oi-depth-hot-cache",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F7.3": {
+      "status": "review",
+      "branch": "feature/F7.3-redis-quote-oi-depth-hot-cache",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 416,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 122,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F7.3.md",
+        "backend/tests/unit/test_feedd_hot_cache.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F7.2": {
       "status": "review",
       "branch": "feature/F7.2-feed-subscription-manager",

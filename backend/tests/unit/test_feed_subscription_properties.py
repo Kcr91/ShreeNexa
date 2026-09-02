@@ -37,19 +37,23 @@ def subscription_action_strategy(draw: st.DrawFn) -> list[dict[str, object]]:
                 st.lists(st.sampled_from(universe), min_size=batch_size, max_size=batch_size)
             )
             prio = draw(
-                st.sampled_from([
-                    SubscriptionPriority.CRITICAL,
-                    SubscriptionPriority.HIGH,
-                    SubscriptionPriority.MEDIUM,
-                    SubscriptionPriority.LOW,
-                ])
+                st.sampled_from(
+                    [
+                        SubscriptionPriority.CRITICAL,
+                        SubscriptionPriority.HIGH,
+                        SubscriptionPriority.MEDIUM,
+                        SubscriptionPriority.LOW,
+                    ]
+                )
             )
-            actions.append({
-                "type": action_type,
-                "instruments": chosen_instruments,
-                "requester": req,
-                "priority": prio,
-            })
+            actions.append(
+                {
+                    "type": action_type,
+                    "instruments": chosen_instruments,
+                    "requester": req,
+                    "priority": prio,
+                }
+            )
         else:
             actions.append({"type": "reconnect"})
 
