@@ -61,7 +61,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F8.7 | Done | Fast-forwarded into `main` at `469f6c0` after review. |
 | F9.1 | Done | Fast-forwarded into `main` at `4f94049` after review. |
 | F9.2 | Done | Fast-forwarded into `main` at `08ee58c` after review. |
-| F5.2, F9.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F9.3 | Review ready | Implementation and independent test suite passing at `c5a7bbd`; review report completed. |
+| F5.2, F9.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2077,3 +2078,37 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Authored acceptance contract in `docs/qa/acceptance/F9.2.md`.
 - Full repository test suite: 462 Python tests passed (30 skipped), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (239 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-02 — F9.3 Multiple concurrent paper strategies with isolated capital and shared account caps completed
+
+- Implemented `backend/app/paper/multi_strategy.py`:
+  - `MultiStrategyPaperCoordinator`: Coordinates multiple concurrent paper trading strategies within an overarching paper portfolio.
+  - Strict capital isolation: Each strategy is allocated a dedicated cash pool ($C_i$). Submissions validate against the strategy's cash partition; orders from one strategy cannot draw from another ($C_A \cap C_B = \emptyset$).
+  - Strict position isolation: Open positions and inventory are scoped by strategy. Conflicting or opposing directions (e.g. Strategy A Long 50 TCS, Strategy B Short 20 TCS) persist and evaluate independently with dedicated MTM and P&L without cross-netting.
+  - Shared account-level risk caps (`SharedAccountCaps`):
+    - `max_single_stock_exposure_pct`: Shared constraint capping the combined gross exposure across all active strategies for any single security relative to total account equity.
+    - `max_account_leverage`: Shared aggregate leverage cap across all strategies.
+    - `max_account_drawdown_pct`: Portfolio-level drawdown circuit breaker.
+    - `kill_switch`: Global emergency halt stopping order placement across all strategies and cancelling working orders immediately.
+  - Deterministic conflict resolution: Orders evaluated in sequence; cap breaches or capital violations reject deterministically without corrupting other strategies.
+  - Market data and bar fan-out: `process_price_update` and `on_bar` distribute ticks/bars to all active strategy brokers and aggregate fills.
+  - Comprehensive status report: `get_status` returns aggregated equity, cash, realized/unrealized P&L, shared caps, and per-strategy summaries.
+- Extended `backend/app/api/paper.py`:
+  - `POST /api/v1/paper/multi-strategy/init`: Initialize multi-strategy portfolio with isolated capital allocations and shared risk caps.
+  - `POST /api/v1/paper/multi-strategy/orders`: Route an order to an isolated strategy under shared account caps.
+  - `GET /api/v1/paper/multi-strategy/status`: Query real-time status across all strategy books.
+  - `POST /api/v1/paper/multi-strategy/kill-switch`: Emergency halt toggle.
+- Extended `backend/app/paper/__init__.py` and `backend/app/paper/repository.py`:
+  - Exported multi-strategy coordinator and models.
+  - Enhanced `get_or_create_account` to support sub-account names.
+- Authored acceptance contract in `docs/qa/acceptance/F9.3.md`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_multi_strategy_paper_isolation.py` (6 tests passing):
+  - Verified no cross-strategy cash leakage when Strategy A exhausts its capital.
+  - Verified no cross-strategy position leakage (independent Long/Short inventory and MTM tracking).
+  - Verified deterministic rejection on shared single-stock exposure cap breach.
+  - Verified emergency kill switch halts all strategies, cancels working orders, and rejects new orders until reset.
+  - Verified multi-strategy REST API lifecycle (`init`, `orders`, `status`, `kill-switch`).
+  - Verified `BarRecord` distribution (`on_bar`) fanning out to all strategy books and filling limit orders.
+- Full repository test suite: 468 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (241 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
