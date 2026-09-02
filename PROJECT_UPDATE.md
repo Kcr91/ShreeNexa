@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.14 | Done | Fast-forwarded into `main` at `4eb2b75` after review. |
-| F3.13 | Ready for review | P&L calendar widget rendering monthly performance grids, Indian holiday schedule indicators, and day-level trade book drilldown. 353 Python tests & 102 frontend tests passing. |
-| F3.11, F3.14–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.13 | Done | Fast-forwarded into `main` at `fc4d4ac` after review. |
+| F3.14 | Ready for review | Monthly/yearly compounded return matrix, rolling return distribution engine (21, 63, 126, 252 days), and Continuous Mode Timeline seamlessly stitching Backtest -> Paper -> Live with zero double counting. 353 Python tests & 111 frontend tests passing. |
+| F3.11, F5.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1370,5 +1370,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 102 passed / 0 failed across 37 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 102 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `fc4d4ac`.
+
+### 2026-09-02 — F3.14 Monthly/yearly/rolling returns and continuous mode timeline completed
+
+- Implemented `frontend/src/returns/types.ts`:
+  - `ExecutionPhase` (`BACKTEST`, `PAPER`, `LIVE`), `DailyReturnPoint`, `TimelinePhaseSlice`, `ContinuousTimeline`, `RollingReturnStats`, `YearlyMonthlyReturns`, and `ReturnsTimelineWidgetSettings`.
+- Implemented `frontend/src/returns/engine.ts`:
+  - Geometric compounding formula: $\prod (1 + r_i) - 1$.
+  - `stitchContinuousTimeline`: Enforces strict non-overlapping date sequences ($T_{phase\_end} < T_{next\_start}$), prevents duplicate dates (zero double-counting), and continuously chains equity bases ($E_{paper\_start} = E_{backtest\_end}$, $E_{live\_start} = E_{paper\_end}$).
+  - `computeMonthlyMatrix`: Year x Month return table and YTD compounded returns.
+  - `computeRollingReturns`: 21-day (1M), 63-day (3M), 126-day (6M) rolling distributions (min, max, median, current).
+- Implemented `frontend/src/widgets/builtin/ReturnsTimelineWidget.tsx`:
+  - 3 view tabs: Continuous Timeline, Monthly Heatmap Matrix, and Rolling Returns.
+  - Performance overview strip with phase badge and strict non-overlapping invariant verification banner.
+  - Registered in `widgetRegistry` under category `analytics`.
+- Authored acceptance contract `docs/qa/acceptance/F3.14.md` and added unit tests in `frontend/src/returns/engine.test.ts` and `ReturnsTimelineWidget.test.tsx`:
+  - Independent compounded-return fixtures verified.
+  - Non-overlapping invariant and rejection of overlapping phases verified.
+  - Frontend test suite: 111 passed / 0 failed across 39 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 111 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
