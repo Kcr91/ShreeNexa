@@ -2,7 +2,7 @@
   "feature": "F7.8",
   "status": "review",
   "branch": "feature/F7.8-index-constituent-heatmap-breadth",
-  "commit": null,
+  "commit": "4dd3c7bb76af169614ebf50c7bbe7aece868212a",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F7.8": {
       "status": "review",
       "branch": "feature/F7.8-index-constituent-heatmap-breadth",
-      "commit": null,
+      "commit": "4dd3c7bb76af169614ebf50c7bbe7aece868212a",
       "tests": {
         "pytest": {
           "passed": 435,
