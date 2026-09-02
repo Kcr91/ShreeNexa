@@ -19,6 +19,12 @@ from app.paper.divergence import (
     SessionDivergenceReport,
     generate_account_divergence_report,
 )
+from app.paper.lifecycle import (
+    DeploymentAuditEvent,
+    DeploymentState,
+    StrategyDeployment,
+    paper_deployment_manager,
+)
 from app.paper.models import (
     PaperAccount,
     PaperFill,
@@ -337,3 +343,106 @@ def create_divergence_report(payload: DivergenceReportRequest) -> SessionDiverge
         tolerances=payload.tolerances,
         repository=paper_repository,
     )
+
+
+class DeployStrategyRequest(BaseModel):
+    strategy_id: str
+    strategy_name: str
+    account_id: str
+    allocated_capital: float = Field(default=1_000_000.0, gt=0)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    actor: str = "operator"
+    reason: str = "Deploy forward test"
+
+
+class LifecycleActionRequest(BaseModel):
+    actor: str = "operator"
+    reason: str = "Operator action"
+    close_positions: bool = False
+
+
+@router.post("/deployments", response_model=StrategyDeployment)
+def deploy_strategy(payload: DeployStrategyRequest) -> StrategyDeployment:
+    """Deploy a strategy into the forward-test engine."""
+    return paper_deployment_manager.deploy(
+        strategy_id=payload.strategy_id,
+        strategy_name=payload.strategy_name,
+        account_id=payload.account_id,
+        allocated_capital=payload.allocated_capital,
+        parameters=payload.parameters,
+        actor=payload.actor,
+        reason=payload.reason,
+    )
+
+
+@router.get("/deployments", response_model=list[StrategyDeployment])
+def list_deployments(state: DeploymentState | None = None) -> list[StrategyDeployment]:
+    """List forward-testing deployments with optional state filter."""
+    return paper_deployment_manager.store.list_deployments(state=state)
+
+
+@router.get("/deployments/{deployment_id}", response_model=StrategyDeployment)
+def get_deployment(deployment_id: str) -> StrategyDeployment:
+    """Query forward-testing deployment by ID."""
+    dep = paper_deployment_manager.store.get_deployment(deployment_id)
+    if not dep:
+        raise HTTPException(status_code=404, detail=f"Deployment '{deployment_id}' not found")
+    return dep
+
+
+@router.post("/deployments/{deployment_id}/pause", response_model=StrategyDeployment)
+def pause_deployment(
+    deployment_id: str, payload: LifecycleActionRequest | None = None
+) -> StrategyDeployment:
+    """Pause strategy execution, halting new signal processing."""
+    req = payload or LifecycleActionRequest(reason="Manual pause")
+    try:
+        return paper_deployment_manager.pause(
+            deployment_id=deployment_id, actor=req.actor, reason=req.reason
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/deployments/{deployment_id}/resume", response_model=StrategyDeployment)
+def resume_deployment(
+    deployment_id: str, payload: LifecycleActionRequest | None = None
+) -> StrategyDeployment:
+    """Resume strategy execution from paused state."""
+    req = payload or LifecycleActionRequest(reason="Manual resume")
+    try:
+        return paper_deployment_manager.resume(
+            deployment_id=deployment_id, actor=req.actor, reason=req.reason
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/deployments/{deployment_id}/stop", response_model=StrategyDeployment)
+def stop_deployment(
+    deployment_id: str, payload: LifecycleActionRequest | None = None
+) -> StrategyDeployment:
+    """Permanently stop strategy execution. Strictly idempotent."""
+    req = payload or LifecycleActionRequest(reason="Manual stop")
+    try:
+        return paper_deployment_manager.stop(
+            deployment_id=deployment_id,
+            close_positions=req.close_positions,
+            actor=req.actor,
+            reason=req.reason,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/deployments/{deployment_id}/audit", response_model=list[DeploymentAuditEvent])
+def get_deployment_audit_trail(deployment_id: str) -> list[DeploymentAuditEvent]:
+    """Retrieve immutable audit event trail for a deployment."""
+    dep = paper_deployment_manager.store.get_deployment(deployment_id)
+    if not dep:
+        raise HTTPException(status_code=404, detail=f"Deployment '{deployment_id}' not found")
+    return paper_deployment_manager.store.list_audit_events(deployment_id)

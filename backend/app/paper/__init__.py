@@ -19,6 +19,16 @@ from app.paper.divergence import (
     generate_divergence_report,
 )
 from app.paper.fill_policy import PaperFillPolicy
+from app.paper.lifecycle import (
+    DeploymentAction,
+    DeploymentAuditEvent,
+    DeploymentState,
+    DeploymentStore,
+    PaperDeploymentManager,
+    StrategyDeployment,
+    deployment_store,
+    paper_deployment_manager,
+)
 from app.paper.models import (
     PaperAccount,
     PaperFill,
@@ -44,6 +54,10 @@ from app.paper.reconciliation import (
 from app.paper.repository import PaperRepository, paper_repository
 
 __all__ = [
+    "DeploymentAction",
+    "DeploymentAuditEvent",
+    "DeploymentState",
+    "DeploymentStore",
     "DiscrepancyItem",
     "DiscrepancyType",
     "DivergenceSeverity",
@@ -53,6 +67,7 @@ __all__ = [
     "MultiStrategyStatus",
     "PaperAccount",
     "PaperBroker",
+    "PaperDeploymentManager",
     "PaperFill",
     "PaperFillPolicy",
     "PaperOrder",
@@ -70,12 +85,15 @@ __all__ = [
     "SignalComparisonItem",
     "StrategyAllocationConfig",
     "StrategyBookSummary",
+    "StrategyDeployment",
     "calculate_paper_metrics",
+    "deployment_store",
     "evaluate_paper_scorecard",
     "generate_account_divergence_report",
     "generate_divergence_report",
     "paper_account_to_portfolio",
     "paper_broker",
+    "paper_deployment_manager",
     "paper_repository",
     "reconcile_portfolio",
 ]
