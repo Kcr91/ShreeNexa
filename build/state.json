@@ -2,7 +2,7 @@
   "feature": "F8.6",
   "status": "review",
   "branch": "feature/F8.6-net-greeks-dhan-margin-adapter",
-  "commit": null,
+  "commit": "7e4527dbf053667c2cd7a028d71cd3d10b611a2c",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F8.6": {
       "status": "review",
       "branch": "feature/F8.6-net-greeks-dhan-margin-adapter",
-      "commit": null,
+      "commit": "7e4527dbf053667c2cd7a028d71cd3d10b611a2c",
       "tests": {
         "pytest": {
           "passed": 473,
