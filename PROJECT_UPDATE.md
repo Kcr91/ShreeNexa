@@ -47,8 +47,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F7.2 | Done | Fast-forwarded into `main` at `0cfe68e` after review. |
 | F7.3 | Done | Fast-forwarded into `main` at `ba32b5d` after review. |
 | F7.4 | Done | Fast-forwarded into `main` at `8e00b64` after review. |
-| F7.5 | Ready for review | Multiple manual and F&O watchlists with configurable columns, stable ordering, CRUD REST API, and instrument master refresh survival. 424 Python tests & 130 frontend tests passing. |
-| F5.2, F7.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F7.5 | Done | Fast-forwarded into `main` at `482fe16` after review. |
+| F7.6 | Ready for review | Sector watchlists and index constituent drill-in driven by effective membership/provenance with visible fallback/stale snapshot warnings. 427 Python tests & 136 frontend tests passing. |
+| F5.2, F7.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -1681,3 +1682,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified column configuration toggles and dynamic table layout.
 - Full repository test suite: 424 Python tests passed + 130 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (202 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `482fe16`.
+
+### 2026-09-02 — F7.6 Sector watchlists and index drill-in completed
+
+- Enhanced `backend/app/api/universe.py`:
+  - `SECTOR_CATALOG`: 10 recognized Indian sectors and benchmark indices (NIFTY BANK, NIFTY IT, NIFTY AUTO, NIFTY PHARMA, NIFTY FMCG, NIFTY METAL, NIFTY ENERGY, NIFTY REALTY, NIFTY 50, NIFTY NEXT 50).
+  - `GET /api/v1/indices/sectors/catalog`: Exposes catalog of sector indices and descriptions.
+  - `GET /api/v1/indices/{index_name}/drill-in`: Aggregated index constituent drill-in with point-in-time membership, computed sector weights, and transparent provenance tracking. Explicitly flags `has_fallback` and exposes `provenance_sources`.
+- Authored backend unit tests in `backend/tests/unit/test_sector_drill_in_api.py`:
+  - Verified sector catalog listing, constituent drill-in with fallback provenance visibility, and historical point-in-time membership queries.
+- Implemented `frontend/src/sector/`:
+  - `types.ts`: `SectorIndexCatalogItem`, `IndexConstituentItem`, and `IndexDrillInResponse`.
+  - `api.ts`: Client functions `fetchSectorCatalog` and `fetchIndexDrillIn` supporting historical `as_of` dates and realistic fallback seeding.
+- Created `frontend/src/widgets/builtin/SectorDrillInWidget.tsx`:
+  - Sector and index selector dropdown.
+  - Historical date toggle and date input for point-in-time constituent queries.
+  - **Visible fallback / stale snapshot banner**: Prominent warning banner when fallback provenance is active; never presents fallback as verified official data.
+  - Sector distribution breakdown chips.
+  - Constituent table listing Symbol, Sector, Weight (%), LTP, Change %, Provenance, and Effective Interval.
+  - "Save to Watchlist" integration creating user watchlists from sector constituents.
+  - Registered `sectorDrillInDefinition` in `frontend/src/widgets/builtin/index.ts`.
+- Authored frontend unit tests in `frontend/src/sector/sector.test.ts` and `frontend/src/widgets/builtin/SectorDrillInWidget.test.tsx`:
+  - Verified catalog retrieval, constituent drill-in, historical date selection, fallback visibility, and watchlist export.
+- Full repository test suite: 427 Python tests passed + 136 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (203 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.

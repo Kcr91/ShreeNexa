@@ -1,13 +1,38 @@
 {
-  "feature": "F7.5",
+  "feature": "F7.6",
   "status": "review",
-  "branch": "feature/F7.5-multiple-watchlists-configurable-columns",
-  "commit": "851299f29094b7643b5c6e8d058a1bf5367637ce",
+  "branch": "feature/F7.6-sector-watchlists-index-drill-in",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
   "blockers": [],
   "features": {
+    "F7.6": {
+      "status": "review",
+      "branch": "feature/F7.6-sector-watchlists-index-drill-in",
+      "commit": null,
+      "tests": {
+        "pytest": {
+          "passed": 427,
+          "failed": 0,
+          "skipped": 0
+        },
+        "frontend_vitest": {
+          "passed": 136,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F7.6.md",
+        "backend/app/api/universe.py",
+        "frontend/src/sector/api.ts",
+        "frontend/src/widgets/builtin/SectorDrillInWidget.tsx"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
     "F7.5": {
       "status": "review",
       "branch": "feature/F7.5-multiple-watchlists-configurable-columns",

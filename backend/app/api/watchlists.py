@@ -29,9 +29,7 @@ class WatchlistCreateModel(BaseModel):
 
     name: str = Field(min_length=1, max_length=64)
     description: str = ""
-    columns: list[str] = Field(
-        default_factory=lambda: ["symbol", "ltp", "changePct", "volume"]
-    )
+    columns: list[str] = Field(default_factory=lambda: ["symbol", "ltp", "changePct", "volume"])
     items: list[WatchlistItemModel] = Field(default_factory=list)
 
 
@@ -226,9 +224,7 @@ def delete_watchlist(watchlist_id: str) -> None:
 
 
 @router.post("/{watchlist_id}/symbols", response_model=WatchlistResponse)
-def add_symbol_to_watchlist(
-    watchlist_id: str, item: WatchlistItemModel
-) -> dict[str, Any]:
+def add_symbol_to_watchlist(watchlist_id: str, item: WatchlistItemModel) -> dict[str, Any]:
     """Add a symbol to a watchlist with stable ordering."""
     wl = _WATCHLISTS_STORE.get(watchlist_id)
     if not wl:
@@ -265,9 +261,7 @@ def remove_symbol_from_watchlist(watchlist_id: str, symbol: str) -> dict[str, An
 
 
 @router.post("/{watchlist_id}/reorder", response_model=WatchlistResponse)
-def reorder_watchlist_symbols(
-    watchlist_id: str, payload: WatchlistReorderModel
-) -> dict[str, Any]:
+def reorder_watchlist_symbols(watchlist_id: str, payload: WatchlistReorderModel) -> dict[str, Any]:
     """Stably reorder items in a watchlist based on an explicit symbol sequence."""
     wl = _WATCHLISTS_STORE.get(watchlist_id)
     if not wl:
