@@ -2,7 +2,7 @@
   "feature": "F7.3",
   "status": "review",
   "branch": "feature/F7.3-redis-quote-oi-depth-hot-cache",
-  "commit": null,
+  "commit": "2ab000fa331834a474daceab488e62a0e4925123",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F7.3": {
       "status": "review",
       "branch": "feature/F7.3-redis-quote-oi-depth-hot-cache",
-      "commit": null,
+      "commit": "2ab000fa331834a474daceab488e62a0e4925123",
       "tests": {
         "pytest": {
           "passed": 416,
