@@ -2,7 +2,7 @@
   "feature": "F4.8",
   "status": "review",
   "branch": "feature/F4.8-backtest-analytics-visualizer-tearsheet",
-  "commit": null,
+  "commit": "8b560a60fcb3b64c0e64b85c1920786cf89f1f07",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -423,7 +423,7 @@
     "F4.8": {
       "status": "review",
       "branch": "feature/F4.8-backtest-analytics-visualizer-tearsheet",
-      "commit": null,
+      "commit": "8b560a60fcb3b64c0e64b85c1920786cf89f1f07",
       "tests": {},
       "evidence": [],
       "verified_at": null,
