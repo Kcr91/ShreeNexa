@@ -1,8 +1,8 @@
 {
-  "feature": "F4.11",
+  "feature": "F4.12",
   "status": "review",
-  "branch": "feature/F4.11-notifications-alerts-audio-manager",
-  "commit": "78ef96a0b73bbf8b65287515f40393f938fcf8d0",
+  "branch": "feature/F4.12-visual-strategy-builder-ir-editor",
+  "commit": null,
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -451,6 +451,15 @@
       "status": "review",
       "branch": "feature/F4.11-notifications-alerts-audio-manager",
       "commit": "78ef96a0b73bbf8b65287515f40393f938fcf8d0",
+      "tests": {},
+      "evidence": [],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F4.12": {
+      "status": "review",
+      "branch": "feature/F4.12-visual-strategy-builder-ir-editor",
+      "commit": null,
       "tests": {},
       "evidence": [],
       "verified_at": null,

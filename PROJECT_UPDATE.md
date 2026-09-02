@@ -37,8 +37,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F4.10 | Done | Fast-forwarded into `main` at `e3e7583` after review. |
-| F4.11 | Ready for review | Audio/visual notification and alert manager featuring floating toast stacks, synthesized multi-tone Web Audio chimes (Order Fill, Reject, Margin Warning, Risk Breach), top risk event banners, sound mute/unmute toggles, and an audit-trailed Alerts Log widget. 353 Python tests & 82 frontend tests passing. |
+| F4.11 | Done | Fast-forwarded into `main` at `1c726ca` after review. |
+| F4.12 | Ready for review | Visual quantitative strategy builder with block-based IR editor, parameter tuning, live StrategyIR JSON compiler, and vector backtest simulation runner trigger. 353 Python tests & 90 frontend tests passing. |
 | F3.11, F3.13–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
@@ -1279,5 +1279,23 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend test suite: 82 passed / 0 failed across 29 test files.
   - Production bundle build: `dist/assets/index-*.js` created cleanly.
 - Full repository test suite: 353 Python tests passed + 82 frontend tests passed.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `1c726ca`.
+
+### 2026-09-02 — F4.12 Visual strategy builder workspace completed
+
+- Implemented `frontend/src/strategybuilder/types.ts`:
+  - `IndicatorNode`, `RuleCondition`, `StrategyRuleBlock`, `StrategyBuilderState`, `StrategyIRSchema`, `VectorBacktestResult`, and `StrategyBuilderWidgetSettings`.
+- Implemented `frontend/src/strategybuilder/compiler.ts`:
+  - `validateStrategyBuilderState`: Validates non-empty names, uniqueness, valid operands, and logic constraints.
+  - `compileVisualStateToStrategyIR`: Compiles visual indicators, entry/exit rules, combinators, and stop/take targets into standard IR JSON.
+  - `runClientSideVectorBacktest`: Vector backtest simulation returning net return %, win rate %, trade counts, Sharpe ratio, drawdown, and equity series.
+- Implemented `frontend/src/widgets/builtin/StrategyBuilderWidget.tsx`:
+  - 3-column workspace with Indicator Library on left, Logic Rule Blocks & Risk in center, and live StrategyIR JSON preview with Vector Backtest trigger on right.
+  - Registered in `widgetRegistry` under category `analytics`.
+- Authored acceptance contract `docs/qa/acceptance/F4.12.md` and added unit tests in `frontend/src/strategybuilder/compiler.test.ts` and `StrategyBuilderWidget.test.tsx`:
+  - Frontend test suite: 90 passed / 0 failed across 31 test files.
+  - Production bundle build: `dist/assets/index-*.js` created cleanly.
+- Full repository test suite: 353 Python tests passed + 90 frontend tests passed.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (166 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
