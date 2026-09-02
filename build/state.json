@@ -1044,7 +1044,7 @@
     "F9.4": {
       "status": "review",
       "branch": "feature/F9.4-paper-metrics-registry-reuse",
-      "commit": "3791da31bc08751aa4ae1e341dc832eebcb0e570",
+      "commit": "78b65f653daa4781774132246e0a53a0a2c6f848",
       "tests": {
         "pytest": {
           "passed": 472,
