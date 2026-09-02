@@ -2,7 +2,7 @@
   "feature": "F8.7",
   "status": "review",
   "branch": "feature/F8.7-visual-strategy-builder-ir",
-  "commit": null,
+  "commit": "469f6c07a289e2b52d76f94353e8a3ddd9ffab4d",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F8.7": {
       "status": "review",
       "branch": "feature/F8.7-visual-strategy-builder-ir",
-      "commit": null,
+      "commit": "469f6c07a289e2b52d76f94353e8a3ddd9ffab4d",
       "tests": {
         "pytest": {
           "passed": 476,
