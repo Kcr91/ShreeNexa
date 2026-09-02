@@ -2,7 +2,7 @@
   "feature": "F3.4",
   "status": "review",
   "branch": "feature/F3.4-stock-strategy-backtest-runner",
-  "commit": null,
+  "commit": "ac8ed3ba03cb8eeaeaf923d8c199587428f52236",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -288,7 +288,7 @@
     "F3.4": {
       "status": "review",
       "branch": "feature/F3.4-stock-strategy-backtest-runner",
-      "commit": null,
+      "commit": "ac8ed3ba03cb8eeaeaf923d8c199587428f52236",
       "tests": {},
       "evidence": [],
       "verified_at": null,
