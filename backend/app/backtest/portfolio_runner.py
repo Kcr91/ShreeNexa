@@ -112,9 +112,7 @@ class PortfolioBacktestRunner:
             equity_series_by_strat[alloc.strategy_id] = eq_dict
 
             return_pct = (
-                (metrics.final_equity - allocated_cap) / allocated_cap
-                if allocated_cap > 0
-                else 0.0
+                (metrics.final_equity - allocated_cap) / allocated_cap if allocated_cap > 0 else 0.0
             )
             contributions.append(
                 StrategyContribution(

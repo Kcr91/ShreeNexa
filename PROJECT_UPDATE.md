@@ -37,9 +37,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F0.6 | Done | Fast-forwarded into `main` at `d4d89d8` after review. |
 | F0.7 | Done | Fast-forwarded into `main` at `d5e4143` after review. |
 | F0.8 | Done | Fast-forwarded into `main` at `370757a` after review. |
-| F3.6 | Done | Fast-forwarded into `main` at `817ef71` after review. |
-| F3.7 | Ready for review | Multi-strategy portfolio backtest runner with capital allocation, equity curve merging, strategy contribution attribution, and drift-based rebalancing. 335/335 tests passing. |
-| F3.8–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F3.7 | Done | Fast-forwarded into `main` at `17b5cd1` after review. |
+| F3.8 | Ready for review | Monte Carlo trade/bar resampling with confidence intervals and empirical risk of ruin, along with rolling/anchored Walk-Forward Analysis and Walk-Forward Efficiency (WFE) evaluation. 339/339 tests passing. |
+| F3.9–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -995,4 +995,20 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `backend/tests/unit/test_portfolio_backtest_runner.py`: 3 passed
 - Full repository test suite: 335 passed / 0 failed / 0 skipped.
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (157 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Fast-forward merged into `main` at `17b5cd1`.
+
+### 2026-09-02 — F3.8 Monte Carlo and walk-forward analysis completed
+
+- Implemented `backend/app/backtest/monte_carlo.py`:
+  - `MonteCarloConfig` & `MonteCarloResult`: Resampling parameters (`TRADE_SHUFFLE`, `BOOTSTRAP`, `BLOCK_BOOTSTRAP`), deterministic random seeds, risk of ruin threshold, and distribution percentiles ($P_5, P_{25}, P_{50}, P_{75}, P_{95}, P_{99}$).
+  - `run_monte_carlo`: Resamples trade PnL series, simulates multi-path equity curves, calculates percentile ranks for terminal equity and maximum drawdown %, and detects empirical risk of ruin.
+- Implemented `backend/app/backtest/walk_forward.py`:
+  - `WalkForwardConfig`, `WalkForwardSplit`, `WalkForwardWindowResult`, and `WalkForwardResult`: Models for In-Sample (IS) training and Out-of-Sample (OOS) validation partitioning.
+  - `generate_walk_forward_splits`: Creates non-overlapping rolling or anchored train/validation time windows.
+  - `run_walk_forward_analysis`: Coordinates sequential IS optimization / OOS validation runs, stitches contiguous out-of-sample equity curves, and calculates individual and mean Walk-Forward Efficiency ($\text{WFE} = \text{CAGR}_{OOS} / \text{CAGR}_{IS}$) along with portfolio robustness scores.
+- Exported Monte Carlo and Walk Forward tools in `backend/app/backtest/__init__.py`.
+- Authored acceptance contract `docs/qa/acceptance/F3.8.md` and added 4 new unit tests covering deterministic trade shuffle terminal equity invariance, bootstrap risk of ruin detection, rolling/anchored date boundary generation, and full walk-forward analysis execution:
+  - `backend/tests/unit/test_monte_carlo_walk_forward.py`: 4 passed
+- Full repository test suite: 339 passed / 0 failed / 0 skipped.
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (160 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 

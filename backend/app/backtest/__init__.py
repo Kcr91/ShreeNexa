@@ -1,4 +1,4 @@
-"""Backtest execution, performance analytics, multi-asset, and portfolio modeling."""
+"""Backtest execution, performance analytics, Monte Carlo, and Walk-Forward modeling."""
 
 from __future__ import annotations
 
@@ -15,6 +15,13 @@ from app.backtest.models import (
     BacktestConfig,
     BacktestPerformanceMetrics,
     BacktestResult,
+)
+from app.backtest.monte_carlo import (
+    MonteCarloConfig,
+    MonteCarloPercentileSummary,
+    MonteCarloResult,
+    ResampleMethod,
+    run_monte_carlo,
 )
 from app.backtest.options_models import (
     OptionBacktestConfig,
@@ -41,6 +48,14 @@ from app.backtest.store import (
     BacktestStore,
     backtest_store,
 )
+from app.backtest.walk_forward import (
+    WalkForwardConfig,
+    WalkForwardResult,
+    WalkForwardSplit,
+    WalkForwardWindowResult,
+    generate_walk_forward_splits,
+    run_walk_forward_analysis,
+)
 
 __all__ = [
     "BacktestConfig",
@@ -53,6 +68,9 @@ __all__ = [
     "FuturesRollRecord",
     "FuturesStrategyBacktestRunner",
     "FuturesStrategyConfig",
+    "MonteCarloConfig",
+    "MonteCarloPercentileSummary",
+    "MonteCarloResult",
     "OptionBacktestConfig",
     "OptionBacktestResult",
     "OptionLegConfig",
@@ -64,10 +82,18 @@ __all__ = [
     "PortfolioGreeks",
     "PortfolioRebalanceEvent",
     "RebalanceFrequency",
+    "ResampleMethod",
     "StockStrategyBacktestRunner",
     "StrategyAllocation",
     "StrategyContribution",
+    "WalkForwardConfig",
+    "WalkForwardResult",
+    "WalkForwardSplit",
+    "WalkForwardWindowResult",
     "backtest_store",
     "calculate_backtest_metrics",
     "calculate_option_margin",
+    "generate_walk_forward_splits",
+    "run_monte_carlo",
+    "run_walk_forward_analysis",
 ]
