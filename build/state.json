@@ -2,7 +2,7 @@
   "feature": "F3.10",
   "status": "review",
   "branch": "feature/F3.10-metric-grading-scorecard",
-  "commit": null,
+  "commit": "69142d088c3a9f02377bcf7a7cf3d32ef3c8d195",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -342,7 +342,7 @@
     "F3.10": {
       "status": "review",
       "branch": "feature/F3.10-metric-grading-scorecard",
-      "commit": null,
+      "commit": "69142d088c3a9f02377bcf7a7cf3d32ef3c8d195",
       "tests": {},
       "evidence": [],
       "verified_at": null,
