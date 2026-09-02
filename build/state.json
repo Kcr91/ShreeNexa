@@ -2,7 +2,7 @@
   "feature": "F7.9",
   "status": "review",
   "branch": "feature/F7.9-market-depth-ladder-watchlist",
-  "commit": null,
+  "commit": "28f3503a0159d68ec12d0bf291a94339b3841318",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -11,7 +11,7 @@
     "F7.9": {
       "status": "review",
       "branch": "feature/F7.9-market-depth-ladder-watchlist",
-      "commit": null,
+      "commit": "28f3503a0159d68ec12d0bf291a94339b3841318",
       "tests": {
         "pytest": {
           "passed": 440,
