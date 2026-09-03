@@ -75,9 +75,15 @@ class Settings(BaseModel):
     @classmethod
     def load(cls, env_file: Path | str | None = ".env") -> Settings:
         """Load settings with precedence: OS environment > .env file > defaults."""
+        target_env = env_file
+        if env_file == ".env":
+            override = os.environ.get("SHREENEXA_ENV_FILE")
+            if override is not None:
+                target_env = override.strip() or None
+
         file_values: dict[str, Any] = {}
-        if env_file:
-            path = Path(env_file)
+        if target_env:
+            path = Path(target_env)
             if path.is_file():
                 file_values = {
                     k.lower(): v for k, v in dotenv_values(path).items() if v is not None
