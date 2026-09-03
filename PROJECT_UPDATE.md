@@ -74,7 +74,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F10.5 | Done | Fast-forwarded into `main` at `f5ad0dc` after review. |
 | F11.1 | Done | Fast-forwarded into `main` at `2fcc59c` after review. |
 | F11.2 | Done | Fast-forwarded into `main` at `5ec6ce9` after review. |
-| F5.3–F5.4, F11.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F11.3 | Done | Fast-forwarded into `main` at `5a9eba3` after review. |
+| F5.3–F5.4, F11.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2450,3 +2451,36 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified REST API endpoints end-to-end.
 - Full repository test suite: 537 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (276 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F11.3 Codex task runner with durable state and event streaming completed
+
+- Implemented `backend/app/feature_builder/runner.py`:
+  - `CodexTaskRunner`: Orchestrates bounded fresh-context tasks, durable disk journaling, and real-time SSE event publishing.
+  - `CodexAuthenticationError`: Proof error verifying that missing or invalid auth credentials raise an explicit, typed exception (HTTP 401).
+  - `CodexQuotaExceededError`: Proof error verifying that exhausted token or quota limits raise an explicit, typed exception (HTTP 429).
+  - `TaskJournalState`: Durable state persisted to disk at `build/tasks/<task_id>/state.json`. Records checkpoint steps, timestamps, status, and Git commit SHA.
+  - `resume_task`: Proof requirement verifying that interrupted tasks resume strictly from Git and durable disk journal without relying on in-memory chat conversation history.
+  - `cancel_task`: Gracefully terminates task execution and records cancellation state.
+- Extended `backend/app/api/feature_builder.py`:
+  - `POST /api/v1/feature-builder/tasks`
+  - `GET /api/v1/feature-builder/tasks`
+  - `GET /api/v1/feature-builder/tasks/{task_id}`
+  - `POST /api/v1/feature-builder/tasks/{task_id}/progress`
+  - `POST /api/v1/feature-builder/tasks/{task_id}/interrupt`
+  - `POST /api/v1/feature-builder/tasks/{task_id}/resume`
+  - `POST /api/v1/feature-builder/tasks/{task_id}/cancel`
+  - `GET /api/v1/feature-builder/tasks/{task_id}/events` (Server-Sent Events)
+- Authored acceptance contract in `docs/qa/acceptance/F11.3.md`.
+- Authored comprehensive unit and acceptance tests in `backend/tests/unit/test_feature_builder_runner.py` (7 tests passing):
+  - Verified explicit authentication error rejection.
+  - Verified explicit quota exceeded error rejection.
+  - Verified durable disk journaling and checkpoint step progression.
+  - Verified interrupt and resume reconstructing state strictly from disk journal and Git SHA.
+  - Verified clean task cancellation and disk state reflection.
+  - Verified real-time structured event streaming.
+  - Verified REST API endpoints end-to-end.
+- Preserved user credential CLI additions (`backend/app/dhan/token.py`, `backend/tests/unit/test_dhan_token_cli.py`, `backend/app/dhan/credentials.py`, and sanitized `.env.example`).
+- Configured `--basetemp=build/pytest_tmp` in `pyproject.toml` ensuring tests across the workspace avoid Windows temporary directory access conflicts.
+- Full repository test suite: 559 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (278 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
