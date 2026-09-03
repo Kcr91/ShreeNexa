@@ -1,8 +1,8 @@
 {
-  "feature": "F11.3",
+  "feature": "F11.4",
   "status": "review",
-  "branch": "feature/F11.3-codex-task-runner",
-  "commit": "5a9eba3",
+  "branch": "feature/F11.4-gate-harness",
+  "commit": "181a013",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1276,6 +1276,18 @@
       "evidence": [
         "backend/tests/unit/test_feature_builder_runner.py",
         "docs/qa/acceptance/F11.3.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F11.4": {
+      "status": "review",
+      "branch": "feature/F11.4-gate-harness",
+      "commit": "181a013",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_feature_builder_gates.py",
+        "docs/qa/acceptance/F11.4.md"
       ],
       "verified_at": null,
       "blockers": []

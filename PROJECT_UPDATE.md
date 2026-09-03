@@ -75,7 +75,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F11.1 | Done | Fast-forwarded into `main` at `2fcc59c` after review. |
 | F11.2 | Done | Fast-forwarded into `main` at `5ec6ce9` after review. |
 | F11.3 | Done | Fast-forwarded into `main` at `5a9eba3` after review. |
-| F5.3–F5.4, F11.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F11.4 | Done | Fast-forwarded into `main` at `181a013` after review. |
+| F5.3–F5.4, F11.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2504,3 +2505,38 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified CLI rejects empty, expired, and client-ID-less tokens, and that `set`/`status` never echo the secret.
 - Backend unit suite: 477 passed, 16 skipped (run from the repository root; several fixture-path tests require that working directory). `ruff check` clean, `ruff format` clean, `mypy` clean on the changed modules.
 - Verified end-to-end against real Windows DPAPI: `set` produced a genuine `CryptProtectData` blob, `status` reported `source: dpapi` with auto-derived expiry, and `clear` removed it.
+
+### 2026-09-03 — F11.4 Gate harness for G1-G6, filtered failure summaries, and bounded retry policy completed
+
+- Implemented `backend/app/feature_builder/gates.py`:
+  - `GateType` & `GateStatus`: Enumerations for G1 through G6 quality gates and evaluation outcomes (`PASSED`, `FAILED`, `BLOCKED`, `SKIPPED`).
+  - `FailureCategory`: Precise categorization of test-gate failures (`PARITY_MISMATCH`, `LOOK_AHEAD_LEAK`, `NONDETERMINISM`, `TYPE_ERROR`, `LINT_ERROR`, `TEST_FAILURE`, `BUILD_FAILURE`, `COVERAGE_DEFICIT`, `PROTECTED_PATH_VIOLATION`).
+  - `FilteredFailureSummary`: Structured, noise-filtered diagnostic object extracting culprit files, offending line numbers, and actionable remediation instructions.
+  - `RetryPolicy`: Bounded retry mechanism enforcing maximum retry attempts (default 3), exponential backoff cooldown calculation, and strict non-retryable guards.
+  - `GateHarness`:
+    - `evaluate_g1_parity`: Bit-for-bit mathematical and signal equivalence verification between vector and incremental evaluations.
+    - `evaluate_g2_lookahead`: Truncated-history audit verifying that decisions at bar $t \le T$ do not depend on bars $t > T$.
+    - `evaluate_g3_determinism`: Reproducibility check verifying byte-identical SHA-256 output across repeat executions with identical configurations.
+    - `evaluate_g4_compilation`: Filtered compilation, strict typing, and build failure parser extracting file/line diagnostics.
+    - `evaluate_g5_coverage`: Coverage verification against required thresholds (e.g. 90% analytics/engine).
+    - `evaluate_g6_protected_paths`: Strictly bars unattended edits to `backend/app/engine/risk.py`, `backend/app/engine/broker.py`, `backend/app/dhan/orders.py`, and `backend/tests/parity/`. Invariant: G6 violation is non-retryable and sets overall status to `BLOCKED`.
+    - `evaluate_all`: Composite evaluator orchestrating all quality gates and computing overall candidate disposition.
+- Extended `backend/app/api/feature_builder.py`:
+  - `POST /api/v1/feature-builder/gates/evaluate`: Evaluate G1-G6 quality gates on candidate changes.
+  - `POST /api/v1/feature-builder/gates/retry`: Request a bounded retry attempt.
+  - `GET /api/v1/feature-builder/gates/policy`: Inspect active retry policy and attempt counters.
+- Authored acceptance contract in `docs/qa/acceptance/F11.4.md`.
+- Authored comprehensive unit and acceptance tests in `backend/tests/unit/test_feature_builder_gates.py` (10 tests passing):
+  - Verified deliberately broken parity fixture is blocked by G1.
+  - Verified vector/incremental length mismatch is blocked by G1.
+  - Verified signal look-ahead leak across truncated history is blocked by G2 as non-retryable.
+  - Verified nondeterministic output across repeat runs is blocked by G3.
+  - Verified broken typing/compilation is blocked by G4 with clean, filtered summaries.
+  - Verified coverage deficits are blocked by G5 with exact shortfall breakdown.
+  - Verified unattended edits touching protected paths are strictly BLOCKED by G6 with retry permanently denied.
+  - Verified evaluate_all aggregates results and sets overall BLOCKED status on security violations.
+  - Verified bounded retry policy enforces max attempts (3) and exponential backoff.
+  - Verified quality gates REST API lifecycle.
+- Full repository test suite: 569 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (282 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
