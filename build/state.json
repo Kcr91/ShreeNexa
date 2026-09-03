@@ -1,8 +1,8 @@
 {
-  "feature": "F9.7",
+  "feature": "F10.1",
   "status": "review",
-  "branch": "feature/F9.7-paper-pnl-calendar-returns",
-  "commit": "d42e3434856cb323a72ba272bf8d9412a1885a49",
+  "branch": "feature/F10.1-holdings-ledger-lots-corporate-actions",
+  "commit": "8db63cfa7d0acbed8e820f7c4362773575f4e83a",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1138,6 +1138,33 @@
         "backend/app/paper/calendar.py",
         "backend/app/api/paper.py",
         "backend/tests/unit/test_paper_pnl_calendar.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F10.1": {
+      "status": "review",
+      "branch": "feature/F10.1-holdings-ledger-lots-corporate-actions",
+      "commit": "8db63cfa7d0acbed8e820f7c4362773575f4e83a",
+      "tests": {
+        "pytest": {
+          "passed": 494,
+          "failed": 0,
+          "skipped": 30
+        },
+        "frontend_vitest": {
+          "passed": 179,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F10.1.md",
+        "backend/app/investing/ledger.py",
+        "backend/app/investing/models.py",
+        "backend/app/investing/reconciliation.py",
+        "backend/tests/fixtures/dhan_holdings_fixture.json",
+        "backend/tests/unit/test_holdings_ledger_corporate_actions.py"
       ],
       "verified_at": null,
       "blockers": []
