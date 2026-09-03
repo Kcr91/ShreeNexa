@@ -87,6 +87,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F13.4 | Done | Fast-forwarded into `main` at `938162f` after review. |
 | F13.5 | Done | Fast-forwarded into `main` at `b811204` after review. |
 | F12.1 | Done | Fast-forwarded into `main` at `a1d47ee` after review. |
+| F12.2 | Done | Fast-forwarded into `main` at `f0651d5` after review. |
 
 ## Major-task log
 
@@ -2896,3 +2897,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `ruff check backend` 100% clean.
   - `validate_manifest.py` and `validate_fixtures.py` OK.
   - Fast-forwarded into `main` at `a1d47ee`.
+
+
+### 2026-09-03 — F12.2 Live Order Update WebSocket, postback ingestion, deduplication, and reconciliation completed
+
+- Delivered `backend/app/dhan/order_stream.py`:
+  - WebSocket connection models for `wss://api-order-update.dhan.co`.
+  - Client authorization handshake generator `build_order_stream_auth_message` implementing `MsgCode: 42`, `ClientId`, `Token`, and `UserType: "SELF"`.
+  - Typed packet parsing for `DhanOrderUpdateEvent` and `DhanOrderUpdateData` handling `order_alert` payloads.
+  - Webhook postback ingestion model `DhanPostbackPayload` unifying HTTP postbacks with real-time stream data.
+  - `DhanOrderStreamHandler` dispatching parsed updates to registered engine listeners.
+- Delivered `backend/app/engine/order_reconciler.py`:
+  - Deduplication: Unique event fingerprints `(order_no, status, traded_qty, price, timestamp)` drop duplicate packets from concurrent stream and postback channels.
+  - Idempotent fill calculation: Tracks cumulative traded quantities and emits `OrderFillEvent` solely for positive incremental fills, preventing repeated execution alerts from distorting positions or cash balances.
+  - Sequence gap detection: Out-of-order decrements in traded quantities or missing states trigger immediate reconciliation against authoritative broker truth (`DhanRestClient.get_order_by_id`).
+- Authored acceptance contract `docs/qa/acceptance/F12.2.md`.
+- Authored unit test suites:
+  - `backend/tests/unit/test_dhan_order_stream.py` (4 tests, all passing).
+  - `backend/tests/unit/test_order_reconciler.py` (3 tests, all passing).
+- Verified quality gates:
+  - 63 Python tests passing across dhan/order/reconciler suites (0 failures).
+  - `mypy backend --strict` clean across 320 source files.
+  - `ruff check backend` clean.
+  - `validate_manifest.py` and `validate_fixtures.py` OK.
+  - Fast-forwarded into `main` at `f0651d5`.

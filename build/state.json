@@ -1,11 +1,11 @@
 {
-  "feature": "F12.1",
+  "feature": "F12.2",
   "status": "review",
-  "branch": "feature/F12.1-dhan-broker-orders",
-  "commit": "a1d47ee",
+  "branch": "feature/F12.2-order-update-websocket",
+  "commit": "f0651d5",
   "tests": {
     "pytest": {
-      "passed": 56,
+      "passed": 63,
       "failed": 0,
       "skipped": 0
     }
@@ -1438,6 +1438,27 @@
         "backend/tests/unit/test_dhan_broker.py"
       ],
       "verified_at": "2026-09-03T23:06:00Z",
+      "blockers": []
+    },
+    "F12.2": {
+      "status": "review",
+      "branch": "feature/F12.2-order-update-websocket",
+      "commit": "f0651d5",
+      "tests": {
+        "pytest": {
+          "passed": 63,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F12.2.md",
+        "backend/app/dhan/order_stream.py",
+        "backend/app/engine/order_reconciler.py",
+        "backend/tests/unit/test_dhan_order_stream.py",
+        "backend/tests/unit/test_order_reconciler.py"
+      ],
+      "verified_at": "2026-09-03T23:10:00Z",
       "blockers": []
     }
   }
