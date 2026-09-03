@@ -12,6 +12,8 @@ export interface StockOrder {
   productType: ProductType;
   quantity: number;
   price: number;
+  correlationId?: string;
+  confirmationAcknowledged?: boolean;
 }
 
 export interface OptionLeg {
@@ -29,6 +31,8 @@ export interface MultiLegOptionOrder {
   strategyName: string;
   productType: ProductType;
   legs: OptionLeg[];
+  correlationId?: string;
+  confirmationAcknowledged?: boolean;
 }
 
 export interface MarginRequirement {
@@ -53,6 +57,7 @@ export interface OrderPlacementResult {
   success: boolean;
   orderId?: string;
   executionMode: ExecutionMode;
+  isUncertain?: boolean;
   message: string;
 }
 

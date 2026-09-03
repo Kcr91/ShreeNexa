@@ -39,6 +39,9 @@ export function validateStockOrder(
     if (!isLiveApproved) {
       errors.push("Live execution locked. Real order placement is strictly gated behind Epic 12 live approval.");
     }
+    if (!order.confirmationAcknowledged) {
+      errors.push("Live execution requires explicit confirmation acknowledgment.");
+    }
   }
 
   return {
@@ -88,6 +91,9 @@ export function validateOptionOrder(
     if (!isLiveApproved) {
       errors.push("Live execution locked. Real order placement is strictly gated behind Epic 12 live approval.");
     }
+    if (!order.confirmationAcknowledged) {
+      errors.push("Live execution requires explicit confirmation acknowledgment.");
+    }
   }
 
   return {
@@ -101,8 +107,18 @@ export function placeOrder(
   order: StockOrder | MultiLegOptionOrder,
   availableFunds: number = 500000,
   executionMode: ExecutionMode = "PAPER",
-  isLiveApproved: boolean = false
+  isLiveApproved: boolean = false,
+  uncertainOrders?: Set<string>
 ): OrderPlacementResult {
+  if (order.correlationId && uncertainOrders?.has(order.correlationId)) {
+    return {
+      success: false,
+      executionMode,
+      isUncertain: true,
+      message: `Order '${order.correlationId}' is in uncertain state (PENDING_BROKER_CONFIRMATION). Blind retry is blocked.`,
+    };
+  }
+
   const isStock = "price" in order;
   const validation = isStock
     ? validateStockOrder(order as StockOrder, availableFunds, executionMode, isLiveApproved)

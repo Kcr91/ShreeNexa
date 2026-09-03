@@ -32,6 +32,7 @@ from app.api.margin import router as margin_router
 from app.api.monitoring import router as monitoring_router
 from app.api.options import router as options_router
 from app.api.options_analytics import router as options_analytics_router
+from app.api.orders import router as orders_router
 from app.api.paper import router as paper_router
 from app.api.screeners import router as screeners_router
 from app.api.strategy_builder import router as strategy_builder_router
@@ -103,6 +104,7 @@ app.include_router(options_analytics_router)
 app.include_router(strategy_builder_router)
 app.include_router(strategy_ir_router)
 app.include_router(margin_router)
+app.include_router(orders_router)
 app.include_router(paper_router)
 app.include_router(investing_router)
 app.include_router(ai_router)

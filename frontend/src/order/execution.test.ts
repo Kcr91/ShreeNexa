@@ -43,6 +43,30 @@ describe("Order Execution and Safety Gate Validation", () => {
     expect(placement.message).toContain("Live execution locked");
   });
 
+  it("strictly blocks live execution without explicit confirmation acknowledgment", () => {
+    const unconfirmedLiveOrder: StockOrder = {
+      ...validStockOrder,
+      confirmationAcknowledged: false,
+    };
+    const res = validateStockOrder(unconfirmedLiveOrder, 500000, "LIVE", true);
+    expect(res.isValid).toBe(false);
+    expect(res.errors).toContain("Live execution requires explicit confirmation acknowledgment.");
+  });
+
+  it("blocks blind retry when order is in uncertain status", () => {
+    const uncertainSet = new Set(["UNCERTAIN-CORR-01"]);
+    const retryOrder: StockOrder = {
+      ...validStockOrder,
+      correlationId: "UNCERTAIN-CORR-01",
+    };
+
+    const placement = placeOrder(retryOrder, 500000, "PAPER", false, uncertainSet);
+    expect(placement.success).toBe(false);
+    expect(placement.isUncertain).toBe(true);
+    expect(placement.message).toContain("PENDING_BROKER_CONFIRMATION");
+    expect(placement.message).toContain("Blind retry is blocked");
+  });
+
   it("validates multi-leg option orders and requires valid legs", () => {
     const invalidOptionOrder: MultiLegOptionOrder = {
       strategyName: "Empty Strategy",
