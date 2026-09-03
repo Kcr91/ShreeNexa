@@ -5,7 +5,13 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
+from app.feature_builder.gates import (
+    GateExecutionSummary,
+    RetryPolicy,
+    gate_harness,
+)
 from app.feature_builder.models import (
     FeatureRequest,
     FeatureSpec,
@@ -221,3 +227,87 @@ async def stream_task_events(task_id: str) -> StreamingResponse:
             task_runner.unsubscribe(task_id, q)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# --- Quality Gates Endpoints (F11.4) ---
+
+
+class GateEvaluateRequest(BaseModel):
+    task_id: str | None = None
+    changed_files: list[str] = Field(default_factory=list)
+    g1_vector: list[float] | None = None
+    g1_incremental: list[float] | None = None
+    g2_full: list[float | int | bool] | None = None
+    g2_trunc: list[float | int | bool] | None = None
+    g2_point: int | None = None
+    g3_run1: dict[str, Any] | None = None
+    g3_run2: dict[str, Any] | None = None
+    g4_raw_output: str | None = None
+    g4_exit_code: int | None = None
+    g5_actual_coverage: float | None = None
+    g5_required_coverage: float | None = None
+    g5_component: str = "backend"
+
+
+@router.post("/gates/evaluate", response_model=GateExecutionSummary)
+def evaluate_gates(request: GateEvaluateRequest) -> GateExecutionSummary:
+    """Evaluate G1-G6 quality gates on candidate changes and compute overall disposition."""
+    g1_data = None
+    if request.g1_vector is not None and request.g1_incremental is not None:
+        g1_data = (request.g1_vector, request.g1_incremental)
+
+    g2_data = None
+    if (
+        request.g2_full is not None
+        and request.g2_trunc is not None
+        and request.g2_point is not None
+    ):
+        g2_data = (request.g2_full, request.g2_trunc, request.g2_point)
+
+    g3_data = None
+    if request.g3_run1 is not None and request.g3_run2 is not None:
+        g3_data = (request.g3_run1, request.g3_run2)
+
+    g4_data = None
+    if request.g4_raw_output is not None and request.g4_exit_code is not None:
+        g4_data = (request.g4_raw_output, request.g4_exit_code)
+
+    g5_data = None
+    if request.g5_actual_coverage is not None and request.g5_required_coverage is not None:
+        g5_data = (request.g5_actual_coverage, request.g5_required_coverage, request.g5_component)
+
+    return gate_harness.evaluate_all(
+        changed_files=request.changed_files,
+        g1_data=g1_data,
+        g2_data=g2_data,
+        g3_data=g3_data,
+        g4_data=g4_data,
+        g5_data=g5_data,
+        task_id=request.task_id,
+    )
+
+
+@router.post("/gates/retry")
+def request_gate_retry() -> dict[str, Any]:
+    """Record a retry attempt under the bounded retry policy."""
+    if not gate_harness.retry_policy.can_retry():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Max retries ({gate_harness.retry_policy.max_retries}) exceeded "
+                "or non-retryable violation"
+            ),
+        )
+    delay = gate_harness.retry_policy.record_retry()
+    return {
+        "retry_allowed": True,
+        "retry_count": gate_harness.retry_policy.retry_count,
+        "max_retries": gate_harness.retry_policy.max_retries,
+        "backoff_delay_seconds": delay,
+    }
+
+
+@router.get("/gates/policy", response_model=RetryPolicy)
+def get_gate_policy() -> RetryPolicy:
+    """Retrieve the current gate harness retry policy."""
+    return gate_harness.retry_policy

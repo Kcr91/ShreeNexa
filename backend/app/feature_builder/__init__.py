@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+from app.feature_builder.gates import (
+    FailureCategory,
+    FilteredFailureSummary,
+    GateExecutionSummary,
+    GateHarness,
+    GateResult,
+    GateStatus,
+    GateType,
+    RetryPolicy,
+    gate_harness,
+)
 from app.feature_builder.models import (
     FeatureRequest,
     FeatureSpec,
@@ -45,11 +56,19 @@ __all__ = [
     "CodexAuthenticationError",
     "CodexQuotaExceededError",
     "CodexTaskRunner",
+    "FailureCategory",
     "FeatureRequest",
     "FeatureSpec",
     "FeatureSpecEngine",
     "FeatureSpecUpdate",
+    "FilteredFailureSummary",
+    "GateExecutionSummary",
+    "GateHarness",
+    "GateResult",
+    "GateStatus",
+    "GateType",
     "PathEscapeViolationError",
+    "RetryPolicy",
     "RiskLevel",
     "RunnerTaskStatus",
     "SpecApprovalDecision",
@@ -65,6 +84,7 @@ __all__ = [
     "WorktreeManager",
     "evaluate_ambiguity",
     "evaluate_request_risk",
+    "gate_harness",
     "safe_write_worktree_file",
     "spec_engine",
     "task_runner",

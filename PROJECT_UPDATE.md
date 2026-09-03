@@ -2484,3 +2484,23 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Full repository test suite: 559 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (278 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
+
+### 2026-09-03 — Dhan credential hygiene: leaked example token scrubbed, encrypted local token workflow
+
+- Removed a real Dhan access token and client ID from the tracked `.env.example` (committed in `f340b88`, decoded `dhanClientId=1111713478`, `exp=2026-09-03T14:30:58+00:00`). The template now ships blank placeholders and points at the encrypted store. The token remains in git history and must be treated as disclosed.
+- Extended `backend/app/dhan/credentials.py`:
+  - `decode_token_claims`: Reads the unverified JWT payload of a Dhan access token (signature is not validated; used only for local expiry metadata).
+  - `token_expiry_from_claims` / `token_client_id_from_claims`: Derive expiry and client ID from the token's own `exp` and `dhanClientId` claims.
+  - `resolve_dhan_credentials` and `store_dhan_credentials_dpapi` now fall back to the token's own `exp` claim when no explicit `DHAN_TOKEN_EXPIRES_AT` is configured, so the 24-hour expiry is tracked automatically and `/api/v1/dhan/token-health` no longer degrades to `unknown_expiry`.
+- Added `backend/app/dhan/token.py`, run as `python -m app.dhan.token <set|status|clear>`:
+  - `set`: Reads the token from a hidden prompt or piped stdin (never argv, so it stays out of shell history and the process table), derives expiry and client ID from its claims, refuses already-expired tokens, and writes it to the current-user DPAPI-encrypted store at `.runtime/credentials/dhan.enc` per ADR-0006.
+  - `status`: Reports resolved source, masked client ID, and remaining validity without printing the secret.
+  - `clear`: Deletes the encrypted credential file.
+  - Deliberately not wired into `[project.scripts]`; ADR-0004 pins the four runtime command names.
+- Authored unit tests in `backend/tests/unit/test_dhan_token_cli.py` (11 tests passing):
+  - Verified claim decoding, malformed-token rejection, and non-numeric/boolean `exp` rejection.
+  - Verified environment expiry falls back to the token claim, and that an explicit `DHAN_TOKEN_EXPIRES_AT` still wins.
+  - Verified DPAPI store round-trip derives expiry from the token.
+  - Verified CLI rejects empty, expired, and client-ID-less tokens, and that `set`/`status` never echo the secret.
+- Backend unit suite: 477 passed, 16 skipped (run from the repository root; several fixture-path tests require that working directory). `ruff check` clean, `ruff format` clean, `mypy` clean on the changed modules.
+- Verified end-to-end against real Windows DPAPI: `set` produced a genuine `CryptProtectData` blob, `status` reported `source: dpapi` with auto-derived expiry, and `clear` removed it.
