@@ -14,6 +14,7 @@ import {
 import {
   compileVisualToCanonicalIR,
 } from "../../strategybuilder/canonical";
+import { AIDraftModal } from "../../strategybuilder/AIDraftModal";
 
 const DEFAULT_STATE: StrategyBuilderState = {
   strategyName: "EMA Golden Cross Momentum",
@@ -58,6 +59,7 @@ export const StrategyBuilderWidget: React.FC<
     universe: settings?.defaultUniverse || DEFAULT_STATE.universe,
   }));
   const [backtestResult, setBacktestResult] = useState<VectorBacktestResult | null>(null);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   const validation = useMemo(() => {
     return validateStrategyBuilderState(state);
@@ -160,23 +162,43 @@ export const StrategyBuilderWidget: React.FC<
           </select>
         </div>
 
-        <button
-          type="button"
-          onClick={handleRunBacktest}
-          disabled={!validation.isValid}
-          style={{
-            padding: "var(--spacing-1) var(--spacing-3)",
-            backgroundColor: validation.isValid ? "var(--color-primary)" : "var(--bg-active)",
-            color: validation.isValid ? "var(--text-inverse)" : "var(--text-muted)",
-            border: "none",
-            borderRadius: "var(--radius-sm)",
-            fontSize: "var(--font-size-xs)",
-            fontWeight: 700,
-            cursor: validation.isValid ? "pointer" : "not-allowed",
-          }}
-        >
-          ⚡ Run Vector Backtest
-        </button>
+        <div style={{ display: "flex", gap: "var(--spacing-2)" }}>
+          <button
+            type="button"
+            data-testid="btn-ai-assistant"
+            onClick={() => setIsAIModalOpen(true)}
+            style={{
+              padding: "var(--spacing-1) var(--spacing-3)",
+              backgroundColor: "var(--bg-active)",
+              color: "var(--color-primary, #3b82f6)",
+              border: "1px solid var(--color-primary, #3b82f6)",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "var(--font-size-xs)",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            ✨ AI Assistant
+          </button>
+
+          <button
+            type="button"
+            onClick={handleRunBacktest}
+            disabled={!validation.isValid}
+            style={{
+              padding: "var(--spacing-1) var(--spacing-3)",
+              backgroundColor: validation.isValid ? "var(--color-primary)" : "var(--bg-active)",
+              color: validation.isValid ? "var(--text-inverse)" : "var(--text-muted)",
+              border: "none",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "var(--font-size-xs)",
+              fontWeight: 700,
+              cursor: validation.isValid ? "pointer" : "not-allowed",
+            }}
+          >
+            ⚡ Run Vector Backtest
+          </button>
+        </div>
       </div>
 
       {/* Main 3-Column Layout */}
@@ -385,6 +407,16 @@ export const StrategyBuilderWidget: React.FC<
           </pre>
         </div>
       </div>
+
+      <AIDraftModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        currentState={state}
+        onApprove={(draftState) => {
+          setState(draftState);
+          setIsAIModalOpen(false);
+        }}
+      />
     </div>
   );
 };

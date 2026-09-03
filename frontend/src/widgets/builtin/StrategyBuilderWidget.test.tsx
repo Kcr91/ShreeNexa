@@ -59,6 +59,24 @@ describe("StrategyBuilderWidget Component", () => {
     expect(screen.getByTestId("indicator-card-ema_3")).toBeInTheDocument();
   });
 
+  it("opens the AI Strategy Assistant modal when clicking AI Assistant button", () => {
+    render(
+      <StrategyBuilderWidget
+        instanceId="builder-1"
+        settings={{
+          showJsonPreview: true,
+          defaultUniverse: "NIFTY 50",
+        }}
+      />
+    );
+
+    const aiBtn = screen.getByTestId("btn-ai-assistant");
+    fireEvent.click(aiBtn);
+
+    expect(screen.getByTestId("ai-draft-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("badge-draft-status")).toHaveTextContent("Status: DRAFT ONLY");
+  });
+
   it("is registered in widget registry under analytics category", () => {
     expect(widgetRegistry.get("strategy-builder")).toBeDefined();
     expect(widgetRegistry.get("strategy-builder")?.title).toBe("Visual Strategy Builder");
