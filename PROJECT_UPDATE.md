@@ -2570,4 +2570,3 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified security REST API lifecycle end-to-end.
 - Full repository test suite: 576 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (284 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
-

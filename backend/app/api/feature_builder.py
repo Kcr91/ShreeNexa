@@ -28,6 +28,11 @@ from app.feature_builder.runner import (
     TaskStartRequest,
     task_runner,
 )
+from app.feature_builder.sandbox import (
+    SandboxConfig,
+    SandboxIsolationReport,
+    sandbox_env,
+)
 from app.feature_builder.security import (
     EnforcementLayer,
     ProtectedPathViolationError,
@@ -368,3 +373,18 @@ def check_changeset_diff(request: CheckDiffRequest) -> dict[str, Any]:
                 "message": str(err),
             },
         ) from err
+
+
+# --- Sandbox Environment Endpoints (F11.6) ---
+
+
+@router.get("/sandbox/status", response_model=SandboxConfig)
+def get_sandbox_status() -> SandboxConfig:
+    """Retrieve the current sandbox isolation configuration."""
+    return sandbox_env.config
+
+
+@router.post("/sandbox/verify-isolation", response_model=SandboxIsolationReport)
+def verify_sandbox_isolation() -> SandboxIsolationReport:
+    """Run automated verification of sandbox isolation."""
+    return sandbox_env.verify_isolation()
