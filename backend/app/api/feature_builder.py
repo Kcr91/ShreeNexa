@@ -28,6 +28,14 @@ from app.feature_builder.runner import (
     TaskStartRequest,
     task_runner,
 )
+from app.feature_builder.security import (
+    EnforcementLayer,
+    ProtectedPathViolationError,
+    SecurityAuditEvent,
+    audit_logger,
+    is_protected_path,
+    security_engine,
+)
 from app.feature_builder.spec import spec_engine
 from app.feature_builder.worktree import (
     WorktreeAllocation,
@@ -311,3 +319,52 @@ def request_gate_retry() -> dict[str, Any]:
 def get_gate_policy() -> RetryPolicy:
     """Retrieve the current gate harness retry policy."""
     return gate_harness.retry_policy
+
+
+# --- Protected Paths Security Endpoints (F11.5) ---
+
+
+class VerifyPathRequest(BaseModel):
+    path: str
+
+
+class CheckDiffRequest(BaseModel):
+    task_id: str | None = None
+    changed_files: list[str] = Field(default_factory=list)
+    bypassed_layers: list[EnforcementLayer] = Field(default_factory=list)
+
+
+@router.post("/security/verify-path")
+def verify_path(request: VerifyPathRequest) -> dict[str, Any]:
+    """Check if a path is classified as protected."""
+    protected = is_protected_path(request.path)
+    return {"path": request.path, "is_protected": protected}
+
+
+@router.get("/security/audit", response_model=list[SecurityAuditEvent])
+def get_security_audit_trail() -> list[SecurityAuditEvent]:
+    """Retrieve the durable security audit trail of blocked violations."""
+    return audit_logger.get_audit_trail()
+
+
+@router.post("/security/check-diff")
+def check_changeset_diff(request: CheckDiffRequest) -> dict[str, Any]:
+    """Enforce defense-in-depth diff guard on candidate changeset."""
+    try:
+        clean_files = security_engine.diff_guard.verify_diff(
+            changed_files=request.changed_files,
+            task_id=request.task_id,
+            bypassed_layers=request.bypassed_layers,
+        )
+        return {"status": "PASSED", "verified_files": clean_files}
+    except ProtectedPathViolationError as err:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "PROTECTED_PATH_VIOLATION",
+                "offending_path": err.offending_path,
+                "layer": err.layer,
+                "audit_id": err.audit_id,
+                "message": str(err),
+            },
+        ) from err

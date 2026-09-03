@@ -14,15 +14,15 @@ fixtures are blocked.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from datetime import UTC, datetime
-from enum import StrEnum
 import hashlib
 import json
 import math
 import re
-from typing import Any
 import uuid
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
