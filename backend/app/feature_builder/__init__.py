@@ -10,6 +10,19 @@ from app.feature_builder.models import (
     SpecApprovalDecision,
     SpecStatus,
 )
+from app.feature_builder.runner import (
+    CodexAuthenticationError,
+    CodexQuotaExceededError,
+    CodexTaskRunner,
+    RunnerTaskStatus,
+    TaskEvent,
+    TaskEventType,
+    TaskExecutionError,
+    TaskJournalState,
+    TaskStartRequest,
+    TaskStep,
+    task_runner,
+)
 from app.feature_builder.spec import (
     PROTECTED_PATHS,
     FeatureSpecEngine,
@@ -29,14 +42,24 @@ from app.feature_builder.worktree import (
 
 __all__ = [
     "PROTECTED_PATHS",
+    "CodexAuthenticationError",
+    "CodexQuotaExceededError",
+    "CodexTaskRunner",
     "FeatureRequest",
     "FeatureSpec",
     "FeatureSpecEngine",
     "FeatureSpecUpdate",
     "PathEscapeViolationError",
     "RiskLevel",
+    "RunnerTaskStatus",
     "SpecApprovalDecision",
     "SpecStatus",
+    "TaskEvent",
+    "TaskEventType",
+    "TaskExecutionError",
+    "TaskJournalState",
+    "TaskStartRequest",
+    "TaskStep",
     "WorktreeAllocation",
     "WorktreeCreateRequest",
     "WorktreeManager",
@@ -44,6 +67,7 @@ __all__ = [
     "evaluate_request_risk",
     "safe_write_worktree_file",
     "spec_engine",
+    "task_runner",
     "validate_worktree_path",
     "worktree_manager",
 ]

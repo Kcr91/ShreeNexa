@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -39,6 +41,53 @@ def parse_iso_datetime(value: str | datetime | None) -> datetime | None:
         return dt.astimezone(UTC)
     except ValueError:
         return None
+
+
+def decode_token_claims(token: str) -> dict[str, Any] | None:
+    """Decode the unverified payload of a Dhan JWT access token.
+
+    The signature is NOT verified: Dhan signs tokens with a server-side secret we
+    do not hold. This reads self-reported metadata (``exp``, ``dhanClientId``)
+    purely to drive local expiry banners, never to authorise anything.
+    """
+    parts = token.strip().split(".")
+    if len(parts) != 3:
+        return None
+    payload = parts[1]
+    payload += "=" * (-len(payload) % 4)
+    try:
+        raw = base64.urlsafe_b64decode(payload)
+        claims = json.loads(raw.decode("utf-8"))
+    except binascii.Error, ValueError, UnicodeDecodeError:
+        return None
+    if not isinstance(claims, dict):
+        return None
+    return claims
+
+
+def token_expiry_from_claims(token: str) -> datetime | None:
+    """Return the UTC expiry encoded in a Dhan token's own ``exp`` claim."""
+    claims = decode_token_claims(token)
+    if claims is None:
+        return None
+    exp = claims.get("exp")
+    if not isinstance(exp, int | float) or isinstance(exp, bool):
+        return None
+    try:
+        return datetime.fromtimestamp(float(exp), tz=UTC)
+    except OverflowError, OSError, ValueError:
+        return None
+
+
+def token_client_id_from_claims(token: str) -> str | None:
+    """Return the Dhan client ID encoded in a token's own claims, if present."""
+    claims = decode_token_claims(token)
+    if claims is None:
+        return None
+    client_id = claims.get("dhanClientId")
+    if isinstance(client_id, str) and client_id.strip():
+        return client_id.strip()
+    return None
 
 
 class DhanCredentials(BaseModel):
@@ -86,7 +135,9 @@ def resolve_dhan_credentials(
         token_str = cfg.dhan_access_token.get_secret_value().strip()
         client_id_str = cfg.dhan_client_id.strip()
         if token_str and client_id_str:
-            expires_at = parse_iso_datetime(cfg.dhan_token_expires_at)
+            expires_at = parse_iso_datetime(cfg.dhan_token_expires_at) or token_expiry_from_claims(
+                token_str
+            )
             return DhanCredentials(
                 client_id=client_id_str,
                 access_token=SecretStr(token_str),
@@ -106,10 +157,13 @@ def resolve_dhan_credentials(
             client_id = data.get("client_id")
             access_token = data.get("access_token")
             if client_id and access_token:
-                expires_at = parse_iso_datetime(data.get("expires_at"))
+                token_value = str(access_token).strip()
+                expires_at = parse_iso_datetime(data.get("expires_at")) or token_expiry_from_claims(
+                    token_value
+                )
                 return DhanCredentials(
                     client_id=str(client_id).strip(),
-                    access_token=SecretStr(str(access_token).strip()),
+                    access_token=SecretStr(token_value),
                     expires_at=expires_at,
                     source="dpapi",
                 )
@@ -133,7 +187,7 @@ def store_dhan_credentials_dpapi(
     if not client_id_clean or not token_clean:
         raise ValueError("client_id and access_token must not be empty")
 
-    parsed_expires = parse_iso_datetime(expires_at)
+    parsed_expires = parse_iso_datetime(expires_at) or token_expiry_from_claims(token_clean)
     payload: dict[str, Any] = {
         "client_id": client_id_clean,
         "access_token": token_clean,

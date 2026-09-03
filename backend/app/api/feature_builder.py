@@ -1,10 +1,10 @@
 """REST API endpoints for feature-builder specification management (F11.1)."""
 
-from __future__ import annotations
-
+from collections.abc import AsyncIterator
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.feature_builder.models import (
     FeatureRequest,
@@ -12,6 +12,15 @@ from app.feature_builder.models import (
     FeatureSpecUpdate,
     SpecApprovalDecision,
     SpecStatus,
+)
+from app.feature_builder.runner import (
+    CodexAuthenticationError,
+    CodexQuotaExceededError,
+    RunnerTaskStatus,
+    TaskEventType,
+    TaskJournalState,
+    TaskStartRequest,
+    task_runner,
 )
 from app.feature_builder.spec import spec_engine
 from app.feature_builder.worktree import (
@@ -121,3 +130,94 @@ def reconcile_worktrees() -> dict[str, Any]:
     """Reconcile active allocations and prune orphaned worktrees on disk."""
     recovered = worktree_manager.reconcile_and_recover()
     return {"status": "RECONCILED", "recovered_count": len(recovered), "recovered_paths": recovered}
+
+
+# --- Task Runner Endpoints (F11.3) ---
+
+
+@router.post("/tasks", response_model=TaskJournalState)
+def start_task(request: TaskStartRequest) -> TaskJournalState:
+    """Start a new feature building task with bounded fresh context."""
+    try:
+        return task_runner.start_task(request)
+    except CodexAuthenticationError as err:
+        raise HTTPException(status_code=401, detail=str(err)) from err
+    except CodexQuotaExceededError as err:
+        raise HTTPException(status_code=429, detail=str(err)) from err
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/tasks", response_model=list[TaskJournalState])
+def list_tasks(status: RunnerTaskStatus | None = None) -> list[TaskJournalState]:
+    """List task runs with optional status filter."""
+    return task_runner.list_tasks(status=status)
+
+
+@router.get("/tasks/{task_id}", response_model=TaskJournalState)
+def get_task(task_id: str) -> TaskJournalState:
+    """Retrieve durable checkpoint state of a specific task."""
+    state = task_runner.load_durable_state(task_id)
+    if not state:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found")
+    return state
+
+
+@router.post("/tasks/{task_id}/progress", response_model=TaskJournalState)
+def progress_task_step(task_id: str, next_step: int, details: str = "") -> TaskJournalState:
+    """Advance task checkpoint step."""
+    try:
+        return task_runner.progress_step(task_id, next_step, details)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found") from None
+
+
+@router.post("/tasks/{task_id}/interrupt", response_model=TaskJournalState)
+def interrupt_task(task_id: str) -> TaskJournalState:
+    """Simulate host interruption on a running task."""
+    try:
+        return task_runner.interrupt_task(task_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found") from None
+
+
+@router.post("/tasks/{task_id}/resume", response_model=TaskJournalState)
+def resume_task(task_id: str) -> TaskJournalState:
+    """Resume an interrupted task strictly from durable git/state."""
+    try:
+        return task_runner.resume_task(task_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found") from None
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/tasks/{task_id}/cancel", response_model=TaskJournalState)
+def cancel_task(task_id: str) -> TaskJournalState:
+    """Cancel a running task."""
+    try:
+        return task_runner.cancel_task(task_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found") from None
+
+
+@router.get("/tasks/{task_id}/events")
+async def stream_task_events(task_id: str) -> StreamingResponse:
+    """Server-Sent Events endpoint streaming structured task events in real-time."""
+    q = task_runner.subscribe(task_id)
+
+    async def event_generator() -> AsyncIterator[str]:
+        try:
+            while True:
+                event = await q.get()
+                yield f"data: {event.model_dump_json()}\n\n"
+                if event.event_type in (
+                    TaskEventType.TASK_COMPLETED,
+                    TaskEventType.TASK_CANCELLED,
+                    TaskEventType.TASK_FAILED,
+                ):
+                    break
+        finally:
+            task_runner.unsubscribe(task_id, q)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
