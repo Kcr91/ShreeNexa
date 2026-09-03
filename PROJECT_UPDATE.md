@@ -78,12 +78,13 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F11.4 | Done | Fast-forwarded into `main` at `181a013` after review. |
 | F11.5 | Done | Fast-forwarded into `main` at `e1f95d7` after review. |
 | F11.6 | Done | Fast-forwarded into `main` at `b96e784` after review. |
+| F11.7 | Done | Fast-forwarded into `main` at `d06eb67` after review. |
 | F5.3 | Done | Fast-forwarded into `main` at `36aa05d` after review. |
 | F5.4 | Done | Fast-forwarded into `main` at `748553e` after review. |
 | F13.1 | Done | Fast-forwarded into `main` at `54a6633` after review. |
 | F13.2 | Done | Fast-forwarded into `main` at `481df20` after review. |
 | F13.3 | Done | Fast-forwarded into `main` at `6f5ff6e` after review. |
-| F11.7, F13.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F13.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2747,6 +2748,36 @@ a live branch indicator; run `git status --short --branch` for current state.
   - 605 Python tests passed (0 failures, 30 skipped due to absent local DB).
   - 185 frontend tests in 57 test files passed (0 failures).
   - `mypy backend --strict` passed cleanly across 296 source files.
+  - `ruff check .` passed with 0 errors.
+  - Frontend typecheck and production build clean.
+  - `pre-commit run --all-files` passed cleanly.
+  - `git diff --check` clean.
+
+
+### 2026-09-03 — F11.7 Approval-gated blue/green promotion, health check, drain, rollback, and history completed (Epic 11 Complete)
+
+- Authored acceptance contract in `docs/qa/acceptance/F11.7.md`.
+- Implemented `backend/app/feature_builder/promotion.py`:
+  - `PromotionManager` coordinating zero-downtime deployment promotions.
+  - Explicit operator approval gating (`PENDING_APPROVAL` -> `APPROVED` / `REJECTED`). Unapproved candidates are strictly prevented from initiating proxy flips.
+  - Pre-traffic candidate health gating: queries candidate port `/healthz` before traffic switch; aborts and stays on active upstream if candidate fails.
+  - Atomic Caddy proxy upstream flipping (Blue 8000 <-> Green 8001) using `infra.lightsail.blue_green:promote_candidate`.
+  - Graceful connection drain: previous API instance drains connections safely.
+  - Engine continuity & process independence invariant: verifies engine process PID before and after promotion/rollback to guarantee the trading `engine` process (`shreenexa-engine`) is NEVER restarted and active paper strategies suffer zero disruption.
+  - One-click rollback: flips Caddy reverse proxy upstream back to previous instance and verifies engine continuity.
+  - Complete, immutable deployment history audit logging.
+- Extended `backend/app/api/feature_builder.py`:
+  - Exposed REST endpoints: `POST /api/v1/feature-builder/promotion/request`, `POST /api/v1/feature-builder/promotion/approve`, `POST /api/v1/feature-builder/promotion/reject`, `POST /api/v1/feature-builder/promotion/execute`, `POST /api/v1/feature-builder/promotion/rollback`, `GET /api/v1/feature-builder/promotion/history`, `GET /api/v1/feature-builder/promotion/active-color`.
+- Authored comprehensive proof test suite in `backend/tests/unit/test_feature_builder_promotion.py` (4 tests, all passing):
+  - Proved operator approval gating blocks unapproved promotions.
+  - Proved failing pre-traffic health check aborts promotion without modifying Caddy proxy.
+  - Proved promote and rollback during an active paper strategy: verified that trading `engine` process was NEVER restarted (`engine_pid_after == engine_pid_before`, `engine_restarted == False`) and running paper strategy continues without disruption.
+  - Proved complete audit and deployment history trail.
+  - Proved full end-to-end REST API promotion workflows.
+- Quality gates verified:
+  - 609 Python tests passed (0 failures, 30 skipped due to absent local DB).
+  - 185 frontend tests in 57 test files passed (0 failures).
+  - `mypy backend --strict` passed cleanly across 298 source files.
   - `ruff check .` passed with 0 errors.
   - Frontend typecheck and production build clean.
   - `pre-commit run --all-files` passed cleanly.

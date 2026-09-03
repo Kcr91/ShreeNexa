@@ -1,8 +1,8 @@
 {
-  "feature": "F13.3",
+  "feature": "F11.7",
   "status": "review",
-  "branch": "feature/F13.3-single-user-auth-totp-sessions",
-  "commit": "6f5ff6e",
+  "branch": "feature/F11.7-blue-green-promotion-rollback-history",
+  "commit": "d06eb67",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1372,6 +1372,18 @@
       "evidence": [
         "backend/tests/unit/test_auth_security.py",
         "docs/qa/acceptance/F13.3.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F11.7": {
+      "status": "review",
+      "branch": "feature/F11.7-blue-green-promotion-rollback-history",
+      "commit": "d06eb67",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_feature_builder_promotion.py",
+        "docs/qa/acceptance/F11.7.md"
       ],
       "verified_at": null,
       "blockers": []

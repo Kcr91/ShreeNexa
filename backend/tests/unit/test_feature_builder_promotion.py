@@ -53,9 +53,7 @@ def test_operator_approval_gate_enforcement(tmp_path: Path) -> None:
 def test_pre_traffic_health_check_failure_aborts_promotion(tmp_path: Path) -> None:
     """Proof: Failing health check on candidate aborts promotion without flipping Caddy."""
     caddy_file = tmp_path / "Caddyfile"
-    caddy_file.write_text(
-        "example.com {\n    reverse_proxy 127.0.0.1:8000\n}\n", encoding="utf-8"
-    )
+    caddy_file.write_text("example.com {\n    reverse_proxy 127.0.0.1:8000\n}\n", encoding="utf-8")
     mgr = PromotionManager(default_caddyfile_path=caddy_file)
 
     prop = mgr.create_proposal(
@@ -82,9 +80,7 @@ def test_pre_traffic_health_check_failure_aborts_promotion(tmp_path: Path) -> No
 def test_promote_and_rollback_during_active_paper_strategy(tmp_path: Path) -> None:
     """Proof: Promote/rollback during an active paper strategy; engine is not restarted."""
     caddy_file = tmp_path / "Caddyfile"
-    caddy_file.write_text(
-        "example.com {\n    reverse_proxy 127.0.0.1:8000\n}\n", encoding="utf-8"
-    )
+    caddy_file.write_text("example.com {\n    reverse_proxy 127.0.0.1:8000\n}\n", encoding="utf-8")
     mgr = PromotionManager(default_caddyfile_path=caddy_file)
 
     # Active paper strategy running on engine (stable simulated engine PID)
@@ -151,9 +147,7 @@ def test_api_promotion_endpoints_end_to_end(tmp_path: Path) -> None:
     """Test full REST API workflow for promotion management."""
     # Wire temporary Caddyfile into global promotion_manager
     caddy_file = tmp_path / "Caddyfile"
-    caddy_file.write_text(
-        "example.com {\n    reverse_proxy 127.0.0.1:8000\n}\n", encoding="utf-8"
-    )
+    caddy_file.write_text("example.com {\n    reverse_proxy 127.0.0.1:8000\n}\n", encoding="utf-8")
     promotion_manager.caddyfile_path = caddy_file
 
     # 1. Request promotion
