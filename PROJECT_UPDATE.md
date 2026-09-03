@@ -66,8 +66,9 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F9.5 | Done | Fast-forwarded into `main` at `561364f` after review. |
 | F9.6 | Done | Fast-forwarded into `main` at `e8e520b` after review. |
 | F9.7 | Done | Fast-forwarded into `main` at `d42e343` after review. |
-| F10.1 | Done | Fast-forwarded into `main` at `8db63cf` after review. |
-| F5.2, F10.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F10.1 | Done | Fast-forwarded into `main` at `655d9b0` after review. |
+| F5.2 | Done | Fast-forwarded into `main` at `a06f8c0` after review. |
+| F5.3–F5.4, F10.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2264,3 +2265,30 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified end-to-end REST API endpoints.
 - Full repository test suite: 494 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (255 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F5.2 Natural-language to schema-constrained StrategyIR compiler completed
+
+- Implemented `backend/app/ai/generator.py`:
+  - `generate_strategy_ir_from_prompt`: Compiles natural-language prompts into schema-constrained `StrategyIR` drafts.
+  - Archetype parsing: Handles moving average crossovers (EMA/SMA), RSI mean reversion, Supertrend breakouts, Bollinger band squeezes/breakouts, and momentum filters.
+  - Parameter extraction: Automatically extracts timeframes ("1m", "5m", "15m", "1h", "1d"), symbols ("RELIANCE", "TCS", "INFY", "NIFTY", etc.), sizing rules ("fixed_qty", "fixed_value", "pct_capital"), and bracket exits (stop loss %, take profit %).
+  - Adversarial safety: `check_adversarial_safety` inspects incoming prompts for unauthorized live deployment or order execution commands (e.g. "deploy to live", "bypass risk limits", "disable kill switch"). Strictly neutralizes them, enforces `draft_status="draft"`, and injects security warnings ensuring no execution payload is created.
+- Implemented `backend/app/ai/repair.py`:
+  - `repair_strategy_ir`: Inspects malformed or incomplete strategy dictionaries.
+  - Fixes missing versions, infers horizon and market styles, normalizes string universes to static instrument selectors, injects default indicators/parameters, repairs condition comparison operators (e.g. "greater_than" to ">"), and normalizes exit/sizing rules into canonical Pydantic representations.
+- Implemented `backend/app/ai/explainer.py`:
+  - `explain_strategy_ir`: Reverse-translates `StrategyIR` AST condition trees (CrossOver, IndicatorCompare, And, Or, Not, TimeWindow) and configuration blocks into structured, human-readable plain English descriptions.
+- Extended `backend/app/api/ai.py` and mounted in `backend/app/main.py`:
+  - `POST /api/v1/ai/generate-strategy`
+  - `POST /api/v1/ai/repair-strategy`
+  - `POST /api/v1/ai/explain-strategy`
+- Authored acceptance contract in `docs/qa/acceptance/F5.2.md`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_ai_strategy_generator.py` (5 tests passing):
+  - Proved that 20 representative natural-language strategy descriptions yield schema-valid `StrategyIR` drafts and structured explanations.
+  - Verified that adversarial prompts attempting live deployment cannot request live execution and are strictly constrained to un-deployed drafts.
+  - Verified automated repair of malformed strategy dictionaries.
+  - Verified explanation roundtrip against canonical `StrategyIR`.
+  - Verified all three REST API endpoints end-to-end.
+- Full repository test suite: 499 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (260 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+

@@ -1168,6 +1168,34 @@
       ],
       "verified_at": null,
       "blockers": []
+    },
+    "F5.2": {
+      "status": "review",
+      "branch": "feature/F5.2-ai-natural-language-strategy-generator",
+      "commit": "a06f8c0",
+      "tests": {
+        "pytest": {
+          "passed": 499,
+          "failed": 0,
+          "skipped": 30
+        },
+        "frontend_vitest": {
+          "passed": 179,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F5.2.md",
+        "backend/app/ai/generator.py",
+        "backend/app/ai/repair.py",
+        "backend/app/ai/explainer.py",
+        "backend/app/api/ai.py",
+        "backend/tests/unit/test_ai_strategy_generator.py"
+      ],
+      "verified_at": null,
+      "blockers": []
     }
   }
 }
+
