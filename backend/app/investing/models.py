@@ -184,3 +184,79 @@ class ReconciliationReport(BaseModel):
     matched_items: int
     discrepancy_count: int
     items: list[HoldingReconciliationItem] = Field(default_factory=list)
+
+
+# --- F10.2: XIRR & Allocation Models ---
+
+
+class CashFlowItem(BaseModel):
+    """Cashflow record representing an inflow or outflow with a date."""
+
+    model_config = ConfigDict(frozen=True)
+
+    date: date
+    amount: float
+    description: str = ""
+
+
+class XIRRCalculationResponse(BaseModel):
+    """XIRR result summary."""
+
+    model_config = ConfigDict(frozen=True)
+
+    account_id: str
+    xirr: float
+    xirr_pct: float
+    total_invested: float
+    current_value: float
+    cashflow_count: int
+
+
+class SectorAllocationItem(BaseModel):
+    """Portfolio breakdown for a specific industry sector."""
+
+    model_config = ConfigDict(frozen=True)
+
+    sector: str
+    invested_amount: float
+    current_value: float
+    weight_pct: float
+    holding_count: int
+
+
+class AssetAllocationItem(BaseModel):
+    """Portfolio breakdown by asset class."""
+
+    model_config = ConfigDict(frozen=True)
+
+    asset_class: str
+    invested_amount: float
+    current_value: float
+    weight_pct: float
+
+
+class PortfolioAllocationReport(BaseModel):
+    """Overall portfolio allocation and concentration analysis."""
+
+    model_config = ConfigDict(frozen=True)
+
+    account_id: str
+    total_invested: float
+    total_current_value: float
+    sectors: list[SectorAllocationItem] = Field(default_factory=list)
+    asset_classes: list[AssetAllocationItem] = Field(default_factory=list)
+    concentration_warnings: list[str] = Field(default_factory=list)
+
+
+class BenchmarkComparisonResult(BaseModel):
+    """Comparative returns against an equity benchmark."""
+
+    model_config = ConfigDict(frozen=True)
+
+    account_id: str
+    portfolio_xirr_pct: float
+    benchmark_symbol: str
+    benchmark_xirr_pct: float
+    alpha_pct: float
+    outperforming: bool
+    as_of_date: date
