@@ -1,11 +1,16 @@
 {
-  "feature": "F12.2",
+  "feature": "F12.3",
   "status": "review",
-  "branch": "feature/F12.2-order-update-websocket",
-  "commit": "f0651d5",
+  "branch": "feature/F12.3-live-order-ticket",
+  "commit": "28a2b86",
   "tests": {
     "pytest": {
-      "passed": 63,
+      "passed": 71,
+      "failed": 0,
+      "skipped": 0
+    },
+    "vitest": {
+      "passed": 187,
       "failed": 0,
       "skipped": 0
     }
@@ -1459,6 +1464,31 @@
         "backend/tests/unit/test_order_reconciler.py"
       ],
       "verified_at": "2026-09-03T23:10:00Z",
+      "blockers": []
+    },
+    "F12.3": {
+      "status": "review",
+      "branch": "feature/F12.3-live-order-ticket",
+      "commit": "28a2b86",
+      "tests": {
+        "pytest": {
+          "passed": 71,
+          "failed": 0,
+          "skipped": 0
+        },
+        "vitest": {
+          "passed": 187,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F12.3.md",
+        "backend/app/api/orders.py",
+        "backend/tests/unit/test_order_ticket_api.py",
+        "frontend/src/order/execution.ts"
+      ],
+      "verified_at": "2026-09-03T23:20:00Z",
       "blockers": []
     }
   }

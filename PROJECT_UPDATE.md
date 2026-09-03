@@ -88,6 +88,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F13.5 | Done | Fast-forwarded into `main` at `b811204` after review. |
 | F12.1 | Done | Fast-forwarded into `main` at `a1d47ee` after review. |
 | F12.2 | Done | Fast-forwarded into `main` at `f0651d5` after review. |
+| F12.3 | Done | Fast-forwarded into `main` at `28a2b86` after review. |
 
 ## Major-task log
 
@@ -2921,3 +2922,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `ruff check backend` clean.
   - `validate_manifest.py` and `validate_fixtures.py` OK.
   - Fast-forwarded into `main` at `f0651d5`.
+
+
+### 2026-09-03 — F12.3 Live order ticket with explicit mode, estimated charges/margin, confirmations, and retry prevention completed
+
+- Delivered `backend/app/api/orders.py`:
+  - `POST /api/v1/orders/ticket/estimate`: Accurate breakdown of statutory taxes and fees (brokerage, STT/CTT, exchange turnover fees, SEBI charges, stamp duty, 18% GST) and net margin requirements (with intraday leverage).
+  - `POST /api/v1/orders/ticket/place`: Gated order placement requiring explicit mode (`"PAPER"` or `"LIVE"`). Live mode requires `confirmation_acknowledged=True` and is hard-gated by `is_live_enabled=False` (raises `LiveTradingDisabledError` / 403 Forbidden).
+  - Blind retry prevention: Orders marked with uncertain status (`PENDING_BROKER_CONFIRMATION`) reject subsequent submission attempts with HTTP 409 Conflict until state converges with broker.
+  - `GET /api/v1/orders/ticket/status/{order_id}`: Reports order status and boolean `retry_allowed`.
+- Mounted `orders_router` in `backend/app/main.py`.
+- Updated `frontend/src/order/execution.ts` and `types.ts`:
+  - Enforced confirmation acknowledgment for live orders.
+  - Added detection of uncertain orders blocking blind retry from UI.
+- Authored acceptance contract `docs/qa/acceptance/F12.3.md`.
+- Authored unit test suites:
+  - `backend/tests/unit/test_order_ticket_api.py` (8 tests, all passing).
+  - `frontend/src/order/execution.test.ts` (6 tests, all passing).
+- Verified quality gates:
+  - 71 Python tests passing across dhan/order/ticket suites (0 failures).
+  - 187 frontend tests passing across 57 test files (0 failures).
+  - `mypy backend --strict` clean across 322 source files.
+  - `ruff check backend` clean.
+  - Frontend typecheck (`tsc --noEmit`) clean.
+  - `validate_manifest.py` and `validate_fixtures.py` OK.
+  - Fast-forwarded into `main` at `28a2b86`.
