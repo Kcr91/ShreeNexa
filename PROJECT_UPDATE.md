@@ -73,7 +73,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F10.4 | Done | Fast-forwarded into `main` at `6d08f76` after review. |
 | F10.5 | Done | Fast-forwarded into `main` at `f5ad0dc` after review. |
 | F11.1 | Done | Fast-forwarded into `main` at `2fcc59c` after review. |
-| F5.3–F5.4, F11.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F11.2 | Done | Fast-forwarded into `main` at `5ec6ce9` after review. |
+| F5.3–F5.4, F11.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2421,3 +2422,32 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified REST API endpoints end-to-end.
 - Full repository test suite: 527 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (274 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F11.2 Git worktree creation, branch ownership, path validation, cleanup, and recovery completed
+
+- Implemented `backend/app/feature_builder/worktree.py`:
+  - `PathEscapeViolationError`: Raised on unauthorized access or write attempts outside worktree boundaries or into legacy projects.
+  - `validate_worktree_path`: Proof function resolving symlinks, preventing parent traversal (`../`), barring references to legacy project `F:\Algotrading`, and guaranteeing target containment within designated worktree root.
+  - `safe_write_worktree_file`: Strict path-checked write utility ensuring runner files are written solely within the isolated worktree directory.
+  - `WorktreeManager`:
+    - `create_worktree`: Allocates isolated worktree directory and checks out dedicated `feature/<feature_id>-<slug>` branch.
+    - `cleanup_worktree`: Executes `git worktree remove --force` and `git worktree prune`, resetting allocation status.
+    - `reconcile_and_recover`: Scans active allocations vs disk state, safely cleaning up orphaned worktree directories without affecting live user work.
+- Extended `backend/app/api/feature_builder.py`:
+  - `POST /api/v1/feature-builder/worktrees`
+  - `GET /api/v1/feature-builder/worktrees`
+  - `GET /api/v1/feature-builder/worktrees/{worktree_id}`
+  - `DELETE /api/v1/feature-builder/worktrees/{worktree_id}`
+  - `POST /api/v1/feature-builder/worktrees/reconcile`
+- Authored acceptance contract in `docs/qa/acceptance/F11.2.md`.
+- Authored comprehensive unit and property/acceptance tests in `backend/tests/unit/test_feature_builder_worktree.py` (10 tests passing):
+  - Verified safe write within worktree boundary.
+  - Verified denial of parent directory traversal attacks.
+  - Verified denial of absolute paths outside worktree root.
+  - Verified denial of access to legacy project path (`F:\Algotrading`).
+  - Verified worktree manager allocation, branch ownership, and cleanup.
+  - Verified recovery and removal of orphaned worktree directories.
+  - Verified REST API endpoints end-to-end.
+- Full repository test suite: 537 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (276 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+

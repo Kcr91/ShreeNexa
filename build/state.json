@@ -1,8 +1,8 @@
 {
-  "feature": "F11.1",
+  "feature": "F11.2",
   "status": "review",
-  "branch": "feature/F11.1-feature-spec-generator",
-  "commit": "2fcc59c",
+  "branch": "feature/F11.2-worktree-path-validation",
+  "commit": "5ec6ce9",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1252,6 +1252,18 @@
       "evidence": [
         "backend/tests/unit/test_feature_builder_spec.py",
         "docs/qa/acceptance/F11.1.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F11.2": {
+      "status": "review",
+      "branch": "feature/F11.2-worktree-path-validation",
+      "commit": "5ec6ce9",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_feature_builder_worktree.py",
+        "docs/qa/acceptance/F11.2.md"
       ],
       "verified_at": null,
       "blockers": []
