@@ -1,8 +1,8 @@
 {
-  "feature": "F11.4",
+  "feature": "F11.5",
   "status": "review",
-  "branch": "feature/F11.4-gate-harness",
-  "commit": "181a013",
+  "branch": "feature/F11.5-protected-path-enforcement",
+  "commit": "e1f95d7",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1288,6 +1288,18 @@
       "evidence": [
         "backend/tests/unit/test_feature_builder_gates.py",
         "docs/qa/acceptance/F11.4.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F11.5": {
+      "status": "review",
+      "branch": "feature/F11.5-protected-path-enforcement",
+      "commit": "e1f95d7",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_feature_builder_security.py",
+        "docs/qa/acceptance/F11.5.md"
       ],
       "verified_at": null,
       "blockers": []

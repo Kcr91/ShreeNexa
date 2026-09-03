@@ -76,7 +76,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F11.2 | Done | Fast-forwarded into `main` at `5ec6ce9` after review. |
 | F11.3 | Done | Fast-forwarded into `main` at `5a9eba3` after review. |
 | F11.4 | Done | Fast-forwarded into `main` at `181a013` after review. |
-| F5.3–F5.4, F11.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F11.5 | Done | Fast-forwarded into `main` at `e1f95d7` after review. |
+| F5.3–F5.4, F11.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2539,3 +2540,34 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified quality gates REST API lifecycle.
 - Full repository test suite: 569 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (282 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F11.5 Protected-path enforcement for risk, broker, live orders, and parity fixtures completed
+
+- Implemented `backend/app/feature_builder/security.py`:
+  - `EnforcementLayer`: Enum covering all 4 defense-in-depth layers (`PROMPT`, `TOOL`, `DIFF`, `PROMOTION`).
+  - `SecurityAuditAction`: Action tracking (`DENIED_AND_BLOCKED`, `TASK_ABORTED`, `COMMIT_REJECTED`, `PROMOTION_REJECTED`).
+  - `ProtectedPathViolationError`: Typed exception raised whenever an unauthorized operation attempts to target or modify a protected path.
+  - `SecurityAuditEvent`: Immutable schema recording security incidents with audit UUID, timestamp, task ID, layer tripped, offending path, action taken, and list of bypassed layers.
+  - `ProtectedPathAuditLogger`: Durable JSON audit log at `build/tasks/security_audit.json` capturing every attempted violation.
+  - `PromptGuard` (Layer 1): Analyzes task requests, prompts, and explicit file lists to reject tasks targeting protected paths before runner startup.
+  - `ToolGuard` (Layer 2): Intercepts file write, edit, replace, and deletion tool operations, instantly denying writes to protected files even if Layer 1 was bypassed.
+  - `DiffGuard` (Layer 3): Audits git working tree changes and pre-commit candidate diffs, blocking commit creation if any protected path appears in the changeset even if Layers 1 and 2 were bypassed.
+  - `PromotionGuard` (Layer 4): Audits candidate commit objects and files before fast-forward merge into `main` or deployment promotion, barring merge even if Layers 1 through 3 were bypassed.
+  - `LayeredSecurityEngine`: Unified coordinator for all 4 defense layers.
+- Extended `backend/app/api/feature_builder.py`:
+  - `POST /api/v1/feature-builder/security/verify-path`: Check if a candidate path is classified as protected.
+  - `GET /api/v1/feature-builder/security/audit`: Retrieve the durable security audit trail of blocked violations.
+  - `POST /api/v1/feature-builder/security/check-diff`: Check a candidate changeset against defense layers, raising 403 Forbidden on violation.
+- Exported security components in `backend/app/feature_builder/__init__.py`.
+- Authored acceptance contract in `docs/qa/acceptance/F11.5.md`.
+- Authored comprehensive unit and acceptance tests in `backend/tests/unit/test_feature_builder_security.py` (7 tests passing):
+  - Verified path identification and nested subpath detection for `risk.py`, `broker.py`, `orders.py`, and `backend/tests/parity/`.
+  - Verified Layer 1 (Prompt Guard) blocks prompt and writes audit event.
+  - Verified Layer 2 (Tool Guard) blocks file write and logs bypass of Layer 1.
+  - Verified Layer 3 (Diff Guard) blocks commit and logs bypass of Layers 1 and 2.
+  - Verified Layer 4 (Promotion Guard) blocks merge into main and logs bypass of Layers 1, 2, and 3.
+  - Verified clean, unprotected paths pass all 4 layers without triggering warnings or audit entries.
+  - Verified security REST API lifecycle end-to-end.
+- Full repository test suite: 576 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (284 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
