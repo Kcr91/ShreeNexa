@@ -1,8 +1,8 @@
 {
-  "feature": "F11.5",
+  "feature": "F11.6",
   "status": "review",
-  "branch": "feature/F11.5-protected-path-enforcement",
-  "commit": "e1f95d7",
+  "branch": "feature/F11.6-isolated-sandbox-stack",
+  "commit": "b96e784",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1300,6 +1300,18 @@
       "evidence": [
         "backend/tests/unit/test_feature_builder_security.py",
         "docs/qa/acceptance/F11.5.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F11.6": {
+      "status": "review",
+      "branch": "feature/F11.6-isolated-sandbox-stack",
+      "commit": "b96e784",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_feature_builder_sandbox.py",
+        "docs/qa/acceptance/F11.6.md"
       ],
       "verified_at": null,
       "blockers": []

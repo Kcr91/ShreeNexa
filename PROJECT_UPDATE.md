@@ -77,7 +77,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F11.3 | Done | Fast-forwarded into `main` at `5a9eba3` after review. |
 | F11.4 | Done | Fast-forwarded into `main` at `181a013` after review. |
 | F11.5 | Done | Fast-forwarded into `main` at `e1f95d7` after review. |
-| F5.3–F5.4, F11.6–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F11.6 | Done | Fast-forwarded into `main` at `b96e784` after review. |
+| F5.3–F5.4, F11.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2570,3 +2571,31 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified security REST API lifecycle end-to-end.
 - Full repository test suite: 576 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (284 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F11.6 Isolated sandbox ports, database schema, Redis database, read-only warehouse, and hard-wired PaperBroker completed
+
+- Implemented `backend/app/feature_builder/sandbox.py`:
+  - `SandboxLiveOrderDisabledError`: Typed security error raised whenever an operation in the sandbox attempts to instantiate, route to, or configure a live broker (`DhanBroker`).
+  - `ReadOnlyWarehouseViolationError`: Typed storage invariant error raised whenever an operation attempts a write/mutation query against the DuckDB warehouse.
+  - `SandboxConfig`: Immutable configuration model defining isolated network ports (API: 8080, Engine: 8081, Feedd: 8082), isolated Postgres schema (`sandbox_*`), isolated Redis database index (`db=15`), read-only historical warehouse flag, hard-wired broker type (`PaperBroker`), and zero live order authorizations.
+  - `SandboxBrokerDispatcher`: Dispatcher enforcing that only `PaperBroker` and simulated brokers can execute in the sandbox, raising `SandboxLiveOrderDisabledError` if any live broker or Dhan broker code path is invoked.
+  - `SandboxWarehouseManager`: Warehouse interface enforcing strict read-only mode, validating that `SELECT` queries succeed while blocking `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, and `TRUNCATE` queries.
+  - `SandboxCredentialProvider`: Sanitizer ensuring that zero real Dhan trading tokens, client secrets, or live credentials exist in the sandbox environment.
+  - `SandboxEnvironment`: Unified manager orchestrating isolated sandbox runtime components and providing automated isolation verification (`verify_isolation`).
+- Extended `backend/app/api/feature_builder.py`:
+  - `GET /api/v1/feature-builder/sandbox/status`: Retrieve the current sandbox isolation configuration and status.
+  - `POST /api/v1/feature-builder/sandbox/verify-isolation`: Run automated isolation verification audit across ports, schema, redis, warehouse, and broker.
+- Exported sandbox components in `backend/app/feature_builder/__init__.py`.
+- Authored acceptance contract in `docs/qa/acceptance/F11.6.md`.
+- Authored comprehensive unit and acceptance tests in `backend/tests/unit/test_feature_builder_sandbox.py` (8 tests passing):
+  - Verified broker dispatcher hard-wires PaperBroker and rejects DhanBroker/LiveExecutionBroker.
+  - Verified warehouse manager permits read queries and blocks mutations (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `TRUNCATE`).
+  - Verified credential provider strips trading tokens and rejects environments with live Dhan keys.
+  - Verified full isolation report passes all 6 isolation criteria.
+  - Verified detection and rejection of port collisions with live default ports (8000, 8001, 8002).
+  - Verified detection and rejection of live schema attempts (`trading_live`).
+  - Verified detection and rejection of Redis database 0 collisions.
+  - Verified sandbox REST API lifecycle end-to-end.
+- Full repository test suite: 584 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (286 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
