@@ -1145,7 +1145,7 @@
     "F10.1": {
       "status": "review",
       "branch": "feature/F10.1-holdings-ledger-lots-corporate-actions",
-      "commit": "8db63cfa7d0acbed8e820f7c4362773575f4e83a",
+      "commit": "ee494bc44cbd734968f6e9cd1044e25784753be7",
       "tests": {
         "pytest": {
           "passed": 494,
