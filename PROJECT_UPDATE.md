@@ -79,7 +79,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F11.5 | Done | Fast-forwarded into `main` at `e1f95d7` after review. |
 | F11.6 | Done | Fast-forwarded into `main` at `b96e784` after review. |
 | F5.3 | Done | Fast-forwarded into `main` at `36aa05d` after review. |
-| F5.4, F11.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F5.4 | Done | Fast-forwarded into `main` at `748553e` after review. |
+| F11.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2597,8 +2598,33 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified detection and rejection of live schema attempts (`trading_live`).
   - Verified detection and rejection of Redis database 0 collisions.
   - Verified sandbox REST API lifecycle end-to-end.
-- Full repository test suite: 584 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
-- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (286 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+- Full repository test suite: 588 Python tests passed (30 skipped due to absent local DB), 185 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (287 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F5.4 One-click backtest from an approved generated draft, preserving exact IR/version/provider metadata completed
+
+- Implemented `backend/app/backtest/models.py`:
+  - `AIGenerationMetadata`: Immutable schema capturing prompt string, generating provider name, model version, IR schema version, deterministic SHA-256 digest of canonical IR (`ir_hash`), generation and user approval timestamps, and explicit `draft_status="APPROVED_DRAFT"`.
+  - Extended `BacktestConfig` and `BacktestResult` with optional `ai_metadata: AIGenerationMetadata | None`.
+- Implemented `backend/app/backtest/runner.py`:
+  - Propagated `ai_metadata=config.ai_metadata` in `StockStrategyBacktestRunner` across both simulation paths (including empty-bar and simulated bar runs).
+- Extended `backend/app/api/ai.py`:
+  - `compute_ir_hash`: Deterministic SHA-256 digest calculator for canonical StrategyIR dictionaries.
+  - `BacktestDraftRequest` & `BacktestDraftResponse`: Schema models for draft backtest execution.
+  - `POST /api/v1/ai/backtest-draft`: One-click backtest execution endpoint deserializing StrategyIR, attaching immutable `AIGenerationMetadata`, running `StockStrategyBacktestRunner`, persisting results to `backtest_store`, and returning full audited performance.
+- Implemented Frontend One-Click Backtest:
+  - Extended `frontend/src/strategybuilder/AIDraftModal.tsx` with `⚡ Approve & One-Click Backtest` button (`btn-approve-backtest`) and `onApproveAndBacktest` dispatch.
+  - Extended `frontend/src/widgets/builtin/StrategyBuilderWidget.tsx` to handle one-click draft backtests, automatically updating workspace AST state and executing instant client-side vector backtests.
+- Authored acceptance contract in `docs/qa/acceptance/F5.4.md`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_ai_one_click_backtest.py` (4 tests passing) and extended frontend tests in `frontend/src/strategybuilder/AIDraftModal.test.tsx`:
+  - Verified proof invariant: backtest on approved generated draft yields bit-for-bit identical results to a manual run with the exact same StrategyIR snapshot and configuration (`total_return_pct`, `win_rate_pct`, `max_drawdown_pct`, `total_trades`, `sharpe_ratio`, `trades`, and `equity_curve`).
+  - Verified non-empty simulated bars parity across 100 historical bars.
+  - Verified metadata audit preservation: generated run records exact prompt, provider, and IR hash, while manual run leaves `ai_metadata=None`.
+  - Verified REST API endpoint `POST /api/v1/ai/backtest-draft` lifecycle and durable store retrieval.
+  - Verified rejection of malformed StrategyIR with HTTP 422.
+- Full repository test suite: 588 Python tests passed (30 skipped due to absent local DB), 185 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (287 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
 
 ### 2026-09-03 — F5.3 Render generated IR in the visual builder with diff, explanation, warnings, edit, approve, reject, and draft-only status completed
 
