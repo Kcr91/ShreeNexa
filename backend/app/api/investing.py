@@ -33,6 +33,14 @@ from app.investing.models import (
     TaxLot,
     XIRRCalculationResponse,
 )
+from app.investing.rebalancing import (
+    RebalanceProposal,
+    SIPPlanResult,
+    TWRCalculationResult,
+    calculate_time_weighted_return,
+    generate_rebalance_proposal,
+    plan_sip_instalment,
+)
 from app.investing.reconciliation import (
     import_dhan_holdings_as_initial_lots,
     reconcile_dhan_holdings,
@@ -276,3 +284,93 @@ def get_dividend_income_view(account_id: str = "default") -> DividendIncomeView:
         account_id=account_id,
         ledger=holdings_ledger,
     )
+
+
+# --- F10.4 Endpoints: SIP Planning, Rebalancing Proposals, and TWR ---
+
+
+class SIPPlanRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    budget: float = Field(gt=0.0)
+    target_weights: dict[str, float]
+    current_prices: dict[str, float]
+
+
+class RebalanceProposalRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    account_id: str = "default"
+    target_weights: dict[str, float]
+    current_prices: dict[str, float]
+    available_cash: float = 0.0
+    tolerance_band_pct: float = 5.0
+    inflow_only: bool = False
+    max_allocation_per_trade: float | None = None
+
+
+class TWRSubPeriodItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    start_date: date
+    end_date: date
+    start_value: float
+    end_value: float
+    net_cash_flow: float = 0.0
+
+
+class TWRCalculationRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    account_id: str = "default"
+    sub_periods: list[TWRSubPeriodItem]
+
+
+@router.post("/sip/plan", response_model=SIPPlanResult)
+def create_sip_plan(request: SIPPlanRequest) -> SIPPlanResult:
+    """Calculate whole-share SIP investment schedule from budget and target weights."""
+    try:
+        return plan_sip_instalment(
+            budget=request.budget,
+            target_weights=request.target_weights,
+            current_prices=request.current_prices,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/rebalance/proposal", response_model=RebalanceProposal)
+def create_rebalance_proposal(request: RebalanceProposalRequest) -> RebalanceProposal:
+    """Generate portfolio rebalancing proposal respecting cash limits and tolerance bands.
+
+    Safety invariant: Only generates proposals; NEVER places automatic orders.
+    """
+    try:
+        return generate_rebalance_proposal(
+            account_id=request.account_id,
+            target_weights=request.target_weights,
+            current_prices=request.current_prices,
+            available_cash=request.available_cash,
+            tolerance_band_pct=request.tolerance_band_pct,
+            inflow_only=request.inflow_only,
+            max_allocation_per_trade=request.max_allocation_per_trade,
+            ledger=holdings_ledger,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/performance/twr", response_model=TWRCalculationResult)
+def compute_twr(request: TWRCalculationRequest) -> TWRCalculationResult:
+    """Compute Time-Weighted Return (TWR) isolating performance from cashflow timing."""
+    try:
+        raw_periods = [
+            (sp.start_date, sp.end_date, sp.start_value, sp.end_value, sp.net_cash_flow)
+            for sp in request.sub_periods
+        ]
+        return calculate_time_weighted_return(
+            account_id=request.account_id,
+            sub_periods_data=raw_periods,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
