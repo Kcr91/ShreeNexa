@@ -1,0 +1,27 @@
+[Unit]
+Description=ShreeNexa Warehouse Worker Daemon (F13.2)
+Documentation=https://github.com/ShreeNexa/terminal
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=shreenexa
+Group=shreenexa
+WorkingDirectory=/opt/shreenexa
+ExecStartPre=-/usr/bin/docker rm -f shreenexa-worker
+ExecStart=/usr/bin/docker run --rm --name shreenexa-worker \
+    --network shreenexa-prod-net \
+    --user 10001:10001 \
+    --cpus 1.0 \
+    --memory 512m \
+    --env-file /opt/shreenexa/config/prod.env \
+    -v /opt/shreenexa/data:/app/data \
+    shreenexa/worker:prod
+ExecStop=/usr/bin/docker stop -t 10 shreenexa-worker
+Restart=always
+RestartSec=5s
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

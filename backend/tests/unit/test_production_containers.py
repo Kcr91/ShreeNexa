@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import yaml
-
 from app.contracts import heartbeat as hb
 from app.contracts.health_check import check_process_health
 

@@ -1,0 +1,51 @@
+# ShreeNexa Caddy Reverse Proxy & TLS Configuration (F13.2)
+# Handles automated TLS termination, security headers, WebSocket upgrades,
+# and zero-downtime blue/green API upstream routing.
+
+{
+    email {$ACME_EMAIL:admin@shreenexa.internal}
+    admin 127.0.0.1:2019
+}
+
+(security_headers) {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; connect-src 'self' wss: https:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+        -Server
+    }
+}
+
+{$DOMAIN:localhost} {
+    import security_headers
+
+    # Active upstream target for blue/green deployment:
+    # 127.0.0.1:8000 (blue) or 127.0.0.1:8001 (green)
+    reverse_proxy {$UPSTREAM_API:127.0.0.1:8000} {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+
+        # WebSocket support
+        header_up Upgrade {>Upgrade}
+        header_up Connection {>Connection}
+
+        # Upstream health check
+        health_uri /healthz
+        health_interval 5s
+        health_timeout 2s
+        health_status 200
+    }
+
+    # Access and error logging
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+        format json
+    }
+}
