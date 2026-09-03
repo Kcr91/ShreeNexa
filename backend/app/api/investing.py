@@ -12,6 +12,14 @@ from app.investing.analytics import (
     compute_account_xirr,
     generate_portfolio_allocation,
 )
+from app.investing.dividends import (
+    DividendIncomeView,
+    DividendMatchingResult,
+    DividendPaymentImportItem,
+    DividendRecord,
+    DividendStatus,
+    dividend_ledger,
+)
 from app.investing.ledger import holdings_ledger
 from app.investing.models import (
     BenchmarkComparisonResult,
@@ -223,3 +231,48 @@ def compare_with_benchmark(request: BenchmarkComparisonRequest) -> BenchmarkComp
         )
     except XIRRError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+# --- F10.3 Endpoints: Dividend Ledger, Import/Matching, and Income View ---
+
+
+class ImportDividendsRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    account_id: str = "default"
+    items: list[DividendPaymentImportItem]
+
+
+@router.get("/dividends", response_model=list[DividendRecord])
+def list_dividends(
+    account_id: str = "default",
+    from_date: date | None = None,
+    to_date: date | None = None,
+    status: DividendStatus | None = None,
+) -> list[DividendRecord]:
+    """List recorded dividends for an investing account with optional date/status filters."""
+    return dividend_ledger.list_dividends(
+        account_id=account_id,
+        from_date=from_date,
+        to_date=to_date,
+        status=status,
+    )
+
+
+@router.post("/dividends/import", response_model=DividendMatchingResult)
+def import_dividends(request: ImportDividendsRequest) -> DividendMatchingResult:
+    """Import dividend payments and match against active holdings on record date."""
+    return dividend_ledger.match_dividend_payments(
+        account_id=request.account_id,
+        imports=request.items,
+        ledger=holdings_ledger,
+    )
+
+
+@router.get("/dividends/income-view", response_model=DividendIncomeView)
+def get_dividend_income_view(account_id: str = "default") -> DividendIncomeView:
+    """Get dividend income statement, monthly calendar, and yield metrics."""
+    return dividend_ledger.generate_income_view(
+        account_id=account_id,
+        ledger=holdings_ledger,
+    )

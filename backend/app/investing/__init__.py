@@ -9,6 +9,16 @@ from app.investing.analytics import (
     generate_portfolio_cashflows,
     get_security_sector,
 )
+from app.investing.dividends import (
+    DividendIncomeCalendarMonth,
+    DividendIncomeView,
+    DividendLedger,
+    DividendMatchingResult,
+    DividendPaymentImportItem,
+    DividendRecord,
+    DividendStatus,
+    dividend_ledger,
+)
 from app.investing.ledger import HoldingsLedger, holdings_ledger
 from app.investing.models import (
     AssetAllocationItem,
@@ -51,6 +61,13 @@ __all__ = [
     "DhanHoldingItem",
     "DisposalAllocation",
     "DisposalRecord",
+    "DividendIncomeCalendarMonth",
+    "DividendIncomeView",
+    "DividendLedger",
+    "DividendMatchingResult",
+    "DividendPaymentImportItem",
+    "DividendRecord",
+    "DividendStatus",
     "HoldingReconciliationItem",
     "HoldingSummary",
     "HoldingsLedger",
@@ -66,6 +83,7 @@ __all__ = [
     "calculate_xirr",
     "compare_portfolio_to_benchmark",
     "compute_account_xirr",
+    "dividend_ledger",
     "generate_portfolio_allocation",
     "generate_portfolio_cashflows",
     "get_security_sector",
