@@ -1,9 +1,15 @@
 {
-  "feature": "F13.5",
+  "feature": "F12.1",
   "status": "review",
-  "branch": "feature/F13.5-monitoring-actionable-alerts",
-  "commit": "b811204",
-  "tests": {},
+  "branch": "feature/F12.1-dhan-broker-orders",
+  "commit": "a1d47ee",
+  "tests": {
+    "pytest": {
+      "passed": 56,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
   "started_at": null,
   "finished_at": null,
   "blockers": [],
@@ -1411,6 +1417,27 @@
         "docs/qa/acceptance/F13.5.md"
       ],
       "verified_at": null,
+      "blockers": []
+    },
+    "F12.1": {
+      "status": "review",
+      "branch": "feature/F12.1-dhan-broker-orders",
+      "commit": "a1d47ee",
+      "tests": {
+        "pytest": {
+          "passed": 56,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F12.1.md",
+        "backend/app/dhan/orders.py",
+        "backend/app/engine/broker.py",
+        "backend/tests/unit/test_dhan_orders.py",
+        "backend/tests/unit/test_dhan_broker.py"
+      ],
+      "verified_at": "2026-09-03T23:06:00Z",
       "blockers": []
     }
   }

@@ -86,6 +86,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F13.3 | Done | Fast-forwarded into `main` at `6f5ff6e` after review. |
 | F13.4 | Done | Fast-forwarded into `main` at `938162f` after review. |
 | F13.5 | Done | Fast-forwarded into `main` at `b811204` after review. |
+| F12.1 | Done | Fast-forwarded into `main` at `a1d47ee` after review. |
 
 ## Major-task log
 
@@ -2870,3 +2871,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - **Expired options rolling backfill**: Confirmed up to 45-day call window, parameter `drvOptionType`, `requiredData` array, and `BSE_FNO` segment support.
   - **Margin and risk controls**: Documented `POST /v2/margincalculator/multi` (portfolio margin with hedge benefits), `DELETE /v2/positions` (Exit All Positions), and broker `/v2/killswitch`.
 - Synchronized `SHREENEXA_TECHNICAL_SPEC.md` (§3.1, §3.4, §3.5, §3.6, §3.8, §3.9, §3.10) and `SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md` (C10, F0.4, F0.6, F1.3, F1.4, F8.6, F12.1, F12.4, F13.2, Live Activation checklist).
+ 
+
+### 2026-09-03 — F12.1 typed DhanBroker order mapping, slicing, and static IP validation completed
+
+- Delivered `backend/app/dhan/orders.py` (protected path):
+  - Typed models for `DhanOrderRequest`, `DhanOrderResponse`, `DhanOrderModifyRequest`, `DhanOrderCancelResponse`, `DhanSliceOrderRequest`, `DhanOrderDetail`.
+  - StrEnum types for `TransactionType`, `ExchangeSegment`, `ProductType`, `OrderType`, `OrderValidity`, `OrderStatus`, `AMOTime`, `LegName`.
+  - Correlation ID generator `generate_correlation_id` (conforming to Dhan 30-char alphanumeric rules).
+  - Exchange freeze-quantity slicing utility `calculate_order_slices` with index freeze caps (NIFTY 1800, BANKNIFTY 900, FINNIFTY 1800, MIDCPNIFTY 4200) and lot size alignment.
+- Delivered `backend/app/engine/broker.py` (protected path):
+  - `DhanBroker` adapter implementing execution interface.
+  - Hard safety invariant: `is_live_enabled = False` by default; placing/modifying/cancelling an order when disabled raises `LiveTradingDisabledError`.
+  - SEBI Static IP preflight verification: host outbound IP must match Dhan Primary (Lightsail) or Secondary (Workstation); mismatches raise `StaticIPMismatchError`.
+  - Timeout handling: timeout during order placement marks state `PENDING_BROKER_CONFIRMATION` with correlation ID; never blindly retries.
+- Integrated typed order methods in `DhanRestClient` (`place_order`, `modify_order`, `cancel_order`, `place_sliced_order`, `get_order_by_id`, `get_order_by_correlation_id`, `get_order_list`).
+- Authored acceptance contract `docs/qa/acceptance/F12.1.md`.
+- Authored unit and offline cassette test suites:
+  - `backend/tests/unit/test_dhan_orders.py` (12 tests, all passing).
+  - `backend/tests/unit/test_dhan_broker.py` (5 tests, all passing).
+- Verified quality gates:
+  - 56 Python tests passing (0 failures).
+  - `mypy backend --strict` 100% clean across 316 source files.
+  - `ruff check backend` 100% clean.
+  - `validate_manifest.py` and `validate_fixtures.py` OK.
+  - Fast-forwarded into `main` at `a1d47ee`.
