@@ -1,0 +1,156 @@
+# Production Docker Compose stack for ShreeNexa Terminal (F13.1)
+# Enforces non-root execution, explicit resource limits, durable health checks,
+# and independent process roles (api, engine, feedd, worker).
+
+name: shreenexa-prod
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-shreenexa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shreenexa_secure_prod}
+      POSTGRES_DB: ${POSTGRES_DB:-shreenexa}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ../data/services/postgres:/var/lib/postgresql/data
+    mem_limit: "512m"
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shreenexa} -d ${POSTGRES_DB:-shreenexa}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ../data/services/redis:/data
+    mem_limit: "256m"
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: shreenexa/api:prod
+    restart: unless-stopped
+    user: "10001:10001"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      APP_ENV: "production"
+      DATABASE_URL: "postgresql+psycopg://shreenexa:${POSTGRES_PASSWORD:-shreenexa_secure_prod}@postgres:5432/shreenexa"
+      REDIS_URL: "redis://valkey:6379/0"
+    volumes:
+      - ../data:/app/data
+    mem_limit: "512m"
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+
+  engine:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: shreenexa/engine:prod
+    restart: unless-stopped
+    user: "10001:10001"
+    command: ["python", "-m", "app.engine.core"]
+    environment:
+      APP_ENV: "production"
+      DATABASE_URL: "postgresql+psycopg://shreenexa:${POSTGRES_PASSWORD:-shreenexa_secure_prod}@postgres:5432/shreenexa"
+      REDIS_URL: "redis://valkey:6379/0"
+    volumes:
+      - ../data:/app/data
+    mem_limit: "1024m"
+    cpus: 2.0
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.contracts.health_check", "engine"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+
+  feedd:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: shreenexa/feedd:prod
+    restart: unless-stopped
+    user: "10001:10001"
+    command: ["python", "-m", "app.feedd.core"]
+    environment:
+      APP_ENV: "production"
+      DATABASE_URL: "postgresql+psycopg://shreenexa:${POSTGRES_PASSWORD:-shreenexa_secure_prod}@postgres:5432/shreenexa"
+      REDIS_URL: "redis://valkey:6379/0"
+    volumes:
+      - ../data:/app/data
+    mem_limit: "512m"
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.contracts.health_check", "feedd"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: shreenexa/worker:prod
+    restart: unless-stopped
+    user: "10001:10001"
+    command: ["python", "-m", "app.worker.core"]
+    environment:
+      APP_ENV: "production"
+      DATABASE_URL: "postgresql+psycopg://shreenexa:${POSTGRES_PASSWORD:-shreenexa_secure_prod}@postgres:5432/shreenexa"
+      REDIS_URL: "redis://valkey:6379/0"
+    volumes:
+      - ../data:/app/data
+    mem_limit: "512m"
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.contracts.health_check", "worker"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy

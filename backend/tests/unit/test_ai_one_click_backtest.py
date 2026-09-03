@@ -175,7 +175,6 @@ def test_proof_generated_run_equals_manual_run_with_bars_parity(
     assert generated_result.ai_metadata.ir_hash == ir_hash
 
 
-
 def test_api_one_click_backtest_endpoint_success(sample_strategy_ir: StrategyIR) -> None:
     """Verify POST /api/v1/ai/backtest-draft executes and persists with AI metadata."""
     prompt = "Momentum breakout on NIFTY 50"
