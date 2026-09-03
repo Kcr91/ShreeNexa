@@ -14,6 +14,7 @@ export interface AIDraftModalProps {
   onClose: () => void;
   currentState: StrategyBuilderState;
   onApprove: (draftState: StrategyBuilderState) => void;
+  onApproveAndBacktest?: (draftState: StrategyBuilderState, payload: GeneratedStrategyPayload) => void;
 }
 
 export interface GeneratedStrategyPayload {
@@ -34,6 +35,7 @@ export const AIDraftModal: React.FC<AIDraftModalProps> = ({
   onClose,
   currentState,
   onApprove,
+  onApproveAndBacktest,
 }) => {
   const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -138,6 +140,22 @@ export const AIDraftModal: React.FC<AIDraftModalProps> = ({
       takeProfitPct: editedTp,
     };
     onApprove(finalDraft);
+    onClose();
+  };
+
+  const handleApproveAndBacktest = () => {
+    if (!draftVisualState || !draftPayload) return;
+    const finalDraft: StrategyBuilderState = {
+      ...draftVisualState,
+      strategyName: editedName || draftVisualState.strategyName,
+      stopLossPct: editedSl,
+      takeProfitPct: editedTp,
+    };
+    if (onApproveAndBacktest) {
+      onApproveAndBacktest(finalDraft, draftPayload);
+    } else {
+      onApprove(finalDraft);
+    }
     onClose();
   };
 
@@ -618,6 +636,24 @@ export const AIDraftModal: React.FC<AIDraftModalProps> = ({
                 }}
               >
                 Approve & Apply Draft
+              </button>
+
+              <button
+                data-testid="btn-approve-backtest"
+                type="button"
+                onClick={handleApproveAndBacktest}
+                style={{
+                  backgroundColor: "var(--color-primary, #3b82f6)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "var(--spacing-2) var(--spacing-4)",
+                  fontWeight: 700,
+                  fontSize: "var(--font-size-xs)",
+                  cursor: "pointer",
+                }}
+              >
+                ⚡ Approve & One-Click Backtest
               </button>
             </div>
           )}

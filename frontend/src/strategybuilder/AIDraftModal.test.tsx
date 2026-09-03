@@ -144,4 +144,37 @@ describe("AIDraftModal Component (F5.3)", () => {
     expect(appliedState.stopLossPct).toBeGreaterThan(0);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it("proof: clicking approve & one-click backtest triggers execution with metadata", async () => {
+    const handleClose = vi.fn();
+    const handleApprove = vi.fn();
+    const handleApproveAndBacktest = vi.fn();
+
+    render(
+      <AIDraftModal
+        isOpen={true}
+        onClose={handleClose}
+        currentState={mockCurrentState}
+        onApprove={handleApprove}
+        onApproveAndBacktest={handleApproveAndBacktest}
+      />
+    );
+
+    const input = screen.getByTestId("ai-prompt-input");
+    fireEvent.change(input, { target: { value: "EMA crossover backtest prompt" } });
+    fireEvent.click(screen.getByTestId("btn-generate-draft"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("btn-approve-backtest")).toBeInTheDocument();
+    });
+
+    const backtestBtn = screen.getByTestId("btn-approve-backtest");
+    fireEvent.click(backtestBtn);
+
+    expect(handleApproveAndBacktest).toHaveBeenCalledTimes(1);
+    const [draftState, payload] = handleApproveAndBacktest.mock.calls[0];
+    expect(draftState.universe).toBe("NIFTY 50");
+    expect(payload.strategy_ir.ir_version).toBe(1);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
 });

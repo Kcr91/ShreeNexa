@@ -105,6 +105,7 @@ class StockStrategyBacktestRunner:
                 trades=[],
                 equity_curve=[],
                 engine_commit=_get_git_commit(),
+                ai_metadata=config.ai_metadata,
             )
 
         # 3. Precompile Signals using VectorStrategyCompiler
@@ -241,6 +242,7 @@ class StockStrategyBacktestRunner:
             trades=broker.portfolio.fills,
             equity_curve=broker.portfolio.equity_curve,
             engine_commit=_get_git_commit(),
+            ai_metadata=config.ai_metadata,
         )
 
     def _calculate_order_qty(

@@ -416,6 +416,15 @@ export const StrategyBuilderWidget: React.FC<
           setState(draftState);
           setIsAIModalOpen(false);
         }}
+        onApproveAndBacktest={(draftState) => {
+          setState(draftState);
+          setIsAIModalOpen(false);
+          const ir = compileVisualStateToStrategyIR(draftState);
+          if (ir) {
+            const res = runClientSideVectorBacktest(ir);
+            setBacktestResult(res);
+          }
+        }}
       />
     </div>
   );

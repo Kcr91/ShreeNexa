@@ -13,6 +13,21 @@ from app.engine.sim_broker import FillTiming
 from app.strategy.ir import StrategyIR
 
 
+class AIGenerationMetadata(BaseModel):
+    """Provenance metadata recorded when a backtest originates from an AI-generated draft."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str
+    provider_name: str
+    model_version: str = "1.0.0"
+    ir_version: int
+    ir_hash: str
+    generated_at: datetime
+    approved_at: datetime
+    draft_status: str = "APPROVED_DRAFT"
+
+
 class BacktestConfig(BaseModel):
     """Backtest execution parameter configuration."""
 
@@ -31,6 +46,9 @@ class BacktestConfig(BaseModel):
     )
     product_type: ProductType = Field(default=ProductType.DELIVERY)
     seed: int | None = Field(default=None, description="Random seed for reproducible execution")
+    ai_metadata: AIGenerationMetadata | None = Field(
+        default=None, description="Optional AI generation provenance metadata"
+    )
 
 
 class BacktestPerformanceMetrics(BaseModel):
@@ -71,3 +89,6 @@ class BacktestResult(BaseModel):
     equity_curve: list[EquityPoint]
     engine_commit: str = Field(default="unknown")
     executed_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
+    ai_metadata: AIGenerationMetadata | None = Field(
+        default=None, description="Optional AI generation provenance metadata"
+    )
