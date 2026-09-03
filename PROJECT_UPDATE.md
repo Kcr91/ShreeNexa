@@ -72,7 +72,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F10.3 | Done | Fast-forwarded into `main` at `c4f2caa` after review. |
 | F10.4 | Done | Fast-forwarded into `main` at `6d08f76` after review. |
 | F10.5 | Done | Fast-forwarded into `main` at `f5ad0dc` after review. |
-| F5.3–F5.4, F11.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F11.1 | Done | Fast-forwarded into `main` at `2fcc59c` after review. |
+| F5.3–F5.4, F11.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2392,3 +2393,32 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified REST API endpoints end-to-end.
 - Full repository test suite: 521 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (269 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F11.1 Feature request to structured, editable implementation specification completed
+
+- Implemented `backend/app/feature_builder/`:
+  - `models.py`: Defines `FeatureRequest`, `FeatureSpec`, `FeatureSpecUpdate`, `RiskLevel`, `SpecStatus`, and `SpecApprovalDecision`.
+  - `spec.py` (`FeatureSpecEngine`):
+    - Transforms raw feature proposals into structured `FeatureSpec` models tied to manifest schemas.
+    - Evaluates ambiguity: detects underspecified descriptions (< 25 chars) and vague terms (`etc`, `tbd`, `maybe`).
+    - Evaluates risk: detects protected path modifications (`risk.py`, `broker.py`, `orders.py`, `parity/`), live broker execution, risk bypassing, or secret exposure.
+    - Gating invariant: High-risk or ambiguous requests strictly require explicit approval (`requires_approval=True`, `status="PENDING_APPROVAL"`).
+    - Lifecycle management: supports updating specification scope, test plans, criteria, and recording auditable approvals or rejections.
+- Implemented `backend/app/api/feature_builder.py` and mounted in `backend/app/main.py`:
+  - `POST /api/v1/feature-builder/specs`
+  - `GET /api/v1/feature-builder/specs`
+  - `GET /api/v1/feature-builder/specs/{spec_id}`
+  - `PUT /api/v1/feature-builder/specs/{spec_id}`
+  - `POST /api/v1/feature-builder/specs/{spec_id}/approve`
+  - `POST /api/v1/feature-builder/specs/{spec_id}/reject`
+- Authored acceptance contract in `docs/qa/acceptance/F11.1.md`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_feature_builder_spec.py` (6 tests passing):
+  - Verified low-risk feature spec generation with full scope, tests, and criteria.
+  - Verified high-risk protected path attempt flags HIGH risk and blocks without explicit approval.
+  - Verified high-risk live broker execution/risk bypass flags HIGH risk.
+  - Verified ambiguous/underspecified request requires approval.
+  - Verified spec editing and approval/rejection lifecycle.
+  - Verified REST API endpoints end-to-end.
+- Full repository test suite: 527 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (274 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
