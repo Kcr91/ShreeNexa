@@ -1,8 +1,8 @@
 {
-  "feature": "F11.6",
+  "feature": "F5.3",
   "status": "review",
-  "branch": "feature/F11.6-isolated-sandbox-stack",
-  "commit": "b96e784",
+  "branch": "feature/F5.3-ai-visual-strategy-draft",
+  "commit": "36aa05d",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1312,6 +1312,18 @@
       "evidence": [
         "backend/tests/unit/test_feature_builder_sandbox.py",
         "docs/qa/acceptance/F11.6.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F5.3": {
+      "status": "review",
+      "branch": "feature/F5.3-ai-visual-strategy-draft",
+      "commit": "36aa05d",
+      "tests": {},
+      "evidence": [
+        "frontend/src/strategybuilder/AIDraftModal.test.tsx",
+        "docs/qa/acceptance/F5.3.md"
       ],
       "verified_at": null,
       "blockers": []

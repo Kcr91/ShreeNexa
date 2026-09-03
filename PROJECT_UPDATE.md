@@ -78,7 +78,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F11.4 | Done | Fast-forwarded into `main` at `181a013` after review. |
 | F11.5 | Done | Fast-forwarded into `main` at `e1f95d7` after review. |
 | F11.6 | Done | Fast-forwarded into `main` at `b96e784` after review. |
-| F5.3–F5.4, F11.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F5.3 | Done | Fast-forwarded into `main` at `36aa05d` after review. |
+| F5.4, F11.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2598,3 +2599,37 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified sandbox REST API lifecycle end-to-end.
 - Full repository test suite: 584 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (286 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F5.3 Render generated IR in the visual builder with diff, explanation, warnings, edit, approve, reject, and draft-only status completed
+
+- Implemented `frontend/src/strategybuilder/AIDraftModal.tsx`:
+  - Enforced critical safety invariant: all generated drafts are marked with `Status: DRAFT ONLY` and `Deployment: UNTOUCHED / DISABLED`.
+  - Generation communicates with `/api/v1/ai/generate-strategy` (with lossless local schema fallback for disconnected test scenarios).
+  - Decompiles generated `CanonicalStrategyIR` into visual builder state via `decompileCanonicalIRToVisual`.
+  - Interactive Tab 1 (Diff View): side-by-side parameter comparison showing Strategy Name, Target Universe, Timeframe, Indicators pipeline, Entry/Exit Rules, and Stop Loss / Take Profit risks.
+  - Interactive Tab 2 (Explanation View): displays natural language analysis of strategy mechanics and indicator roles.
+  - Interactive Tab 3 (Warnings View): displays validation warnings and risk notices.
+  - Interactive Controls:
+    - `Reject Draft` button: safely discards the draft, leaves visual builder completely untouched, and closes modal.
+    - `Edit Draft` toggle: allows inline modification of strategy name, stop-loss %, and take-profit % before approval.
+    - `Approve & Apply Draft` button: transfers the approved draft into the active visual builder workspace.
+- Updated `frontend/src/widgets/builtin/StrategyBuilderWidget.tsx`:
+  - Added `✨ AI Assistant` button in the header toolbar (`btn-ai-assistant`).
+  - Integrated `AIDraftModal` to control draft lifecycle and apply approved state to visual builder.
+- Authored acceptance contract in `docs/qa/acceptance/F5.3.md`.
+- Authored comprehensive component unit tests in `frontend/src/strategybuilder/AIDraftModal.test.tsx` (4 tests) and extended `frontend/src/widgets/builtin/StrategyBuilderWidget.test.tsx` (5 tests):
+  - Verified draft status badge (`Status: DRAFT ONLY`) and deployment badge (`Deployment: UNTOUCHED / DISABLED`).
+  - Verified generation renders Diff, Explanation, and Warnings tabs.
+  - Verified Reject button discards draft without calling onApprove and preserves original state.
+  - Verified Approve button updates workspace with final draft and closes modal.
+  - Verified AI Assistant button in visual builder toolbar triggers modal.
+- Quality gates verified:
+  - 183 frontend Vitest tests passed (0 failures).
+  - TypeScript strict typecheck passed (`tsc --noEmit`).
+  - Production Vite build passed.
+  - `ruff check .` passed.
+  - `mypy backend --strict` passed across 286 source files.
+  - `validate_manifest.py` & `validate_fixtures.py` passed.
+  - `pre-commit run --all-files` passed.
+  - `git diff --check` clean.
+
