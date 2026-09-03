@@ -45,6 +45,15 @@ from app.investing.reconciliation import (
     import_dhan_holdings_as_initial_lots,
     reconcile_dhan_holdings,
 )
+from app.investing.rotation import (
+    RotationBacktestResult,
+    RotationWalkForwardResult,
+    SectorConstituentMembership,
+    SurvivorshipAuditResult,
+    audit_survivorship_bias,
+    run_rotation_walk_forward,
+    run_sectoral_momentum_backtest,
+)
 from app.investing.xirr import XIRRError, calculate_xirr
 
 router = APIRouter(prefix="/api/v1/investing", tags=["investing"])
@@ -371,6 +380,99 @@ def compute_twr(request: TWRCalculationRequest) -> TWRCalculationResult:
         return calculate_time_weighted_return(
             account_id=request.account_id,
             sub_periods_data=raw_periods,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+# --- F10.5 Endpoints: Point-in-Time Sectoral Momentum Rotation Strategy ---
+
+
+class SectoralRotationBacktestRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    memberships: list[SectorConstituentMembership]
+    price_history: dict[str, dict[date, float]]
+    rebalance_dates: list[date]
+    top_k_sectors: int = 2
+    defensive_symbol: str = "GOLDBEES"
+    initial_capital: float = 1000000.0
+
+
+class SectoralRotationWalkForwardRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    memberships: list[SectorConstituentMembership]
+    price_history: dict[str, dict[date, float]]
+    rebalance_dates: list[date]
+    in_sample_steps: int = 4
+    out_of_sample_steps: int = 2
+    step_stride: int = 2
+
+
+class SectoralRotationSurvivorshipAuditRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    memberships: list[SectorConstituentMembership]
+    price_history: dict[str, dict[date, float]]
+    rebalance_dates: list[date]
+
+
+@router.post(
+    "/strategy/sectoral-rotation/backtest",
+    response_model=RotationBacktestResult,
+)
+def backtest_sectoral_rotation(
+    request: SectoralRotationBacktestRequest,
+) -> RotationBacktestResult:
+    """Execute point-in-time sectoral momentum rotation strategy backtest."""
+    try:
+        return run_sectoral_momentum_backtest(
+            memberships=request.memberships,
+            price_history=request.price_history,
+            rebalance_dates=request.rebalance_dates,
+            top_k_sectors=request.top_k_sectors,
+            defensive_symbol=request.defensive_symbol,
+            initial_capital=request.initial_capital,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post(
+    "/strategy/sectoral-rotation/walk-forward",
+    response_model=RotationWalkForwardResult,
+)
+def walk_forward_sectoral_rotation(
+    request: SectoralRotationWalkForwardRequest,
+) -> RotationWalkForwardResult:
+    """Execute walk-forward analysis with enforced out-of-sample robustness validation."""
+    try:
+        return run_rotation_walk_forward(
+            memberships=request.memberships,
+            price_history=request.price_history,
+            all_rebalance_dates=request.rebalance_dates,
+            in_sample_steps=request.in_sample_steps,
+            out_of_sample_steps=request.out_of_sample_steps,
+            step_stride=request.step_stride,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post(
+    "/strategy/sectoral-rotation/survivorship-audit",
+    response_model=SurvivorshipAuditResult,
+)
+def audit_rotation_survivorship(
+    request: SectoralRotationSurvivorshipAuditRequest,
+) -> SurvivorshipAuditResult:
+    """Audit survivorship bias comparing true point-in-time vs static surviving universe."""
+    try:
+        return audit_survivorship_bias(
+            memberships=request.memberships,
+            price_history=request.price_history,
+            rebalance_dates=request.rebalance_dates,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
