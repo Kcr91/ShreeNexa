@@ -1,8 +1,8 @@
 {
-  "feature": "F10.4",
+  "feature": "F10.5",
   "status": "review",
-  "branch": "feature/F10.4-sip-rebalancing-proposals",
-  "commit": "6d08f76",
+  "branch": "feature/F10.5-pit-sectoral-momentum-rotation",
+  "commit": "f5ad0dc",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1228,6 +1228,18 @@
       "evidence": [
         "backend/tests/unit/test_investing_rebalancing.py",
         "docs/qa/acceptance/F10.4.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F10.5": {
+      "status": "review",
+      "branch": "feature/F10.5-pit-sectoral-momentum-rotation",
+      "commit": "f5ad0dc",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_sectoral_momentum_rotation.py",
+        "docs/qa/acceptance/F10.5.md"
       ],
       "verified_at": null,
       "blockers": []

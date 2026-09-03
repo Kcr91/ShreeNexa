@@ -71,7 +71,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F10.2 | Done | Fast-forwarded into `main` at `57cab9e` after review. |
 | F10.3 | Done | Fast-forwarded into `main` at `c4f2caa` after review. |
 | F10.4 | Done | Fast-forwarded into `main` at `6d08f76` after review. |
-| F5.3–F5.4, F10.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F10.5 | Done | Fast-forwarded into `main` at `f5ad0dc` after review. |
+| F5.3–F5.4, F11.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2369,3 +2370,26 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified REST API endpoints end-to-end.
 - Full repository test suite: 516 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (267 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F10.5 Point-in-time sectoral momentum rotation research strategy completed
+
+- Implemented `backend/app/investing/rotation.py`:
+  - `resolve_pit_sector_constituents`: Point-in-time constituent resolver strictly filtering constituents as-of historical dates (`effective_date <= as_of and (exit_date is None or exit_date > as_of)`), eliminating look-ahead and survivorship bias.
+  - `compute_sector_momentum_scores`: Calculates relative momentum scores (1M, 3M, 6M blend) and evaluates absolute momentum trend filter (`trend_positive`).
+  - `run_sectoral_momentum_backtest`: Simulates periodic sector rotation among top $K$ performing sectors with defensive hedging (`GOLDBEES` / cash) when fewer than $K$ sectors pass the trend filter.
+  - `audit_survivorship_bias`: Mathematical proof test comparing true point-in-time universe performance against a naive static surviving universe, verifying and quantifying the survivorship bias return inflation.
+  - `run_rotation_walk_forward`: Evaluates strategy stability across rolling train/test partitions, computing Walk-Forward Efficiency (WFE) ratio and parameter robustness.
+- Extended `backend/app/api/investing.py`:
+  - `POST /api/v1/investing/strategy/sectoral-rotation/backtest`
+  - `POST /api/v1/investing/strategy/sectoral-rotation/walk-forward`
+  - `POST /api/v1/investing/strategy/sectoral-rotation/survivorship-audit`
+- Authored acceptance contract in `docs/qa/acceptance/F10.5.md`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_sectoral_momentum_rotation.py` (5 tests passing):
+  - Verified point-in-time constituent resolution without lookahead.
+  - Verified multi-horizon momentum scoring and absolute trend filter.
+  - Verified mathematical proof of survivorship bias detection.
+  - Verified enforced walk-forward optimization and WFE calculation.
+  - Verified REST API endpoints end-to-end.
+- Full repository test suite: 521 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (269 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
