@@ -1172,7 +1172,7 @@
     "F5.2": {
       "status": "review",
       "branch": "feature/F5.2-ai-natural-language-strategy-generator",
-      "commit": "a06f8c0",
+      "commit": "f350566e35b69c332c6e5d6f7ca67f38b58f3bf9",
       "tests": {
         "pytest": {
           "passed": 499,
