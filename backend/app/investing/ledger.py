@@ -285,9 +285,7 @@ class HoldingsLedger:
             avg_cost = round(total_invested / total_qty, 4) if total_qty > 0 else 0.0
 
             current_val = round(total_qty * current_market_price, 2)
-            unrealized = (
-                round(current_val - total_invested, 2) if current_market_price > 0 else 0.0
-            )
+            unrealized = round(current_val - total_invested, 2) if current_market_price > 0 else 0.0
             unrealized_pct = (
                 round((unrealized / total_invested) * 100.0, 2) if total_invested > 0 else 0.0
             )

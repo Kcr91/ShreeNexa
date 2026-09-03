@@ -29,10 +29,10 @@ def parse_dhan_holdings_payload(payload: str | list[dict[str, Any]]) -> list[Dha
 
 
 def reconcile_dhan_holdings(
-        account_id: str,
-        dhan_items: list[DhanHoldingItem],
-        ledger: HoldingsLedger = holdings_ledger,
-        cost_tolerance: float = 0.01,
+    account_id: str,
+    dhan_items: list[DhanHoldingItem],
+    ledger: HoldingsLedger = holdings_ledger,
+    cost_tolerance: float = 0.01,
 ) -> ReconciliationReport:
     """Reconcile local holdings ledger against a list of Dhan holdings."""
     report = ledger.generate_portfolio_report(account_id)
