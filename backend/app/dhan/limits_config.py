@@ -51,24 +51,26 @@ def get_default_dhan_limits() -> DhanLimitsConfig:
     """Return hardcoded safe fallback configuration if YAML file is unavailable."""
     return DhanLimitsConfig(
         schema_version=1,
-        as_of="2026-09-01",
+        as_of="2026-09-03",
         source="https://dhanhq.co/docs/v2/",
-        notes="Safe built-in fallback rate limits",
-        default_limit=RateLimitSpec(rate=10.0, burst=20, description="Default fallback"),
+        notes="Safe built-in fallback rate limits (DhanHQ v2.5 verified)",
+        default_limit=RateLimitSpec(rate=10.0, burst=10, description="Default fallback"),
         backoff=BackoffSpec(base_delay_seconds=0.05, max_delay_seconds=2.0, jitter_ratio=0.25),
         categories={
-            "default": RateLimitSpec(rate=10.0, burst=20, description="Default REST"),
+            "default": RateLimitSpec(rate=10.0, burst=10, description="Default REST"),
             "option_chain": RateLimitSpec(
-                rate=0.3333333333333333, burst=1, description="Option chain (1 req/3s)"
+                rate=0.3333333333333333,
+                burst=1,
+                description="Option chain (1 req/3s per underlying)",
             ),
-            "historical_daily": RateLimitSpec(rate=5.0, burst=10, description="Daily historical"),
+            "historical_daily": RateLimitSpec(rate=5.0, burst=5, description="Daily historical"),
             "historical_intraday": RateLimitSpec(
-                rate=5.0, burst=10, description="Intraday historical"
+                rate=5.0, burst=5, description="Intraday historical"
             ),
-            "quotes": RateLimitSpec(rate=10.0, burst=20, description="Quotes"),
-            "orders": RateLimitSpec(rate=25.0, burst=50, description="Orders"),
+            "quotes": RateLimitSpec(rate=1.0, burst=1, description="Quotes (1 req/s)"),
+            "orders": RateLimitSpec(rate=10.0, burst=10, description="Orders (10 req/s)"),
             "account_funds_holdings": RateLimitSpec(
-                rate=10.0, burst=20, description="Account & Holdings"
+                rate=10.0, burst=10, description="Account & Holdings"
             ),
         },
     )
@@ -98,6 +100,7 @@ def get_category_for_endpoint(method: str, path: str) -> str:
         norm_path = norm_path[3:].lstrip("/")
 
     lower_path = norm_path.lower()
+    method_upper = method.upper()
 
     if lower_path.startswith("optionchain"):
         return "option_chain"
@@ -111,8 +114,18 @@ def get_category_for_endpoint(method: str, path: str) -> str:
         or "quote" in lower_path
     ):
         return "quotes"
-    if lower_path.startswith("orders") or lower_path.startswith("forever/orders"):
+
+    # Orders and emergency order actions
+    if (
+        lower_path.startswith("orders")
+        or lower_path.startswith("forever/orders")
+        or lower_path.startswith("superorders")
+        or lower_path.startswith("killswitch")
+        or lower_path.startswith("pnlexit")
+        or (lower_path.startswith("positions") and method_upper == "DELETE")
+    ):
         return "orders"
+
     if any(
         lower_path.startswith(prefix)
         for prefix in (
@@ -122,7 +135,10 @@ def get_category_for_endpoint(method: str, path: str) -> str:
             "positions",
             "edis",
             "margin",
+            "margincalculator",
             "traderscontrol",
+            "renewtoken",
+            "ip",
         )
     ):
         return "account_funds_holdings"

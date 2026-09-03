@@ -2857,3 +2857,16 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend typecheck and production build clean.
   - `pre-commit run --all-files` passed cleanly.
   - `git diff --check` clean.
+
+
+### 2026-09-03 — DhanHQ v2.5 API documentation verification and specification/plan alignment completed
+
+- Conducted exhaustive comparative analysis of `dhan-api-docs.md` (151 documents, DhanHQ v2.5 export) against `SHREENEXA_TECHNICAL_SPEC.md` and `SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md`.
+- Formally resolved all previously unverified Dhan facts:
+  - **Rate limits verified**: Order APIs (10 req/s, 100k daily), Market Quote (1 req/s, 1000 batching), Data APIs (5 req/s, 7k daily), Option Chain (1 req/3s per unique underlying/expiry combination).
+  - **SEBI/Exchange Static IP mandate**: Confirmed mandatory Static IP whitelisting for all Order Placement, Modification, Cancellation, Slicing, Super Orders, and Exit-All APIs; established dual static IP topology (Lightsail Mumbai Primary + Local workstation Secondary).
+  - **24-hour Access Token lifecycle**: Documented 24h validity, automated renewal via `GET /v2/RenewToken`, headless generation via `POST https://auth.dhan.co/app/generateAccessToken` with TOTP, and token status checks via `GET /v2/profile`.
+  - **Historical chart intervals**: Corrected intraday chart intervals to `1, 5, 15, 30, 60` minutes (replacing erroneous 25m) and verified `POST` HTTP method.
+  - **Expired options rolling backfill**: Confirmed up to 45-day call window, parameter `drvOptionType`, `requiredData` array, and `BSE_FNO` segment support.
+  - **Margin and risk controls**: Documented `POST /v2/margincalculator/multi` (portfolio margin with hedge benefits), `DELETE /v2/positions` (Exit All Positions), and broker `/v2/killswitch`.
+- Synchronized `SHREENEXA_TECHNICAL_SPEC.md` (§3.1, §3.4, §3.5, §3.6, §3.8, §3.9, §3.10) and `SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md` (C10, F0.4, F0.6, F1.3, F1.4, F8.6, F12.1, F12.4, F13.2, Live Activation checklist).

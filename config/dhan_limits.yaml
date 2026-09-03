@@ -1,17 +1,17 @@
 # Dated DhanHQ API Rate Limits Configuration
-# Source: DhanHQ Documentation v2 (https://dhanhq.co/docs/v2/) and ShreeNexa Technical Spec v1.1
+# Source: DhanHQ Documentation v2.5 (dhan-api-docs.md) and ShreeNexa Technical Spec v1.2
 #
 # Rates are specified in requests per second (req/sec).
 # Burst represents the maximum token bucket capacity.
 
 schema_version: 1
-as_of: "2026-09-01"
+as_of: "2026-09-03"
 source: "https://dhanhq.co/docs/v2/"
-notes: "Dhan rate limits with confirmed option chain limit (1 req/3s) and conservative defaults for REST endpoints."
+notes: "Verified DhanHQ v2.5 rate limits: Orders 10/s (100k/day), Quotes 1/s, Data 5/s (7k/day), Option Chain 1 req/3s per underlying."
 
 default_limit:
   rate: 10.0
-  burst: 20
+  burst: 10
 
 backoff:
   base_delay_seconds: 0.05
@@ -21,35 +21,35 @@ backoff:
 categories:
   default:
     rate: 10.0
-    burst: 20
+    burst: 10
     description: "General REST API requests"
 
   option_chain:
     rate: 0.3333333333333333
     burst: 1
-    description: "Option chain requests (1 request per 3 seconds per spec section 3.4)"
+    description: "Option chain requests (1 request per 3 seconds per unique underlying/expiry combination)"
 
   historical_daily:
     rate: 5.0
-    burst: 10
-    description: "Daily historical chart data requests"
+    burst: 5
+    description: "Daily historical chart data requests (5 req/s, 7,000 requests daily limit)"
 
   historical_intraday:
     rate: 5.0
-    burst: 10
-    description: "Intraday minute historical chart data requests"
+    burst: 5
+    description: "Intraday minute historical chart data requests (5 req/s, 7,000 requests daily limit)"
 
   quotes:
-    rate: 10.0
-    burst: 20
-    description: "Market quote and depth REST requests"
+    rate: 1.0
+    burst: 1
+    description: "Market quote and depth REST requests (1 req/s across all quote endpoints, max 1000 instruments/call)"
 
   orders:
-    rate: 25.0
-    burst: 50
-    description: "Order placement, modification, and cancellation requests"
+    rate: 10.0
+    burst: 10
+    description: "Order placement, modification, slicing, and cancellation requests (10 req/s, 100,000 daily limit)"
 
   account_funds_holdings:
     rate: 10.0
-    burst: 20
-    description: "Account profile, funds limits, holdings, and positions requests"
+    burst: 10
+    description: "Account profile, token renewal, funds limits, holdings, positions, and static IP requests"

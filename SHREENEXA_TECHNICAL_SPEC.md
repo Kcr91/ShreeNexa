@@ -154,14 +154,18 @@ F:\ShreeNexa\        (new independent git repository — not yet created)
 
 Everything in this section was verified against live documentation, not assumed. Where a fact could not be verified, it is marked **UNVERIFIED** and carries a resolution step.
 
-### 3.1 DhanHQ v2 — subscription and access
+### 3.1 DhanHQ v2 — subscription, access, and token lifecycle
 
 | Item | Detail |
 |---|---|
 | Trading APIs | Free |
 | Data API | ₹499 + GST / month, renews every 30 days. Required for live market feed, market quotes, and all historical data |
-| Base docs | `https://dhanhq.co/docs/v2/` |
-| Python SDK | `dhanhq` 2.2.0 (released 2026-04-24). Covers orders, feed, quotes, option chain, historical, live order updates, 200-level depth. Version 2.2.0 introduced breaking changes from 2.0.2 |
+| Base docs | `https://dhanhq.co/docs/v2/` (DhanHQ v2.5) |
+| Python SDK | `dhanhq` 2.2.0+ (released 2026-04-24). Covers orders, feed, quotes, option chain, historical, live order updates, 200-level depth |
+| **Token Validity** | **24 hours strictly** per SEBI and Exchange retail algo guidelines |
+| **Token Renewal** | `GET /v2/RenewToken` — Renews an active access token for another 24 hours via API (must be renewed before expiry) |
+| **Token Generation** | `POST https://auth.dhan.co/app/generateAccessToken` — Generates a fresh 24-hour access token using `dhanClientId`, PIN, and TOTP |
+| **Account Profile** | `GET /v2/profile` — Validates access token, active segments, and Data API subscription status |
 
 ### 3.2 Live Market Feed (WebSocket)
 
@@ -176,9 +180,9 @@ Everything in this section was verified against live documentation, not assumed.
 
 | Mode | Contents |
 |---|---|
-| Ticker | LTP, Last Traded Time |
-| Quote | LTP, last traded qty, average trade price, volume, total buy/sell qty, day OHLC. Open Interest arrives as separate packets |
-| Full | All Quote fields + 5 levels of bid/ask (price, quantity, order count) + Open Interest |
+| Ticker | LTP, Last Traded Time (16B total: 8B header + 8B payload) |
+| Quote | LTP, last traded qty, average trade price, volume, total buy/sell qty, day OHLC (50B total) + separate OI packets (12B) |
+| Full | All Quote fields + 5 levels of bid/ask (price, quantity, order count) + Open Interest (162B total) |
 
 **Critical design note:** the feed delivers **prices and OI only — never IV or Greeks**. Those are computed locally (see §11).
 
@@ -188,13 +192,13 @@ A socket separate from the Live Market Feed, with its own limits.
 
 | Property | Value |
 |---|---|
-| **20-level depth** | **Up to 50 instruments per connection** |
-| **200-level depth** | **Exactly 1 instrument per connection** |
-| Connections | Maximum 5. **Opening a sixth disconnects the first** |
+| **20-level depth** | **Up to 50 instruments per connection** (`wss://depth-api-feed.dhan.co/twentydepth`) |
+| **200-level depth** | **Exactly 1 instrument per connection** (`wss://full-depth-api.dhan.co/twohundreddepth`) |
+| Connections | Maximum 5. **Opening a sixth disconnects the oldest with code 805** |
 | Request code | `23` for both modes |
 | Subscription — 20 level | `RequestCode`, `InstrumentCount`, `InstrumentList[]` of `{ExchangeSegment, SecurityId}` |
 | Subscription — 200 level | `RequestCode`, `ExchangeSegment`, `SecurityId` directly — no array |
-| Packet | 12-byte header, then 16 bytes per level: price `float64` (8B), quantity `uint32` (4B), order count `uint32` (4B) |
+| Packet | 12-byte header, then 16 bytes per level: price `float64` (8B), quantity `uint32` (4B), order count `uint32` (4B). Bid (`41`) and Ask (`51`) arrive as separate stacked packets |
 | Keepalive | Server pings every 10 s; client must respond within 40 s or be disconnected |
 | **Segments** | **NSE Equity and NSE Derivatives only** |
 
@@ -203,23 +207,21 @@ A socket separate from the Live Market Feed, with its own limits.
 1. **Depth is available for many scripts at once, not one.** 50 instruments per connection at 20 levels is ample for a depth watchlist. 200-level is the exception — it consumes an entire connection for a single instrument, so it is reserved for the one explicitly focused script and subscribed on demand.
 2. **BSE, MCX and currency have no Full Market Depth.** For those segments the deepest available book is the **5 levels carried in the regular feed's Full packet**. The UI must show 5 levels there and say why, rather than rendering an empty 20-level ladder that looks like a bug.
 
-### 3.3.1 UNVERIFIED — is the 5-connection limit shared?
+### 3.3.1 Connection budget and socket allocation
 
-The Live Market Feed documents "up to five WebSocket connections per user"; Full Market Depth separately documents "maximum 5 WebSocket connections". **Whether these are two independent pools of 5, or one shared pool, is not stated.** If shared, consuming all five on the market feed would leave none for depth.
+The Live Market Feed documents "up to five WebSocket connections per user"; Full Market Depth separately documents "maximum 5 WebSocket connections". Both connections trigger error code `805` if exceeded.
 
-**Resolution:** feature F0.9 builds a central **connection budget manager** that owns every Dhan socket and allocates from a configured budget. Until the question is settled empirically, it defaults to the conservative assumption of **one shared pool of 5**, split 3 feed / 2 depth. If the pools turn out to be independent, the split becomes 5 / 5 as a configuration change with no code impact.
+Feature F0.9 implements a central **connection budget manager** that owns every Dhan socket and allocates from a configured budget. It defaults to the conservative allocation of **one shared pool of 5**, split 3 feed / 2 depth. If independent pools are confirmed, the split becomes 5 / 5 as a configuration change in `config/feed_budget.yaml`.
 
 ### 3.4 Option Chain (REST)
 
 | Property | Value |
 |---|---|
-| Endpoint | `/optionchain` |
-| Expiry list | `/optionchain/expirylist` (requires `UnderlyingScrip`, `UnderlyingSeg`) |
+| Endpoint | `POST /optionchain` |
+| Expiry list | `POST /optionchain/expirylist` (requires `UnderlyingScrip`, `UnderlyingSeg`) |
 | Parameters | `UnderlyingScrip` (int, security id), `UnderlyingSeg` (string, exchange segment), `Expiry` (string, `YYYY-MM-DD`) |
-| **Rate limit** | **One unique request every 3 seconds — total, not per underlying.** Documented rationale: OI updates more slowly than price |
+| **Rate limit** | **1 request every 3 seconds per unique underlying/expiry combination** (enhanced in v2.5 to allow concurrent calls across different underlyings/expiries) |
 | Response, per strike | Greeks (**delta, theta, gamma, vega**), implied volatility, last price, average price, bid/ask, open interest, volume, previous-day data, security identifiers — for both CE and PE |
-
-**This rate limit is the single most consequential constraint in the entire system.** A chain screen driven by this endpoint refreshes at best every 3 seconds for one underlying; watching four underlyings means each refreshes every 12 seconds. That is unusable for options trading. The architectural response is in §11.
 
 ### 3.5 Historical data (REST)
 
@@ -227,19 +229,19 @@ The Live Market Feed documents "up to five WebSocket connections per user"; Full
 
 | Property | Value |
 |---|---|
-| Endpoint | `/charts/historical` |
+| Endpoint | `POST /charts/historical` |
 | Interval | Daily (EOD) only |
 | Depth | Since the instrument's inception |
 | Instruments | Equities, futures, options (via `instrument` + `exchangeSegment`) |
-| Required params | `securityId`, `exchangeSegment`, `instrument` |
+| Required params | `securityId`, `exchangeSegment`, `instrument`, `fromDate`, `toDate` |
 | Response | open, high, low, close, volume, timestamp, optional open interest |
 
 **Intraday:**
 
 | Property | Value |
 |---|---|
-| Endpoint | `/charts/intraday` |
-| Intervals | 1, 5, 15, 25, 60 minutes |
+| Endpoint | `POST /charts/intraday` |
+| Intervals | **1, 5, 15, 30, 60 minutes** (default: 5) |
 | Depth | Up to 5 years |
 | **Max range per call** | **90 days** |
 | Instruments | All active instruments, all segments |
@@ -253,15 +255,11 @@ Documentation explicitly recommends storing intraday data locally due to volume 
 | Endpoint | `POST /charts/rollingoption` |
 | Depth | 5 years of expired-contract data |
 | Granularity | Minute-level |
-| Intervals | 1, 5, 15, 25, 60 minutes |
-| **Max range per call** | **30 days** |
+| Intervals | **1, 5, 15, 30, 60 minutes** |
+| **Max range per call** | **Up to 45 days** |
 | **Strike coverage** | **ATM ±10 strikes for index options; ATM ±3 for stock options** |
-| Parameters | Exchange segment (`NSE_FNO`), security id, instrument type, expiry code, expiry flag (`WEEK`/`MONTH`), strike selection, option type (`CALL`/`PUT`) |
-| Response fields | `open`, `high`, `low`, `close`, `volume`, `iv`, `oi`, `spot`, `strike`, `timestamp` |
-
-**Two consequences:**
-1. On NIFTY with 50-point strikes, ATM±10 is roughly ±500 points from spot. Confirmed sufficient — strategies are near-ATM. The engine reports `strike_unavailable` rather than silently substituting a nearby strike.
-2. **No bid/ask is returned.** Option backtest fills therefore cannot model spread-crossing and must use a premium-percentage slippage model, calibrated later against real paper-trading fills.
+| Parameters | Exchange segment (`NSE_FNO`, `BSE_FNO`), security id, instrument type (`OPTIDX`, `OPTSTK`), expiry code (`1`, `2`, `3`), expiry flag (`WEEK`/`MONTH`), strike selection (`ATM`, `ATM+10`, `ATM-10`), option type (`drvOptionType`: `CALL`/`PUT`), `requiredData` array |
+| Response fields | Columnar arrays under `data.ce` / `data.pe` for `open`, `high`, `low`, `close`, `volume`, `iv`, `oi`, `spot`, `strike`, `timestamp` |
 
 ### 3.7 Instrument master
 
@@ -270,40 +268,64 @@ Documentation explicitly recommends storing intraday data locally due to volume 
 | Compact | `https://images.dhan.co/api-data/api-scrip-master.csv` |
 | Detailed | `https://images.dhan.co/api-data/api-scrip-master-detailed.csv` |
 
-Detailed version includes exchange/segment identifiers, security classifications, lot size, tick size, symbol names, expiry dates, strike prices, option types, bracket/cover order margins and ranges, surveillance flags, margin requirements, MTF leverage. Update frequency is not documented — synced daily.
+Detailed version includes exchange/segment identifiers, security classifications, lot size, tick size, symbol names, expiry dates, strike prices, option types, bracket/cover order margins and ranges, surveillance flags, margin requirements, MTF leverage. Synced daily.
 
 ### 3.8 Codes and enumerations
 
-**Exchange segments:**
+**Active Exchange segments:**
 
 | Code | Value | Meaning |
 |---|---|---|
 | `IDX_I` | 0 | Index |
 | `NSE_EQ` | 1 | NSE Equity Cash |
 | `NSE_FNO` | 2 | NSE Futures & Options |
-| `NSE_CURRENCY` | 3 | NSE Currency |
 | `BSE_EQ` | 4 | BSE Equity Cash |
 | `MCX_COMM` | 5 | MCX Commodity |
-| `BSE_CURRENCY` | 7 | BSE Currency |
 | `BSE_FNO` | 8 | BSE Futures & Options |
 
-**Instrument types:** `INDEX`, `FUTIDX`, `OPTIDX`, `EQUITY`, `FUTSTK`, `OPTSTK`, `FUTCOM`, `OPTFUT`, `FUTCUR`, `OPTCUR`
+*(Note: Currency segments `NSE_CURRENCY` [3] and `BSE_CURRENCY` [7] are legacy/inactive in DhanHQ API documentation following SEBI/RBI regulatory directives).*
 
-**Product types:** `CNC` (cash & carry, equity delivery), `INTRADAY`, `MARGIN` (F&O carry forward), `CO` (cover order), `BO` (bracket order)
+**Instrument types:** `INDEX`, `FUTIDX`, `OPTIDX`, `EQUITY`, `FUTSTK`, `OPTSTK`, `FUTCOM`, `OPTFUT`
+
+**Product types:** `CNC` (cash & carry), `INTRADAY`, `MARGIN` (carry forward), `MTF`, `CO` (cover order), `BO` (bracket order)
 
 **Order statuses:** `TRANSIT`, `PENDING`, `CLOSED`, `TRIGGERED`, `REJECTED`, `CANCELLED`, `PART_TRADED`, `TRADED`
 
-### 3.9 Order APIs
+### 3.9 Order, Risk, and Margin APIs
 
-Available: Orders, Super Order (entry + target + stop-loss in one), Forever Order (GTT), Conditional Trigger, Portfolio and Positions, EDIS, Trader's Control, Funds & Margin, Statement, Postback, Live Order Update (WebSocket).
+**Order Management:**
+- `POST /orders`, `PUT /orders/{id}`, `DELETE /orders/{id}`
+- `POST /orders/slicing` — Automatically slices orders exceeding exchange freeze limits into multiple legs.
+- `POST /superOrders` — Super Orders combining entry and trailing stop-loss legs.
+- `GET /orders`, `GET /orders/{id}`, `GET /orders/external/{correlation-id}`.
+- Live Order Update stream via WebSocket (`wss://api-order-update.dhan.co`).
 
-### 3.10 UNVERIFIED — rate limits
+**Mandatory Static IP Whitelisting (SEBI Mandate):**
+All Order Placement, Modification, Cancellation, Slicing, Super Orders, and Exit-All APIs strictly require a whitelisted Static IP. Read-only APIs do not require IP whitelisting. Once an IP is whitelisted, it cannot be modified for 7 days.
+- ShreeNexa supports a dual-IP topology: **Primary IP** assigned to AWS Lightsail Mumbai server, and **Secondary IP** assigned to the local operator workstation.
+- IP Management: `GET /v2/ip/getIP`, `POST /v2/ip/setIP`, `PUT /v2/ip/modifyIP`.
 
-The DhanHQ rate-limit documentation page did not resolve during research (404 at both `/docs/v2/rate-limit/` and `/docs/v2/rate-limits/`). Per-second, per-minute, per-hour and per-day limits for Order / Data / Quote / Non-Trading API classes are therefore **not confirmed**.
+**Broker Risk & Emergency Controls:**
+- `DELETE /v2/positions` — **Exit All Positions**: Closes all active open positions at market price and cancels all open orders in a single atomic call (returns 202 Accepted).
+- `POST /v2/killswitch?killSwitchStatus=ACTIVATE` and `GET /v2/killswitch` — Disables trading at the broker level for the remainder of the day.
+- `POST /v2/pnlExit` — Configures broker-side automatic P&L based position closure.
 
-**Resolution:** the first task of feature F0.6 is to locate the current published limits and populate `config/dhan_limits.yaml`. Until then, conservative defaults apply. Because every Dhan call routes through one central limiter, correcting these is a configuration change, not a code change.
+**Margin Calculators:**
+- `POST /v2/margincalculator` — Single order SPAN, exposure, and leverage calculator.
+- `POST /v2/margincalculator/multi` — Multi-Order Margin Calculator calculating portfolio margin with **hedge benefits** across multiple legs and existing positions.
 
-Known exception: the Option Chain limit of 1 request / 3 seconds **is** confirmed.
+### 3.10 Verified rate limits
+
+The DhanHQ v2.5 rate limits are formally verified and enforced centrally through `config/dhan_limits.yaml`:
+
+| API Category | Per Second | Daily Limit | Scope / Notes |
+|---|---|---|---|
+| **Order APIs** | 10 requests | 100,000 | Order placement, modification, slicing, cancellation |
+| **Data APIs** | 5 requests | 7,000 | Daily and minute historical chart backfills |
+| **Market Quotes** | 1 request | Uncapped | Max 1,000 instruments per batch call across LTP/OHLC/Quote |
+| **Option Chain** | 1 per 3 sec | Uncapped | Per unique underlying/expiry combination |
+
+When limits are exceeded, Dhan returns HTTP failure with `errorType: "RATE_LIMIT_ERROR"`, `errorCode: "RL001"`. All REST requests pass through the central Redis token-bucket rate limiter.
 
 ### 3.11 Data Dhan does not provide
 

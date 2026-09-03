@@ -19,19 +19,25 @@ def test_default_dhan_limits() -> None:
     config = get_default_dhan_limits()
     assert config.schema_version == 1
     assert config.default_limit.rate == 10.0
-    assert config.default_limit.burst == 20
+    assert config.default_limit.burst == 10
     assert "option_chain" in config.categories
     assert config.get_rate_limit("option_chain").burst == 1
     assert abs(config.get_rate_limit("option_chain").rate - 0.3333333333333333) < 1e-6
+    assert config.get_rate_limit("quotes").rate == 1.0
+    assert config.get_rate_limit("quotes").burst == 1
+    assert config.get_rate_limit("orders").rate == 10.0
+    assert config.get_rate_limit("orders").burst == 10
 
 
 def test_load_dhan_limits_from_real_yaml() -> None:
     config = load_dhan_limits()
     assert isinstance(config, DhanLimitsConfig)
-    assert config.as_of == "2026-09-01"
+    assert config.as_of == "2026-09-03"
     assert config.source == "https://dhanhq.co/docs/v2/"
-    assert config.get_rate_limit("orders").rate == 25.0
-    assert config.get_rate_limit("orders").burst == 50
+    assert config.get_rate_limit("orders").rate == 10.0
+    assert config.get_rate_limit("orders").burst == 10
+    assert config.get_rate_limit("quotes").rate == 1.0
+    assert config.get_rate_limit("quotes").burst == 1
     assert config.get_rate_limit("historical_daily").rate == 5.0
     assert config.get_rate_limit("unknown_custom_category").rate == 10.0
 
@@ -50,7 +56,7 @@ def test_load_dhan_limits_malformed_yaml_fallback() -> None:
         bad_yaml.write_text("invalid: yaml: [content", encoding="utf-8")
         config = load_dhan_limits(bad_yaml)
         assert isinstance(config, DhanLimitsConfig)
-        assert config.default_limit.burst == 20
+        assert config.default_limit.burst == 10
 
 
 def test_get_category_for_endpoint() -> None:
@@ -62,11 +68,17 @@ def test_get_category_for_endpoint() -> None:
     assert get_category_for_endpoint("POST", "marketfeed/quote") == "quotes"
     assert get_category_for_endpoint("POST", "orders") == "orders"
     assert get_category_for_endpoint("PUT", "/orders/12345") == "orders"
+    assert get_category_for_endpoint("DELETE", "/positions") == "orders"
+    assert get_category_for_endpoint("POST", "killswitch") == "orders"
     assert get_category_for_endpoint("GET", "fundlimit") == "account_funds_holdings"
     assert get_category_for_endpoint("GET", "/holdings") == "account_funds_holdings"
     assert get_category_for_endpoint("GET", "positions") == "account_funds_holdings"
     assert get_category_for_endpoint("GET", "/v2/profile") == "account_funds_holdings"
+    assert get_category_for_endpoint("GET", "v2/RenewToken") == "account_funds_holdings"
+    assert get_category_for_endpoint("GET", "ip/getIP") == "account_funds_holdings"
+    assert get_category_for_endpoint("POST", "margincalculator/multi") == "account_funds_holdings"
     assert get_category_for_endpoint("GET", "unknown/endpoint") == "default"
+
 
 
 def test_rate_limit_spec_validation() -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from typing import Any
 
 from app.config import mask_client_id
@@ -17,10 +18,15 @@ from app.dhan.models import (
     DhanFundLimit,
     DhanHistoricalData,
     DhanHolding,
+    DhanIPConfig,
+    DhanKillSwitchStatus,
+    DhanMultiMarginResponse,
+    DhanMultiMarginScripItem,
     DhanPosition,
     DhanProfile,
     DhanQuote,
     DhanResponseEnvelope,
+    DhanTokenRenewalResponse,
 )
 from app.dhan.transport import (
     DhanTransport,
@@ -52,7 +58,9 @@ class DhanRestClient:
         return {
             "client-id": self.credentials.client_id,
             "access-token": self.credentials.get_token_value(),
+            "dhanClientId": self.credentials.client_id,
         }
+
 
     def _request(
         self,
@@ -77,6 +85,9 @@ class DhanRestClient:
         )
 
         raise_for_status(status_code, raw_body)
+
+        if not raw_body or not raw_body.strip():
+            return {}
 
         try:
             parsed = json.loads(raw_body.decode("utf-8"))
@@ -194,6 +205,65 @@ class DhanRestClient:
         if isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
             return [DhanPosition.model_validate(item) for item in data["data"]]
         return []
+
+    def renew_token(self) -> DhanTokenRenewalResponse:
+        """Renew an active 24-hour access token via GET /v2/RenewToken."""
+        data = self._request("GET", "RenewToken")
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError("Expected dictionary payload for RenewToken")
+        return DhanTokenRenewalResponse.model_validate(data)
+
+    def get_ip_config(self) -> DhanIPConfig:
+        """Fetch currently configured primary and secondary static IPs via GET /v2/ip/getIP."""
+        data = self._request("GET", "ip/getIP")
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError("Expected dictionary payload for ip/getIP")
+        return DhanIPConfig.model_validate(data)
+
+    def calculate_multi_margin(
+        self,
+        scrip_list: Sequence[dict[str, Any] | DhanMultiMarginScripItem],
+        include_position: bool = False,
+        include_order: bool = False,
+    ) -> DhanMultiMarginResponse:
+        """Calculate combined margin with hedge benefits via POST /v2/margincalculator/multi."""
+        cid = self.credentials.client_id if self.credentials else ""
+        serialized_scrips = [
+            item.model_dump(by_alias=True) if isinstance(item, DhanMultiMarginScripItem) else item
+            for item in scrip_list
+        ]
+        payload = {
+            "dhanClientId": cid,
+            "includePosition": include_position,
+            "includeOrder": include_order,
+            "scripList": serialized_scrips,
+        }
+        data = self._request("POST", "margincalculator/multi", json_data=payload)
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError(
+                "Expected dictionary payload for margincalculator/multi"
+            )
+        return DhanMultiMarginResponse.model_validate(data)
+
+    def exit_all_positions(self) -> bool:
+        """Exit all active positions and cancel open orders via DELETE /v2/positions."""
+        self._request("DELETE", "positions")
+        return True
+
+    def get_kill_switch_status(self) -> DhanKillSwitchStatus:
+        """Query trading account kill switch status via GET /v2/killswitch."""
+        data = self._request("GET", "killswitch")
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError("Expected dictionary payload for killswitch")
+        return DhanKillSwitchStatus.model_validate(data)
+
+    def manage_kill_switch(self, activate: bool = True) -> DhanKillSwitchStatus:
+        """Activate or deactivate account kill switch via POST /v2/killswitch."""
+        status_val = "ACTIVATE" if activate else "DEACTIVATE"
+        data = self._request("POST", "killswitch", params={"killSwitchStatus": status_val})
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError("Expected dictionary payload for killswitch")
+        return DhanKillSwitchStatus.model_validate(data)
 
     def __repr__(self) -> str:
         cid = mask_client_id(self.credentials.client_id) if self.credentials else "[NONE]"

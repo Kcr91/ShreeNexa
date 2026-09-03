@@ -107,6 +107,57 @@ def cmd_clear(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_renew(args: argparse.Namespace) -> int:
+    """Renew the active 24-hour access token via GET /v2/RenewToken."""
+    from app.dhan.client import DhanRestClient
+    from app.dhan.exceptions import DhanClientError
+
+    creds = resolve_dhan_credentials(runtime_root=_runtime_root())
+    if not creds:
+        print("No Dhan credentials found to renew.", file=sys.stderr)
+        return 1
+
+    health = check_token_health(creds)
+    if not health.is_valid:
+        print(
+            f"Cannot renew: current token is already {health.status}.",
+            file=sys.stderr,
+        )
+        return 1
+
+    client = DhanRestClient(credentials=creds)
+    try:
+        renewal = client.renew_token()
+    except DhanClientError as exc:
+        print(f"Token renewal failed: {exc}", file=sys.stderr)
+        return 1
+
+    new_token = renewal.access_token
+    if not new_token:
+        print("RenewToken API returned empty access token.", file=sys.stderr)
+        return 1
+
+    expiry = token_expiry_from_claims(new_token)
+    client_id = renewal.client_id or creds.client_id
+
+    try:
+        path = store_dhan_credentials_dpapi(
+            client_id=client_id,
+            access_token=new_token,
+            expires_at=expiry,
+            runtime_root=_runtime_root(),
+        )
+    except (DPAPIError, ValueError) as exc:
+        print(f"Failed to store renewed credentials: {exc}", file=sys.stderr)
+        return 1
+
+    print("Successfully renewed access token.")
+    print(f"  stored at : {path}")
+    print(f"  client id : {mask_client_id(client_id)}")
+    print(f"  expires   : {expiry.isoformat() if expiry else 'unknown'}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m app.dhan.token",
@@ -125,10 +176,14 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("status", help="show resolved credential source and expiry").set_defaults(
         func=cmd_status
     )
+    sub.add_parser("renew", help="renew active access token for another 24 hours").set_defaults(
+        func=cmd_renew
+    )
     sub.add_parser("clear", help="delete the encrypted credential file").set_defaults(
         func=cmd_clear
     )
     return parser
+
 
 
 def main(argv: list[str] | None = None) -> int:

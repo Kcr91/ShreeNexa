@@ -52,7 +52,7 @@ These ambiguities in the original draft are resolved in the updated specificatio
 | C7 | The original build harness targeted a different coding-agent CLI, while development is requested in Codex/VS Code. | Use `AGENTS.md`, `.codex/config.toml`, VS Code Codex chats, `/review`, and later `codex exec` for stable repeated checks. Keep runtime AI-provider decisions separate. |
 | C8 | The product AI provider and the development coding agent are conflated. | Codex builds the system. The product's NL-to-StrategyIR provider remains a separate pluggable decision; do not assume a ChatGPT subscription is an API credential. |
 | C9 | The specification assumes Docker is the simplest choice, but the Windows laptop has 8 GB RAM. | Use Docker Desktop with explicit CPU/RAM limits and only Postgres/Redis running locally; benchmark before adding more containers. |
-| C10 | Several Dhan facts are explicitly unverified or may change. | Each affected feature begins with a dated documentation/cassette verification task and stores limits in configuration rather than code. |
+| C10 | Several Dhan facts were originally unverified (rate limits, token lifetimes, IP requirements, chart intervals). | All Dhan facts are now formally verified against `dhan-api-docs.md` (DhanHQ v2.5): Orders 10/s (100k/day), Quotes 1/s, Data 5/s (7k/day), Option Chain 1 per 3s per underlying; 24h token expiry with `/v2/RenewToken`; 30m intraday interval; and mandatory dual Static IP (Lightsail primary + Local machine secondary) for order APIs. |
 | C11 | F2.6's dependency cell reads `F2.2–F2.5`, transitively requiring F2.4 (deferred to after F4.1–F4.3 per C4) even though wave W3 places F2.6 before the frontend shell exists and explicitly excludes F2.4. Found during M0.5 manifest transcription, 2026-08-31. | F2.6 depends on `F2.2–F2.3, F2.5` — the compiler/parser/schema prerequisites, without the indicator-builder UI. `build/manifest.yaml` encodes this resolution; the F2.6 ledger row below is left in its original wording. |
 
 ---
@@ -266,9 +266,9 @@ The “proof” column is the minimum evidence required in addition to the globa
 | F0.1 | Standardize the new repo, Python 3.14 venv, Node workspace, lockfiles, ruff, mypy, pytest, frontend test/build, pre-commit, and CI skeleton. | M0.6 | Clean checkout installs from locks; CPython 3.14 binary-wheel check; every baseline command passes. | SOL-H |
 | F0.2 | Add resource-limited local Postgres and Redis using Docker Compose; document the WSL2 fallback, but implement only one active path. | F0.1 | `up` makes both healthy; migrations/connectivity smoke tests pass on the 8 GB laptop. | TER-H |
 | F0.3 | Create `api`, `engine`, `feedd`, and `worker` process skeletons plus supervisor contracts; no trading behavior yet. | F0.1–F0.2 | Kill/restart `api`; an engine heartbeat and persisted state continue. | SOL-XH |
-| F0.4 | Central settings, `.env.example`, secret loading, redaction, and Dhan token-expiry health state/banner API. | F0.1–F0.3 | Secrets never appear in frontend payloads, logs, exceptions, fixtures, or git; expired-token acceptance test. | SOL-H |
+| F0.4 | Central settings, `.env.example`, secret loading, redaction, and Dhan 24h token-expiry health state/banner API with `/v2/RenewToken` renewal support. | F0.1–F0.3 | Secrets never appear in frontend payloads, logs, exceptions, fixtures, or git; expired-token and 24h renewal acceptance tests. | SOL-H |
 | F0.5 | Typed Dhan REST wrapper with injectable transport and recorded cassettes. | F0.4 | Offline cassette tests cover success, auth failure, malformed response, timeout, and retryable error. | SOL-H |
-| F0.6 | Verify current Dhan limits, store dated limits in YAML, and implement a Redis token bucket with jittered backoff. Route all Dhan REST calls through it. | F0.2, F0.5 | Hypothesis/concurrency test never exceeds configured limits; architecture test finds no bypassing call site. | SOL-XH |
+| F0.6 | Store verified Dhan limits (Orders: 10/s, Quotes: 1/s, Data: 5/s, Option Chain: 1 req/3s per underlying) in YAML and implement a Redis token bucket with jittered backoff. Route all Dhan REST calls through it. | F0.2, F0.5 | Hypothesis/concurrency test never exceeds configured limits; architecture test finds no bypassing call site. | SOL-XH |
 | F0.7 | Ingest the detailed Dhan instrument master and expose typed search across every segment actually present in the source. Do not hardcode “7” if the master disagrees. | F0.5–F0.6 | Known symbols/options resolve correctly; inactive/duplicate IDs and schema drift are tested. | SOL-H |
 | F0.8 | Build current and historical index-constituent ingestion from scratch using effective intervals, official source snapshots, committed fallback, and manual override. | M0.3, F0.7 | Date-aware membership tests; NSE failure uses a stale fallback with visible provenance; unavailable constituents remain non-fatal. | SOL-XH |
 | F0.9 | Central connection-budget manager for market-feed and depth sockets, conservative shared pool of five until proven otherwise. | F0.3–F0.5 | Property tests never open socket six; exhaustion is explicit; configuration can switch to independent pools. | SOL-XH |
@@ -279,8 +279,8 @@ The “proof” column is the minimum evidence required in addition to the globa
 |---|---|---|---|---|
 | F1.1 | Implement immutable DuckDB/Parquet bar store with typed schema, partition manifest, atomic writes, correction workflow, and read API. | F0.1, M0.3 | Round-trip and partition-pruning tests; interrupted write cannot expose a partial partition. | SOL-XH |
 | F1.2 | Dhan daily backfill since inception with resumable windows, provenance, and corporate-action-adjustment investigation. | F0.5–F0.7, F1.1 | NIFTY sample reconciles independently; adjustment status is explicit; no equity backtest is marked trusted until resolved. | SOL-H |
-| F1.3 | Build resumable Dhan one-minute backfill in 90-day windows, writing only to the new warehouse. | F0.5–F0.7, F1.1, M0.3 | Per-symbol counts/date coverage/hashes and gap/duplicate report; kill/resume produces no duplicates. | SOL-XH |
-| F1.4 | Expired-option 30-day-window backfill with ATM coverage metadata. | F0.5–F0.7, F1.1 | Outside ATM±10/±3 returns `strike_unavailable`; no substitution; restart-safe writes. | SOL-H |
+| F1.3 | Build resumable Dhan one-minute backfill in 90-day windows (intervals: 1, 5, 15, 30, 60m), writing only to the new warehouse. | F0.5–F0.7, F1.1, M0.3 | Per-symbol counts/date coverage/hashes and gap/duplicate report; kill/resume produces no duplicates. | SOL-XH |
+| F1.4 | Expired-option rolling backfill with ATM coverage metadata (up to 45-day window, `drvOptionType`, requiredData). | F0.5–F0.7, F1.1 | Outside ATM±10/±3 returns `strike_unavailable`; no substitution; restart-safe writes. | SOL-H |
 | F1.5 | Per-segment trading sessions, holidays, timezone normalization, and calendar versions. | F0.7, M0.2 | Published-calendar fixtures; no bars outside valid session; IST handling is deterministic. | SOL-XH |
 | F1.6 | Session-aware resampling from 1m to 3/5/15/30/60/D/W, including partial-bar policy. | F1.1, F1.5 | OHLC/volume/OI invariants and parity with pandas on independent fixtures. | SOL-H |
 | F1.7 | Data-quality reporting for gaps, duplicates, outliers, zero volume, unexpected dates, stale partitions, and coverage by universe/date. | F1.1–F1.6 | Seeded defects are detected; report separates upstream source gaps from warehouse errors. | TER-H |
@@ -375,7 +375,7 @@ After F4.1–F4.3, execute the deferred UI features in this order: **F2.4 → F3
 | F8.3 | Streaming option-chain widget combining tick prices/OI with locally computed IV/Greeks. | F4.2–F4.3, F7.1–F7.4, F8.1–F8.2 | Tick updates do not exceed render budget; stale/calibration drift is visible; strike/expiry changes resubscribe safely. | SOL-H |
 | F8.4 | ATM IV, IV rank/percentile, OI/volume PCR, max pain, skew/smile, and term structure. | F1.4, F8.1–F8.3 | Independent fixtures and explicit minimum-history rules; no division-by-zero/fabricated percentile. | SOL-XH |
 | F8.5 | Multi-leg option strategy builder with expiry/T+n payoff, breakevens, extrema, and position Greeks. | F2.5, F4.2–F4.3, F8.1 | Hand-computed standard structures; payoff/Greek aggregation properties; edit/reorder legs. | SOL-XH |
-| F8.6 | Net Greeks plus Dhan margin adapter and reconciliation. | F0.5–F0.7, F8.5 | Recorded margin responses match Dhan calculator samples; unavailable margin is explicit, never zero. | SOL-H |
+| F8.6 | Net Greeks plus Dhan single/multi-order margin adapter (`/v2/margincalculator/multi`) with hedge benefit reconciliation. | F0.5–F0.7, F8.5 | Recorded margin responses match Dhan calculator samples; hedge benefits verified; unavailable margin is explicit, never zero. | SOL-H |
 | F8.7 | Visual stock strategy builder mapping exactly to StrategyIR nodes. | F2.4–F2.7, F4.2–F4.3 | UI→IR→UI round-trip preserves meaning; produced IR passes evaluator and G2 tests. | TER-H |
 
 ### Epic 9 — Paper trading and forward testing
@@ -421,7 +421,7 @@ This epic replaces the original vendor-specific development harness. Build it on
 | ID | Codex work unit | Depends on | Minimum proof | Model |
 |---|---|---|---|---|
 | F13.1 | Production containers for `api`, `engine`, `feedd`, and `worker`, with non-root users, health checks, resource limits, and immutable images. | F9.1–F9.7 | Local production stack starts cleanly; restarting API leaves engine/paper deployment intact. | SOL-XH |
-| F13.2 | Lightsail Mumbai provisioning, network policy, systemd/container supervision, Caddy TLS, and blue/green upstream. | F13.1 | Staging deploy/rollback runbook is executed; only intended public ports are reachable. | SOL-XH |
+| F13.2 | Lightsail Mumbai provisioning, network policy, static IP attachment, Dhan IP whitelisting runbook, systemd/container supervision, Caddy TLS, and blue/green upstream. | F13.1 | Staging deploy/rollback runbook is executed; static IP attached; only intended public ports are reachable. | SOL-XH |
 | F13.3 | Single-user password + TOTP auth, secure sessions, recovery process, rate limiting, and audit. | F4.1, F13.2 | Security tests for session fixation, CSRF, brute force, secret storage, and WebSocket authorization. | SOL-XH |
 | F13.4 | Nightly Postgres/Parquet/config backups, retention, encryption, integrity checks, and documented restore. | F13.2–F13.3 | Restore into a clean staging box succeeds and reconciles counts/hashes. | SOL-XH |
 | F13.5 | Uptime, feed freshness, disk, token expiry, queue, engine, backup, and data-gap monitoring with actionable alerts. | F13.1–F13.4 | Injected failures trigger one clear alert and recovery notice; stale feed cannot look healthy. | SOL-H |
@@ -432,10 +432,10 @@ These features are never assigned to the unattended Epic 11 builder. Use supervi
 
 | ID | Codex work unit | Depends on | Minimum proof | Model |
 |---|---|---|---|---|
-| F12.1 | Typed `DhanBroker` order mapping, idempotency keys, timeout/unknown-state handling, and disabled-by-default feature gate. | F0.5–F0.7, F9.1–F9.6, F13.1–F13.5 | Offline cassettes/state properties; no test can reach live Dhan; startup remains paper-only by default. | SOL-XH |
+| F12.1 | Typed `DhanBroker` order mapping, idempotency keys, correlation IDs, order slicing (`/orders/slicing`), timeout/unknown-state handling, static IP validation (Lightsail primary or Local machine secondary), and disabled-by-default feature gate. | F0.5–F0.7, F9.1–F9.6, F13.1–F13.5 | Offline cassettes/state properties; unwhitelisted IP blocks order placement; no test can reach live Dhan; startup remains paper-only by default. | SOL-XH |
 | F12.2 | Live Order Update WebSocket, postback ingestion, deduplication, sequence gaps, and reconciliation. | F7.1–F7.3, F12.1 | Duplicate/lost/out-of-order events converge to broker truth without duplicate fills. | SOL-XH |
 | F12.3 | Live order ticket with explicit mode, estimated charges/margin, confirmations, validation, and status uncertainty. | F4.2–F4.3, F8.6, F12.1–F12.2 | Playwright cannot submit accidentally; paper/live are unmistakable; uncertain order state blocks blind retry. | SOL-XH |
-| F12.4 | Account risk layer: kill switch, capital/loss/position/order-rate/price-band caps, and broker-path enforcement. | F3.1, F9.3, F12.1–F12.3 | Exhaustive test proves no path reaches `DhanBroker` without risk filtering; kill switch halts within one tick. | SOL-XH |
+| F12.4 | Account risk layer: kill switch (including broker-level `/v2/killswitch` and `DELETE /v2/positions` Exit All), capital/loss/position/order-rate/price-band caps, and broker-path enforcement. | F3.1, F9.3, F12.1–F12.3 | Exhaustive test proves no path reaches `DhanBroker` without risk filtering; kill switch halts within one tick and triggers broker-side fail-safe if authorized. | SOL-XH |
 | F12.5 | Continuous positions/orders/funds reconciliation against Dhan with freeze-on-mismatch policy. | F12.1–F12.4 | Seeded mismatch freezes affected trading and creates a clear resolution workflow; no silent auto-correction. | SOL-XH |
 | F12.6 | Immutable audit of every signal, filter, risk decision, order request, response, update, reconciliation, override, and kill-switch event. | F12.1–F12.5 | One trade can be reconstructed end to end; sensitive values are redacted; audit tampering is detectable. | SOL-XH |
 
@@ -446,8 +446,9 @@ After F12.6, require a separate checklist and explicit user message authorizing 
 - 20 reviewed paper-market days.
 - No unresolved severe divergence.
 - Latest backup restore passed.
-- Kill-switch drill passed.
+- Kill-switch drill passed (including broker `/killswitch` and Exit-All verification).
 - Dhan reconciliation drill passed.
+- Static IP verified: outbound host IP matches Dhan whitelisted Primary (Lightsail) or Secondary (Local machine).
 - Maximum capital and daily-loss limits entered by the user.
 - First live run uses minimum quantity and one approved strategy.
 - Human supervision for the entire first session.

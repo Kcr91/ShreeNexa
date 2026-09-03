@@ -134,3 +134,76 @@ class DhanResponseEnvelope(BaseModel):
     error_type: str | None = Field(alias="errorType", default=None)
     error_code: str | None = Field(alias="errorCode", default=None)
     data: Any = Field(default=None)
+
+
+class DhanTokenRenewalResponse(BaseModel):
+    """Response payload for GET /v2/RenewToken."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    client_id: str = Field(alias="dhanClientId", default="")
+    client_name: str = Field(alias="dhanClientName", default="")
+    client_ucc: str = Field(alias="dhanClientUcc", default="")
+    given_power_of_attorney: bool = Field(alias="givenPowerOfAttorney", default=False)
+    access_token: str = Field(alias="accessToken", default="")
+    expiry_time: str = Field(alias="expiryTime", default="")
+
+
+class DhanIPConfig(BaseModel):
+    """Configured static IP response from GET /v2/ip/getIP."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    primary_ip: str = Field(alias="primaryIP", default="")
+    modify_date_primary: str = Field(alias="modifyDatePrimary", default="")
+    secondary_ip: str = Field(alias="secondaryIP", default="")
+    modify_date_secondary: str = Field(alias="modifyDateSecondary", default="")
+
+
+class DhanMultiMarginScripItem(BaseModel):
+    """Single order leg item for multi-order margin calculator."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    exchange_segment: str = Field(alias="exchangeSegment")
+    transaction_type: str = Field(alias="transactionType")
+    quantity: int = Field(alias="quantity")
+    product_type: str = Field(alias="productType")
+    security_id: str = Field(alias="securityId")
+    price: float = Field(alias="price", default=0.0)
+    trigger_price: float = Field(alias="triggerPrice", default=0.0)
+
+
+class DhanMultiMarginRequest(BaseModel):
+    """Request payload for POST /v2/margincalculator/multi."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    dhan_client_id: str = Field(alias="dhanClientId")
+    include_position: bool = Field(alias="includePosition", default=False)
+    include_order: bool = Field(alias="includeOrder", default=False)
+    scrip_list: list[DhanMultiMarginScripItem] = Field(alias="scripList")
+
+
+class DhanMultiMarginResponse(BaseModel):
+    """Portfolio margin calculation with hedge benefits from POST /v2/margincalculator/multi."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    client_id: str = Field(alias="clientId", default="")
+    total_margin: float = Field(alias="totalMargin", default=0.0)
+    span_margin: float = Field(alias="spanMargin", default=0.0)
+    exposure_margin: float = Field(alias="exposure", default=0.0)
+    equity_margin: float = Field(alias="equityMargin", default=0.0)
+    fo_margin: float = Field(alias="foMargin", default=0.0)
+    commodity_margin: float = Field(alias="commodity", default=0.0)
+    currency_margin: float = Field(alias="currency", default=0.0)
+
+
+class DhanKillSwitchStatus(BaseModel):
+    """Account kill switch status from GET or POST /v2/killswitch."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    client_id: str = Field(alias="dhanClientId", default="")
+    kill_switch_status: str = Field(alias="killSwitchStatus", default="")

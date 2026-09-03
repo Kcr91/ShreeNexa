@@ -9,6 +9,7 @@ WebSocket fan-out arrive with F0.4/F4.1/F7.4.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -46,18 +47,30 @@ PROCESS_NAME = "api"
 
 
 async def _heartbeat_task() -> None:
-    engine = hb.make_engine()
-    pid = os.getpid()
-    hb.record_start(engine, PROCESS_NAME, pid)
+    try:
+        engine = hb.make_engine()
+        pid = os.getpid()
+        hb.record_start(engine, PROCESS_NAME, pid)
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Heartbeat disabled: database unavailable (%s)", exc)
+        return
+
     try:
         while True:
             await asyncio.sleep(HEARTBEAT_INTERVAL_S)
-            hb.beat(engine, PROCESS_NAME)
+            try:
+                hb.beat(engine, PROCESS_NAME)
+            except Exception:
+                pass
     except asyncio.CancelledError:
-        hb.record_stop(engine, PROCESS_NAME)
+        try:
+            hb.record_stop(engine, PROCESS_NAME)
+        except Exception:
+            pass
         raise
     finally:
         engine.dispose()
+
 
 
 @asynccontextmanager
@@ -102,14 +115,13 @@ app.include_router(monitoring_router)
 def healthz() -> dict[str, object]:
     """Liveness of `api` itself, plus a snapshot of every process's row --
     this is api's eventual dashboard role, exercised here at its simplest."""
-    engine = hb.make_engine()
     try:
-        rows = hb.read_all(engine)
-    finally:
-        engine.dispose()
-    return {
-        "process": PROCESS_NAME,
-        "processes": [
+        engine = hb.make_engine()
+        try:
+            rows = hb.read_all(engine)
+        finally:
+            engine.dispose()
+        processes = [
             {
                 "process_name": r.process_name,
                 "pid": r.pid,
@@ -117,7 +129,12 @@ def healthz() -> dict[str, object]:
                 "last_heartbeat_at": r.last_heartbeat_at.isoformat(),
             }
             for r in rows
-        ],
+        ]
+    except Exception:
+        processes = []
+    return {
+        "process": PROCESS_NAME,
+        "processes": processes,
     }
 
 
