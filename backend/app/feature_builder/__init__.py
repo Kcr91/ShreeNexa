@@ -17,6 +17,15 @@ from app.feature_builder.spec import (
     evaluate_request_risk,
     spec_engine,
 )
+from app.feature_builder.worktree import (
+    PathEscapeViolationError,
+    WorktreeAllocation,
+    WorktreeCreateRequest,
+    WorktreeManager,
+    safe_write_worktree_file,
+    validate_worktree_path,
+    worktree_manager,
+)
 
 __all__ = [
     "PROTECTED_PATHS",
@@ -24,10 +33,17 @@ __all__ = [
     "FeatureSpec",
     "FeatureSpecEngine",
     "FeatureSpecUpdate",
+    "PathEscapeViolationError",
     "RiskLevel",
     "SpecApprovalDecision",
     "SpecStatus",
+    "WorktreeAllocation",
+    "WorktreeCreateRequest",
+    "WorktreeManager",
     "evaluate_ambiguity",
     "evaluate_request_risk",
+    "safe_write_worktree_file",
     "spec_engine",
+    "validate_worktree_path",
+    "worktree_manager",
 ]

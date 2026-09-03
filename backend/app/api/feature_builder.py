@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 
 from app.feature_builder.models import (
@@ -12,6 +14,11 @@ from app.feature_builder.models import (
     SpecStatus,
 )
 from app.feature_builder.spec import spec_engine
+from app.feature_builder.worktree import (
+    WorktreeAllocation,
+    WorktreeCreateRequest,
+    worktree_manager,
+)
 
 router = APIRouter(prefix="/api/v1/feature-builder", tags=["feature-builder"])
 
@@ -67,3 +74,50 @@ def reject_feature_spec(spec_id: str, decision: SpecApprovalDecision) -> Feature
         return spec_engine.reject_spec(spec_id, decision)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"FeatureSpec '{spec_id}' not found") from None
+
+
+# --- Worktree Management Endpoints (F11.2) ---
+
+
+@router.post("/worktrees", response_model=WorktreeAllocation)
+def create_worktree(request: WorktreeCreateRequest) -> WorktreeAllocation:
+    """Allocate an isolated Git worktree for feature building."""
+    try:
+        return worktree_manager.create_worktree(
+            feature_id=request.feature_id,
+            branch_name=request.branch_name,
+            base_commit=request.base_commit,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/worktrees", response_model=list[WorktreeAllocation])
+def list_worktrees() -> list[WorktreeAllocation]:
+    """List all active and tracked worktree allocations."""
+    return worktree_manager.list_worktrees()
+
+
+@router.get("/worktrees/{worktree_id}", response_model=WorktreeAllocation)
+def get_worktree(worktree_id: str) -> WorktreeAllocation:
+    """Retrieve details of a specific worktree allocation."""
+    alloc = worktree_manager.get_worktree(worktree_id)
+    if not alloc:
+        raise HTTPException(status_code=404, detail=f"Worktree '{worktree_id}' not found")
+    return alloc
+
+
+@router.delete("/worktrees/{worktree_id}")
+def delete_worktree(worktree_id: str) -> dict[str, Any]:
+    """Prune and remove an allocated Git worktree."""
+    success = worktree_manager.cleanup_worktree(worktree_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Worktree '{worktree_id}' not found")
+    return {"status": "CLEANED", "worktree_id": worktree_id}
+
+
+@router.post("/worktrees/reconcile")
+def reconcile_worktrees() -> dict[str, Any]:
+    """Reconcile active allocations and prune orphaned worktrees on disk."""
+    recovered = worktree_manager.reconcile_and_recover()
+    return {"status": "RECONCILED", "recovered_count": len(recovered), "recovered_paths": recovered}
