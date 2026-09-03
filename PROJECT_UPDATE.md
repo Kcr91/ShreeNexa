@@ -89,6 +89,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F12.1 | Done | Fast-forwarded into `main` at `a1d47ee` after review. |
 | F12.2 | Done | Fast-forwarded into `main` at `f0651d5` after review. |
 | F12.3 | Done | Fast-forwarded into `main` at `28a2b86` after review. |
+| F12.4 | Done | Fast-forwarded into `main` at `42bce68` after review. |
 
 ## Major-task log
 
@@ -2947,3 +2948,33 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Frontend typecheck (`tsc --noEmit`) clean.
   - `validate_manifest.py` and `validate_fixtures.py` OK.
   - Fast-forwarded into `main` at `28a2b86`.
+
+
+### 2026-09-03 — F12.4 Account risk layer, kill switch, pre-trade caps, and broker-path enforcement completed
+
+- Delivered `backend/app/engine/risk.py` (Protected path):
+  - `RiskLimits`: Configurable pre-trade guardrails (`max_daily_loss`: ₹50k, `max_order_value`: ₹500k, `max_open_positions`: 10, `max_orders_per_second`: 10 req/s, `price_band_pct`: ±10% ref LTP).
+  - `RiskEngine`: Validates all pre-trade caps before routing to broker; emergency kill switch immediately transitions engine to `HALTED` within one tick and rejects all subsequent orders with `KillSwitchActiveError`.
+  - Fail-safe broker actions: Coordinates broker-level liquidation (`DELETE /v2/positions`) and trading lockout (`POST /v2/killswitch?killSwitchStatus=ACTIVATE`) when authorized.
+  - `RiskFilteredBroker`: Mandatory execution gateway ensuring no order reaches `DhanBroker` without passing pre-trade risk validation.
+- Extended `DhanRestClient` with broker-level control endpoints:
+  - `get_kill_switch_status()` (`GET /v2/killswitch`).
+  - `manage_kill_switch()` (`POST /v2/killswitch`).
+  - `exit_all_positions()` (`DELETE /v2/positions`).
+- Authored acceptance contract `docs/qa/acceptance/F12.4.md`.
+- Authored unit and safety test suites:
+  - `backend/tests/unit/test_risk_engine.py` (8 tests, all passing):
+    - Rejection of orders exceeding order value cap.
+    - Rejection of fat-finger prices exceeding ±10% price band.
+    - Rejection of orders breaching max open positions cap.
+    - Rate limiter throttling orders exceeding 10/s.
+    - Kill switch halting order routing within one tick.
+    - Automatic kill switch activation upon cumulative daily loss breach.
+    - Execution of broker fail-safe actions (`DELETE positions`, `POST killswitch`).
+    - Exhaustive proof that orders cannot reach `DhanBroker` without risk filtering.
+- Verified quality gates:
+  - 79 Python tests passing across dhan/order/ticket/risk suites (0 failures).
+  - `mypy backend --strict` clean across 324 source files.
+  - `ruff check backend` clean.
+  - `validate_manifest.py` and `validate_fixtures.py` OK.
+  - Fast-forwarded into `main` at `42bce68`.

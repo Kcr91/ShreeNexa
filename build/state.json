@@ -1,16 +1,11 @@
 {
-  "feature": "F12.3",
+  "feature": "F12.4",
   "status": "review",
-  "branch": "feature/F12.3-live-order-ticket",
-  "commit": "28a2b86",
+  "branch": "feature/F12.4-account-risk-layer",
+  "commit": "42bce68",
   "tests": {
     "pytest": {
-      "passed": 71,
-      "failed": 0,
-      "skipped": 0
-    },
-    "vitest": {
-      "passed": 187,
+      "passed": 79,
       "failed": 0,
       "skipped": 0
     }
@@ -1489,6 +1484,25 @@
         "frontend/src/order/execution.ts"
       ],
       "verified_at": "2026-09-03T23:20:00Z",
+      "blockers": []
+    },
+    "F12.4": {
+      "status": "review",
+      "branch": "feature/F12.4-account-risk-layer",
+      "commit": "42bce68",
+      "tests": {
+        "pytest": {
+          "passed": 79,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F12.4.md",
+        "backend/app/engine/risk.py",
+        "backend/tests/unit/test_risk_engine.py"
+      ],
+      "verified_at": "2026-09-03T23:25:00Z",
       "blockers": []
     }
   }
