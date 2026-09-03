@@ -91,6 +91,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F12.3 | Done | Fast-forwarded into `main` at `28a2b86` after review. |
 | F12.4 | Done | Fast-forwarded into `main` at `42bce68` after review. |
 | F12.5 | Done | Fast-forwarded into `main` at `6851f0b` after review. |
+| F12.6 | Done | Fast-forwarded into `main` at `43a7657` after review. |
 
 ## Major-task log
 
@@ -3003,3 +3004,26 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `ruff check backend` clean.
   - `validate_manifest.py` and `validate_fixtures.py` OK.
   - Fast-forwarded into `main` at `6851f0b`.
+
+
+### 2026-09-03 — F12.6 Immutable audit trail with cryptographic tamper-evidence, secret redaction, and lifecycle reconstruction completed (Epic 12 Complete)
+
+- Delivered `backend/app/engine/audit.py`:
+  - `AuditLedger`: Append-only, tamper-evident audit ledger recording every signal, filter, risk decision, order request, response, update, reconciliation, and kill-switch event.
+  - Cryptographic Hash Chain: SHA-256 hash chaining (`prev_hash` + canonical payload hash) where any mutation, deletion, insertion, or reordering invalidates the chain and is pinpointed to the exact corrupted sequence number.
+  - Automatic Secret Redaction: Recursive scrubber removes authentication tokens, passwords, cookies, and secrets (`"[REDACTED]"`) and masks Dhan client IDs (`mask_client_id`) before events enter the immutable ledger.
+  - End-to-End Reconstruction: `reconstruct_lifecycle(correlation_id)` reconstructs the complete chronological audit history for any trade or order.
+- Authored acceptance contract `docs/qa/acceptance/F12.6.md`.
+- Authored unit and proof test suite `backend/tests/unit/test_audit_ledger.py` (5 tests, all passing):
+  - Verified valid hash chain verification passes.
+  - Verified tamper detection triggers upon payload mutation and pinpoints corrupted sequence.
+  - Verified tamper detection triggers upon event deletion or reordering.
+  - Verified sensitive values (access tokens, passwords, API tokens) and client IDs are strictly redacted.
+  - Verified complete end-to-end lifecycle reconstruction across signal, risk, order submission, response, fill update, and reconciliation.
+- Verified quality gates:
+  - 89 Python tests passing across dhan/order/ticket/risk/recon/audit suites (0 failures).
+  - `mypy backend --strict` clean across 328 source files.
+  - `ruff check backend` clean.
+  - `validate_manifest.py` and `validate_fixtures.py` OK.
+  - Fast-forwarded into `main` at `43a7657`.
+  - **Epic 12 is fully delivered and merged!**

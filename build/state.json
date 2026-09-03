@@ -1,11 +1,11 @@
 {
-  "feature": "F12.5",
+  "feature": "F12.6",
   "status": "review",
-  "branch": "feature/F12.5-broker-continuous-reconciliation",
-  "commit": "6851f0b",
+  "branch": "feature/F12.6-immutable-audit-trail",
+  "commit": "43a7657",
   "tests": {
     "pytest": {
-      "passed": 84,
+      "passed": 89,
       "failed": 0,
       "skipped": 0
     }
@@ -1522,6 +1522,25 @@
         "backend/tests/unit/test_continuous_recon.py"
       ],
       "verified_at": "2026-09-03T23:28:00Z",
+      "blockers": []
+    },
+    "F12.6": {
+      "status": "review",
+      "branch": "feature/F12.6-immutable-audit-trail",
+      "commit": "43a7657",
+      "tests": {
+        "pytest": {
+          "passed": 89,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F12.6.md",
+        "backend/app/engine/audit.py",
+        "backend/tests/unit/test_audit_ledger.py"
+      ],
+      "verified_at": "2026-09-03T23:31:00Z",
       "blockers": []
     }
   }
