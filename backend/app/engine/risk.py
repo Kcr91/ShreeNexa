@@ -25,6 +25,7 @@ from app.dhan.orders import (
 
 if TYPE_CHECKING:
     from app.engine.broker import DhanBroker
+    from app.engine.continuous_recon import ContinuousReconciler
 
 logger = logging.getLogger("shreenexa.engine.risk")
 
@@ -51,8 +52,13 @@ class RiskLimits:
 class RiskEngine:
     """Pre-trade risk filtering and emergency halt coordinator."""
 
-    def __init__(self, limits: RiskLimits | None = None) -> None:
+    def __init__(
+        self,
+        limits: RiskLimits | None = None,
+        continuous_reconciler: ContinuousReconciler | None = None,
+    ) -> None:
         self.limits = limits or RiskLimits()
+        self.continuous_reconciler = continuous_reconciler
         self._is_halted: bool = False
         self._halt_reason: str | None = None
         self._daily_realized_loss: float = 0.0
@@ -147,6 +153,14 @@ class RiskEngine:
         if self._is_halted:
             raise KillSwitchActiveError(
                 f"Trading is halted by emergency kill switch: {self._halt_reason}"
+            )
+
+        if self.continuous_reconciler and self.continuous_reconciler.is_symbol_frozen(
+            order.security_id
+        ):
+            raise RiskCheckFailedError(
+                f"Trading is FROZEN for security '{order.security_id}' "
+                "due to active reconciliation mismatch"
             )
 
         self._check_rate_limit()
