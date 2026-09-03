@@ -28,6 +28,14 @@ from app.dhan.models import (
     DhanResponseEnvelope,
     DhanTokenRenewalResponse,
 )
+from app.dhan.orders import (
+    DhanOrderCancelResponse,
+    DhanOrderDetail,
+    DhanOrderModifyRequest,
+    DhanOrderRequest,
+    DhanOrderResponse,
+    DhanSliceOrderRequest,
+)
 from app.dhan.transport import (
     DhanTransport,
     HTTPTransport,
@@ -264,6 +272,71 @@ class DhanRestClient:
         if not isinstance(data, dict):
             raise DhanMalformedResponseError("Expected dictionary payload for killswitch")
         return DhanKillSwitchStatus.model_validate(data)
+
+    def place_order(self, order: DhanOrderRequest) -> DhanOrderResponse:
+        """Place a new order via POST /v2/orders (requires Static IP whitelisting)."""
+        cid = self.credentials.client_id if self.credentials else ""
+        payload = order.to_api_payload(client_id=cid)
+        data = self._request("POST", "orders", json_data=payload)
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError("Expected dictionary payload for orders")
+        return DhanOrderResponse.model_validate(data)
+
+    def modify_order(self, modification: DhanOrderModifyRequest) -> DhanOrderResponse:
+        """Modify a pending order via PUT /v2/orders/{orderId} (requires Static IP)."""
+        cid = self.credentials.client_id if self.credentials else ""
+        payload = modification.to_api_payload(client_id=cid)
+        endpoint = f"orders/{modification.order_id}"
+        data = self._request("PUT", endpoint, json_data=payload)
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError(f"Expected dictionary payload for {endpoint}")
+        return DhanOrderResponse.model_validate(data)
+
+    def cancel_order(self, order_id: str) -> DhanOrderCancelResponse:
+        """Cancel a pending order via DELETE /v2/orders/{orderId} (requires Static IP)."""
+        endpoint = f"orders/{order_id}"
+        data = self._request("DELETE", endpoint)
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError(f"Expected dictionary payload for {endpoint}")
+        return DhanOrderCancelResponse.model_validate(data)
+
+    def place_sliced_order(self, slice_order: DhanSliceOrderRequest) -> list[DhanOrderResponse]:
+        """Place order with slicing for freeze limits via POST /v2/orders/slicing."""
+        cid = self.credentials.client_id if self.credentials else ""
+        payload = slice_order.to_api_payload(client_id=cid)
+        data = self._request("POST", "orders/slicing", json_data=payload)
+        if isinstance(data, list):
+            return [
+                DhanOrderResponse.model_validate(item)
+                for item in data
+                if isinstance(item, dict)
+            ]
+        if isinstance(data, dict):
+            return [DhanOrderResponse.model_validate(data)]
+        raise DhanMalformedResponseError("Expected list or dictionary payload for orders/slicing")
+
+    def get_order_by_id(self, order_id: str) -> DhanOrderDetail:
+        """Retrieve order details by order ID via GET /v2/orders/{order-id}."""
+        endpoint = f"orders/{order_id}"
+        data = self._request("GET", endpoint)
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError(f"Expected dictionary payload for {endpoint}")
+        return DhanOrderDetail.model_validate(data)
+
+    def get_order_by_correlation_id(self, correlation_id: str) -> DhanOrderDetail:
+        """Retrieve order details by correlation ID via GET /v2/orders/external/{correlation-id}."""
+        endpoint = f"orders/external/{correlation_id}"
+        data = self._request("GET", endpoint)
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError(f"Expected dictionary payload for {endpoint}")
+        return DhanOrderDetail.model_validate(data)
+
+    def get_order_list(self) -> list[DhanOrderDetail]:
+        """Retrieve order book via GET /v2/orders."""
+        data = self._request("GET", "orders")
+        if not isinstance(data, list):
+            raise DhanMalformedResponseError("Expected list payload for orders")
+        return [DhanOrderDetail.model_validate(item) for item in data if isinstance(item, dict)]
 
     def __repr__(self) -> str:
         cid = mask_client_id(self.credentials.client_id) if self.credentials else "[NONE]"

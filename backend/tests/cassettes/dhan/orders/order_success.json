@@ -1,0 +1,15 @@
+{
+  "_fixture": {
+    "classification": "synthetic",
+    "source": "dhanhq_v2.5_order_placement_spec",
+    "recorded_broker_response": false,
+    "account_id": "0000000000",
+    "credential_profile": "invalid_test_only"
+  },
+  "status": "success",
+  "remarks": "",
+  "data": {
+    "orderId": "1124090400001",
+    "orderStatus": "PENDING"
+  }
+}
