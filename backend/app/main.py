@@ -28,6 +28,7 @@ from app.api.indicators import router as indicators_router
 from app.api.instruments import router as instruments_router
 from app.api.investing import router as investing_router
 from app.api.margin import router as margin_router
+from app.api.monitoring import router as monitoring_router
 from app.api.options import router as options_router
 from app.api.options_analytics import router as options_analytics_router
 from app.api.paper import router as paper_router
@@ -94,6 +95,7 @@ app.include_router(investing_router)
 app.include_router(ai_router)
 app.include_router(feature_builder_router)
 app.include_router(auth_router)
+app.include_router(monitoring_router)
 
 
 @app.get("/healthz")
