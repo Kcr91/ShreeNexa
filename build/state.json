@@ -1,8 +1,8 @@
 {
-  "feature": "F10.3",
+  "feature": "F10.4",
   "status": "review",
-  "branch": "feature/F10.3-dividends-matching-tax-income",
-  "commit": "c4f2caa",
+  "branch": "feature/F10.4-sip-rebalancing-proposals",
+  "commit": "6d08f76",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1216,6 +1216,18 @@
       "evidence": [
         "backend/tests/unit/test_investing_dividends.py",
         "docs/qa/acceptance/F10.3.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F10.4": {
+      "status": "review",
+      "branch": "feature/F10.4-sip-rebalancing-proposals",
+      "commit": "6d08f76",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_investing_rebalancing.py",
+        "docs/qa/acceptance/F10.4.md"
       ],
       "verified_at": null,
       "blockers": []

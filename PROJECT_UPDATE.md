@@ -70,7 +70,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F5.2 | Done | Fast-forwarded into `main` at `a06f8c0` after review. |
 | F10.2 | Done | Fast-forwarded into `main` at `57cab9e` after review. |
 | F10.3 | Done | Fast-forwarded into `main` at `c4f2caa` after review. |
-| F5.3–F5.4, F10.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F10.4 | Done | Fast-forwarded into `main` at `6d08f76` after review. |
+| F5.3–F5.4, F10.5–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2345,3 +2346,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified REST API endpoints end-to-end.
 - Full repository test suite: 511 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (265 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F10.4 SIP planning and calendar/threshold rebalancing proposals completed
+
+- Implemented `backend/app/investing/rebalancing.py`:
+  - `plan_sip_instalment`: Computes whole-share equity/ETF allocation from recurring budget and target portfolio weights, tracking residual cash.
+  - `project_step_up_sip`: Computes multi-year contribution schedules under step-up SIP escalation rates.
+  - `generate_rebalance_proposal`: Computes drift $\Delta w_i = w_i - w_{\text{target}}$ against configured tolerance bands (e.g. 5%), generating actionable `BUY` and `SELL` items.
+  - Critical safety invariant: Engine generates proposals only (`status="PROPOSED"`). No automatic live orders are ever placed or transmitted.
+  - Limit & cash respect: Total buy amounts respect available cash and sell proceeds; positions adhere to `max_allocation_per_trade`.
+  - `calculate_time_weighted_return`: Chains sub-period returns across deposit dates ($TWR = \prod (1 + r_t) - 1$), isolating true investment performance from client cashflow timing.
+- Extended `backend/app/api/investing.py`:
+  - `POST /api/v1/investing/sip/plan`
+  - `POST /api/v1/investing/rebalance/proposal`
+  - `POST /api/v1/investing/performance/twr`
+- Authored acceptance contract in `docs/qa/acceptance/F10.4.md`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_investing_rebalancing.py` (5 tests passing):
+  - Verified whole-share SIP allocation and unallocated cash calculation.
+  - Verified step-up multi-year SIP compounding projections.
+  - Verified threshold rebalancing with tolerance bands, action tagging, and safety limit enforcement.
+  - Verified mathematical proof of Cashflow / TWR separation where deposits distort MWR but TWR isolates exact underlying performance.
+  - Verified REST API endpoints end-to-end.
+- Full repository test suite: 516 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (267 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
