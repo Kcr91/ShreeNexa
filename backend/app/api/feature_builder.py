@@ -19,6 +19,14 @@ from app.feature_builder.models import (
     SpecApprovalDecision,
     SpecStatus,
 )
+from app.feature_builder.promotion import (
+    PromotionExecutionResult,
+    PromotionProposal,
+    ProposalApprovalRequest,
+    ProposalCreateRequest,
+    ProposalRejectRequest,
+    promotion_manager,
+)
 from app.feature_builder.runner import (
     CodexAuthenticationError,
     CodexQuotaExceededError,
@@ -388,3 +396,71 @@ def get_sandbox_status() -> SandboxConfig:
 def verify_sandbox_isolation() -> SandboxIsolationReport:
     """Run automated verification of sandbox isolation."""
     return sandbox_env.verify_isolation()
+
+
+# --- Blue/Green Promotion Endpoints (F11.7) ---
+
+
+@router.post("/promotion/request", response_model=PromotionProposal)
+def request_promotion(req: ProposalCreateRequest) -> PromotionProposal:
+    """Create a new blue/green promotion proposal requiring operator approval."""
+    return promotion_manager.create_proposal(
+        candidate_commit=req.candidate_commit,
+        release_notes=req.release_notes,
+    )
+
+
+@router.post("/promotion/approve", response_model=PromotionProposal)
+def approve_promotion(req: ProposalApprovalRequest) -> PromotionProposal:
+    """Explicit operator approval gate for candidate promotion."""
+    try:
+        return promotion_manager.approve_proposal(
+            proposal_id=req.proposal_id,
+            operator_username=req.operator_username,
+        )
+    except KeyError as err:
+        raise HTTPException(status_code=404, detail=str(err)) from err
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
+
+
+@router.post("/promotion/reject", response_model=PromotionProposal)
+def reject_promotion(req: ProposalRejectRequest) -> PromotionProposal:
+    """Explicit operator rejection for candidate promotion."""
+    try:
+        return promotion_manager.reject_proposal(
+            proposal_id=req.proposal_id,
+            operator_username=req.operator_username,
+            reason=req.reason,
+        )
+    except KeyError as err:
+        raise HTTPException(status_code=404, detail=str(err)) from err
+
+
+@router.post("/promotion/execute", response_model=PromotionExecutionResult)
+def execute_promotion(proposal_id: str) -> PromotionExecutionResult:
+    """Execute approved candidate promotion: health check, proxy flip, and drain."""
+    try:
+        return promotion_manager.execute_promotion(proposal_id)
+    except KeyError as err:
+        raise HTTPException(status_code=404, detail=str(err)) from err
+
+
+@router.post("/promotion/rollback", response_model=PromotionExecutionResult)
+def rollback_promotion(
+    reason: str = "Rollback requested by operator",
+) -> PromotionExecutionResult:
+    """One-click rollback of active upstream to previous color without touching trading engine."""
+    return promotion_manager.rollback(reason=reason)
+
+
+@router.get("/promotion/history", response_model=list[PromotionExecutionResult])
+def get_promotion_history() -> list[PromotionExecutionResult]:
+    """Retrieve full audit history of blue/green promotions and rollbacks."""
+    return promotion_manager.get_history()
+
+
+@router.get("/promotion/active-color")
+def get_active_upstream_color() -> dict[str, str]:
+    """Get currently routed upstream color (blue or green)."""
+    return {"active_color": promotion_manager.get_current_active_color()}
