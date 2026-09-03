@@ -23,6 +23,7 @@ from app.api.heatmap import router as heatmap_router
 from app.api.indicators import alias_router as indicators_alias_router
 from app.api.indicators import router as indicators_router
 from app.api.instruments import router as instruments_router
+from app.api.investing import router as investing_router
 from app.api.margin import router as margin_router
 from app.api.options import router as options_router
 from app.api.options_analytics import router as options_analytics_router
@@ -86,6 +87,7 @@ app.include_router(strategy_builder_router)
 app.include_router(strategy_ir_router)
 app.include_router(margin_router)
 app.include_router(paper_router)
+app.include_router(investing_router)
 
 
 @app.get("/healthz")

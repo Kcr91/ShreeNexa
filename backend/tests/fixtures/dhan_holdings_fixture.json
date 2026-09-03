@@ -1,0 +1,38 @@
+[
+  {
+    "exchange": "NSE",
+    "tradingSymbol": "RELIANCE-EQ",
+    "securityId": "2885",
+    "isin": "INE002A01018",
+    "totalQty": 100,
+    "dpQty": 100,
+    "t1Qty": 0,
+    "availableQty": 100,
+    "collateralQty": 0,
+    "avgCostPrice": 2450.50
+  },
+  {
+    "exchange": "NSE",
+    "tradingSymbol": "TCS-EQ",
+    "securityId": "11536",
+    "isin": "INE467B01029",
+    "totalQty": 50,
+    "dpQty": 50,
+    "t1Qty": 0,
+    "availableQty": 50,
+    "collateralQty": 0,
+    "avgCostPrice": 3820.00
+  },
+  {
+    "exchange": "NSE",
+    "tradingSymbol": "INFY-EQ",
+    "securityId": "1594",
+    "isin": "INE009A01021",
+    "totalQty": 75,
+    "dpQty": 50,
+    "t1Qty": 25,
+    "availableQty": 50,
+    "collateralQty": 0,
+    "avgCostPrice": 1610.20
+  }
+]
