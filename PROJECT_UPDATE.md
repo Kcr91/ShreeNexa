@@ -85,7 +85,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F13.2 | Done | Fast-forwarded into `main` at `481df20` after review. |
 | F13.3 | Done | Fast-forwarded into `main` at `6f5ff6e` after review. |
 | F13.4 | Done | Fast-forwarded into `main` at `938162f` after review. |
-| F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F13.5 | Done | Fast-forwarded into `main` at `b811204` after review. |
 
 ## Major-task log
 
@@ -2810,6 +2810,49 @@ a live branch indicator; run `git status --short --branch` for current state.
   - 612 Python tests passed (0 failures, 30 skipped due to absent local DB).
   - 185 frontend tests in 57 test files passed (0 failures).
   - `mypy backend --strict` passed cleanly across 304 source files.
+  - `ruff check .` passed with 0 errors.
+  - Frontend typecheck and production build clean.
+  - `pre-commit run --all-files` passed cleanly.
+  - `git diff --check` clean.
+
+
+### 2026-09-03 — F13.5 Uptime, feed freshness, disk, token expiry, queue, engine, backup, and data-gap monitoring with actionable alerts completed (Epic 13 Complete)
+
+- Authored acceptance contract in `docs/qa/acceptance/F13.5.md`.
+- Implemented `backend/app/monitoring/models.py`:
+  - `HealthStatus`, `AlertSeverity`, `AlertState`, `SubsystemKind`, `SubsystemHealth`, `SystemHealthReport`, and `AlertRecord` schemas.
+- Implemented `backend/app/monitoring/health.py`:
+  - Health check evaluators covering all 8 operational subsystems:
+    1. `check_uptime`: monitors status of `api`, `engine`, `feedd`, `worker`, `redis`, `postgres`, and `caddy`.
+    2. `check_feed_freshness`: tracks time since last market tick; elevates to `DEGRADED` (> 2.0s) and `CRITICAL` (> 5.0s). Invariant verified: *stale feed cannot look healthy*.
+    3. `check_disk_space`: monitors host disk capacity (< 15% warning, < 5% critical).
+    4. `check_token_expiry`: monitors Dhan access token validity (< 24h warning, < 2h critical).
+    5. `check_queue_depth`: monitors buffer queue backpressure (warning >= 5,000, critical >= 20,000).
+    6. `check_engine_health`: monitors trading engine event loop heartbeat and unhandled exceptions.
+    7. `check_backup_status`: monitors timeliness (< 26h) and integrity of nightly backup snapshots.
+    8. `check_data_gaps`: evaluates missing minute bars across trading hours (09:15–15:30 IST).
+- Implemented `backend/app/monitoring/alerter.py`:
+  - `AlertManager` with actionable remediation guides for each subsystem.
+  - Stateful alert lifecycle (`PENDING` -> `FIRING` -> `ACKNOWLEDGED` -> `RESOLVED`).
+  - Strict deduplication: repeated failing evaluation cycles do not spam alerts.
+  - Recovery notices: when a failing subsystem recovers to normal status, an explicit `ALERT_RESOLVED` notice is dispatched with diagnostic metrics.
+- Implemented `backend/app/monitoring/service.py`:
+  - `MonitoringService` coordinating telemetry gathering, evaluations, and alert management.
+- Implemented `backend/app/api/monitoring.py` and mounted in `backend/app/main.py`:
+  - `GET /api/v1/monitoring/health` -> Composite system health report.
+  - `GET /api/v1/monitoring/alerts` -> Active alerts.
+  - `GET /api/v1/monitoring/alerts/history` -> Alert audit log.
+  - `POST /api/v1/monitoring/alerts/{alert_id}/acknowledge` -> Operator acknowledgment.
+  - `POST /api/v1/monitoring/evaluate` -> Trigger evaluation cycle.
+- Authored comprehensive proof test suite in `backend/tests/unit/test_monitoring_system.py` (4 tests, all passing):
+  - **Proof Requirement**: Injected failure (e.g. disk drop to 3%) triggers exactly one clear alert; deduplication prevents spamming on repeated cycles; restoring disk to 45% triggers an explicit `ALERT_RESOLVED` recovery notice.
+  - **Proof Requirement**: Stale feed invariant: feed latency exceeding thresholds (> 2.0s / > 5.0s) is marked `DEGRADED`/`CRITICAL` and never reports as healthy.
+  - Comprehensive coverage of all 8 monitored domains.
+  - End-to-end REST API health querying and alert acknowledgment.
+- Quality gates verified:
+  - 616 Python tests passed (0 failures, 30 skipped due to absent local DB).
+  - 185 frontend tests in 57 test files passed (0 failures).
+  - `mypy backend --strict` passed cleanly across 311 source files.
   - `ruff check .` passed with 0 errors.
   - Frontend typecheck and production build clean.
   - `pre-commit run --all-files` passed cleanly.

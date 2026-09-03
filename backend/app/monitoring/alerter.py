@@ -113,13 +113,15 @@ class AlertManager:
             )
             self._active_alerts[subsystem] = alert
             self._history.append(alert)
-            self._notifications.append({
-                "type": "ALERT_FIRED",
-                "alert_id": alert.alert_id,
-                "title": alert.title,
-                "message": alert.message,
-                "remediation": alert.remediation,
-            })
+            self._notifications.append(
+                {
+                    "type": "ALERT_FIRED",
+                    "alert_id": alert.alert_id,
+                    "title": alert.title,
+                    "message": alert.message,
+                    "remediation": alert.remediation,
+                }
+            )
             return alert, None
 
         if health.status == HealthStatus.HEALTHY:
@@ -128,12 +130,14 @@ class AlertManager:
                 active = self._active_alerts.pop(subsystem)
                 active.state = AlertState.RESOLVED
                 active.resolved_at = now
-                self._notifications.append({
-                    "type": "ALERT_RESOLVED",
-                    "alert_id": active.alert_id,
-                    "title": f"[RESOLVED] {subsystem.replace('_', ' ').title()} Recovered",
-                    "message": f"{subsystem} returned to healthy status: {health.message}",
-                })
+                self._notifications.append(
+                    {
+                        "type": "ALERT_RESOLVED",
+                        "alert_id": active.alert_id,
+                        "title": f"[RESOLVED] {subsystem.replace('_', ' ').title()} Recovered",
+                        "message": f"{subsystem} returned to healthy status: {health.message}",
+                    }
+                )
                 return None, active
 
         return None, None
