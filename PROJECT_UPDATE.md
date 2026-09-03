@@ -81,7 +81,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F5.3 | Done | Fast-forwarded into `main` at `36aa05d` after review. |
 | F5.4 | Done | Fast-forwarded into `main` at `748553e` after review. |
 | F13.1 | Done | Fast-forwarded into `main` at `54a6633` after review. |
-| F11.7, F13.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F13.2 | Done | Fast-forwarded into `main` at `481df20` after review. |
+| F11.7, F13.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2601,6 +2602,35 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified sandbox REST API lifecycle end-to-end.
 - Full repository test suite: 588 Python tests passed (30 skipped due to absent local DB), 185 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (287 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F13.2 Lightsail Mumbai provisioning, network policy, systemd/container supervision, Caddy TLS, and blue/green upstream completed
+
+- Implemented `infra/lightsail/provision.sh`:
+  - Host provisioning script for Ubuntu 24.04 LTS on AWS Lightsail Mumbai (`ap-south-1`).
+  - Sets up unprivileged service user `shreenexa` (UID/GID 10001) and production directories.
+  - Implements kernel socket and TCP buffer tuning (`somaxconn`, `rmem_max`, `wmem_max`).
+  - Configures UFW firewall enforcing strict network policy: allows public ingress exclusively on ports 22 (SSH), 80 (HTTP redirect), and 443 (HTTPS TLS); denies and filters all direct external access to internal services (Postgres 5432, Valkey 6379, Blue/Green API 8000/8001, Sandbox 8080/8081/8082).
+- Implemented `infra/caddy/Caddyfile`:
+  - Automated ACME TLS termination and reverse proxy configuration.
+  - Injected hardened HTTP security headers: HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, and CSP.
+  - Configured WebSocket connection upgrades (`/ws`, `/api/v1/ws`) and health-checked upstream routing.
+- Implemented Systemd Container Supervision:
+  - Authored systemd service unit files in `infra/lightsail/systemd/`: `shreenexa-engine.service`, `shreenexa-feedd.service`, `shreenexa-worker.service`, `shreenexa-caddy.service`.
+  - Guaranteed process isolation: background daemons run independently under systemd and have zero coupling to API process lifecycle.
+- Implemented Blue/Green Deployment Controller (`infra/lightsail/blue_green.py`):
+  - State machine supporting active color detection (`blue` on 8000 vs `green` on 8001), candidate color selection, and automated Caddyfile upstream rewrites.
+  - Pre-traffic candidate health gating via HTTP `/healthz`.
+  - Automatic rollback on candidate probe failure, preserving active color and isolating production traffic from faulty candidate builds.
+- Authored Staging Deploy & Rollback Runbook in `docs/runbooks/staging-deploy-rollback.md`.
+- Authored acceptance contract in `docs/qa/acceptance/F13.2.md`.
+- Authored comprehensive test suite in `backend/tests/unit/test_lightsail_caddy_blue_green.py` (6 tests passing):
+  - Verified Caddyfile security headers, WebSocket support, and upstream health checking.
+  - Verified network policy firewall rules blocking internal ports and allowing only 22, 80, 443.
+  - Verified systemd unit process independence.
+  - Verified blue/green state machine, promotion with passing/failing health probes, and rollback.
+  - Verified runbook documentation integrity.
+- Full repository test suite: 598 Python tests passed (30 skipped due to absent local DB), 185 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (290 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
 ### 2026-09-03 — F13.1 Production containers for api, engine, feedd, and worker, with non-root users, health checks, resource limits, and immutable images completed
 

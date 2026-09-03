@@ -1,8 +1,8 @@
 {
-  "feature": "F13.1",
+  "feature": "F13.2",
   "status": "review",
-  "branch": "feature/F13.1-production-containers",
-  "commit": "54a6633",
+  "branch": "feature/F13.2-lightsail-caddy-blue-green",
+  "commit": "481df20",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1348,6 +1348,18 @@
       "evidence": [
         "backend/tests/unit/test_production_containers.py",
         "docs/qa/acceptance/F13.1.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F13.2": {
+      "status": "review",
+      "branch": "feature/F13.2-lightsail-caddy-blue-green",
+      "commit": "481df20",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_lightsail_caddy_blue_green.py",
+        "docs/qa/acceptance/F13.2.md"
       ],
       "verified_at": null,
       "blockers": []
