@@ -1,11 +1,11 @@
 {
-  "feature": "F12.4",
+  "feature": "F12.5",
   "status": "review",
-  "branch": "feature/F12.4-account-risk-layer",
-  "commit": "42bce68",
+  "branch": "feature/F12.5-broker-continuous-reconciliation",
+  "commit": "6851f0b",
   "tests": {
     "pytest": {
-      "passed": 79,
+      "passed": 84,
       "failed": 0,
       "skipped": 0
     }
@@ -1503,6 +1503,25 @@
         "backend/tests/unit/test_risk_engine.py"
       ],
       "verified_at": "2026-09-03T23:25:00Z",
+      "blockers": []
+    },
+    "F12.5": {
+      "status": "review",
+      "branch": "feature/F12.5-broker-continuous-reconciliation",
+      "commit": "6851f0b",
+      "tests": {
+        "pytest": {
+          "passed": 84,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "evidence": [
+        "docs/qa/acceptance/F12.5.md",
+        "backend/app/engine/continuous_recon.py",
+        "backend/tests/unit/test_continuous_recon.py"
+      ],
+      "verified_at": "2026-09-03T23:28:00Z",
       "blockers": []
     }
   }

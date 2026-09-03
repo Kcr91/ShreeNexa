@@ -90,6 +90,7 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F12.2 | Done | Fast-forwarded into `main` at `f0651d5` after review. |
 | F12.3 | Done | Fast-forwarded into `main` at `28a2b86` after review. |
 | F12.4 | Done | Fast-forwarded into `main` at `42bce68` after review. |
+| F12.5 | Done | Fast-forwarded into `main` at `6851f0b` after review. |
 
 ## Major-task log
 
@@ -2978,3 +2979,27 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `ruff check backend` clean.
   - `validate_manifest.py` and `validate_fixtures.py` OK.
   - Fast-forwarded into `main` at `42bce68`.
+
+
+### 2026-09-03 — F12.5 Continuous positions/orders/funds reconciliation against Dhan with freeze-on-mismatch policy completed
+
+- Delivered `backend/app/engine/continuous_recon.py`:
+  - `ContinuousReconciler`: Tracks discrepancies across positions, orders, and funds by comparing local execution state against broker truth.
+  - Freeze-on-Mismatch Policy: Any detected mismatch immediately halts and freezes (`is_frozen=True`) trading on the affected security or entire account.
+  - Zero Silent Auto-Correction: Discrepancies are NEVER silently corrected in the background. System strictly enforces human/operator resolution.
+  - Operator Resolution Workflow: Explicit `resolve_mismatch(incident_id, action, notes)` API to resolve incidents and safely unfreeze instruments after investigation.
+- Wired freeze checks into `RiskEngine.filter_order()` (`backend/app/engine/risk.py`):
+  - Automatically rejects order placement for any instrument currently in a frozen reconciliation state with `RiskCheckFailedError`.
+- Authored acceptance contract `docs/qa/acceptance/F12.5.md`.
+- Authored unit and proof test suite `backend/tests/unit/test_continuous_recon.py` (5 tests, all passing):
+  - Verified matching positions produce zero freeze.
+  - Verified seeded position quantity mismatch freezes trading on the symbol immediately and does not auto-correct local state.
+  - Verified seeded order status/quantity mismatch freezes symbol.
+  - Verified `RiskEngine` rejects order placement for frozen symbols while permitting non-frozen symbols.
+  - Verified operator resolution unfreezes the symbol cleanly.
+- Verified quality gates:
+  - 84 Python tests passing across dhan/order/ticket/risk/recon suites (0 failures).
+  - `mypy backend --strict` clean across 326 source files.
+  - `ruff check backend` clean.
+  - `validate_manifest.py` and `validate_fixtures.py` OK.
+  - Fast-forwarded into `main` at `6851f0b`.
