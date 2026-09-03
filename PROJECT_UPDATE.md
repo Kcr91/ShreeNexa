@@ -80,7 +80,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F11.6 | Done | Fast-forwarded into `main` at `b96e784` after review. |
 | F5.3 | Done | Fast-forwarded into `main` at `36aa05d` after review. |
 | F5.4 | Done | Fast-forwarded into `main` at `748553e` after review. |
-| F11.7–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F13.1 | Done | Fast-forwarded into `main` at `54a6633` after review. |
+| F11.7, F13.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2600,6 +2601,31 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified sandbox REST API lifecycle end-to-end.
 - Full repository test suite: 588 Python tests passed (30 skipped due to absent local DB), 185 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (287 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F13.1 Production containers for api, engine, feedd, and worker, with non-root users, health checks, resource limits, and immutable images completed
+
+- Implemented `infra/Dockerfile`:
+  - Multi-stage hardened build targeting CPython 3.14 (`builder` and `runtime` stages).
+  - Non-root unprivileged dedicated system user and group `shreenexa:shreenexa` (UID/GID 10001) with zero root/sudo access.
+  - Minimal attack surface: zero build tools (gcc, make) in runtime stage.
+  - Fast, reproducible dependency management via frozen `uv sync --frozen --no-dev`.
+  - Supports all 4 process roles (`api`, `engine`, `feedd`, `worker`) through dedicated entrypoint targets.
+- Implemented `infra/docker-compose.prod.yml`:
+  - Orchestrates production topology: `postgres`, `valkey`, `api`, `engine`, `feedd`, `worker`.
+  - Configures explicit resource constraints across all services (`api`: 1.0 CPU / 512MB RAM, `engine`: 2.0 CPU / 1024MB RAM, `feedd`: 1.0 CPU / 512MB RAM, `worker`: 1.0 CPU / 512MB RAM).
+  - Enforces unprivileged execution context (`user: "10001:10001"`).
+  - Proves architectural independence invariant: none of `engine`, `feedd`, or `worker` depend on `api`, guaranteeing that restarting or failing the API container leaves the engine strategy loop and paper deployments completely intact.
+- Implemented `backend/app/contracts/health_check.py`:
+  - Lightweight container health check probe for engine, feedd, and worker.
+  - Queries Postgres durable heartbeat table `process_heartbeat`, validating `running` status and bounded heartbeat age (<= 15s).
+- Authored acceptance contract in `docs/qa/acceptance/F13.1.md`.
+- Authored comprehensive test suite in `backend/tests/unit/test_production_containers.py`:
+  - Verified Dockerfile multi-stage structure, non-root user setup, and absence of hardcoded credentials.
+  - Verified production compose services, resource caps, and health check parameters.
+  - Verified process independence proof invariant (restarting API leaves background daemons untouched).
+  - Verified health check probe logic against fresh, absent, and stopped heartbeats.
+- Full repository test suite: 592 Python tests passed (30 skipped due to absent local DB), 185 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (289 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
 
 ### 2026-09-03 — F5.4 One-click backtest from an approved generated draft, preserving exact IR/version/provider metadata completed
 

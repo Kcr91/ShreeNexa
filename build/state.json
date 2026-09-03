@@ -1,8 +1,8 @@
 {
-  "feature": "F5.4",
+  "feature": "F13.1",
   "status": "review",
-  "branch": "feature/F5.4-ai-draft-one-click-backtest",
-  "commit": "748553e",
+  "branch": "feature/F13.1-production-containers",
+  "commit": "54a6633",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1336,6 +1336,18 @@
       "evidence": [
         "backend/tests/unit/test_ai_one_click_backtest.py",
         "docs/qa/acceptance/F5.4.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F13.1": {
+      "status": "review",
+      "branch": "feature/F13.1-production-containers",
+      "commit": "54a6633",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_production_containers.py",
+        "docs/qa/acceptance/F13.1.md"
       ],
       "verified_at": null,
       "blockers": []
