@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { App } from "./App";
-import "./widgets/builtin";
 
 describe("App Shell and Layout", () => {
   it("renders terminal header, navigation, and workspace layout tabs", () => {
@@ -13,5 +12,7 @@ describe("App Shell and Layout", () => {
     expect(screen.getByRole("navigation", { name: "Terminal primary navigation" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Main Overview/i })).toBeInTheDocument();
     expect(screen.getByText("Market Clock")).toBeInTheDocument();
+    expect(screen.getByText("Backtest Performance Summary")).toBeInTheDocument();
+    expect(screen.queryByText(/Widget not found:/i)).not.toBeInTheDocument();
   });
 });

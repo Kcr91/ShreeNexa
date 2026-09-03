@@ -1,4 +1,8 @@
 import React from "react";
+
+import "./index.css";
+import "./widgets/builtin";
+
 import { AuthProvider } from "./auth/AuthContext";
 import { NotificationProvider } from "./notifications/NotificationContext";
 import { ToastContainer } from "./notifications/ToastContainer";
