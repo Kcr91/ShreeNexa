@@ -1,8 +1,8 @@
 {
-  "feature": "F10.1",
+  "feature": "F10.2",
   "status": "review",
-  "branch": "feature/F10.1-holdings-ledger-lots-corporate-actions",
-  "commit": "8db63cfa7d0acbed8e820f7c4362773575f4e83a",
+  "branch": "feature/F10.2-investing-xirr-allocation-benchmark",
+  "commit": "57cab9e",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1192,6 +1192,18 @@
         "backend/app/ai/explainer.py",
         "backend/app/api/ai.py",
         "backend/tests/unit/test_ai_strategy_generator.py"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F10.2": {
+      "status": "review",
+      "branch": "feature/F10.2-investing-xirr-allocation-benchmark",
+      "commit": "57cab9e",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_investing_xirr_allocation.py",
+        "docs/qa/acceptance/F10.2.md"
       ],
       "verified_at": null,
       "blockers": []

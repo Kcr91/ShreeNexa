@@ -68,7 +68,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F9.7 | Done | Fast-forwarded into `main` at `d42e343` after review. |
 | F10.1 | Done | Fast-forwarded into `main` at `655d9b0` after review. |
 | F5.2 | Done | Fast-forwarded into `main` at `a06f8c0` after review. |
-| F5.3–F5.4, F10.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F10.2 | Done | Fast-forwarded into `main` at `57cab9e` after review. |
+| F5.3–F5.4, F10.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2291,3 +2292,34 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified all three REST API endpoints end-to-end.
 - Full repository test suite: 499 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (260 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F10.2 XIRR solver, sector/asset allocation, and benchmark comparison completed
+
+- Implemented `backend/app/investing/xirr.py`:
+  - `calculate_xirr`: Exact discounted cash flow (DCF) root-finder with Microsoft Excel parity across irregular cash flows.
+  - Analytical first derivative $f'(r)$ for fast Newton-Raphson quadratic convergence.
+  - Multi-bracket bisection fallback across discrete interest rate intervals ensuring convergence even when Newton-Raphson encounters zero-derivative inflection points.
+  - Explicit error handling: `XIRRInvalidCashflowsError` for degenerate cash flow series (empty, single cash flow, all negative/all positive) and `XIRRConvergenceError` for non-convergent inputs.
+- Implemented `backend/app/investing/models.py` (F10.2 extensions):
+  - `CashFlowItem`, `XIRRCalculationResponse`, `SectorAllocationItem`, `AssetAllocationItem`, `PortfolioAllocationReport`, `BenchmarkComparisonResult`.
+- Implemented `backend/app/investing/analytics.py`:
+  - `generate_portfolio_cashflows`: Translates ledger purchase lots (negative outflow), sales/disposals (positive proceeds), and current portfolio valuation into a dated cashflow series.
+  - `compute_account_xirr`: Computes annual XIRR percentage for a specified investor account.
+  - `generate_portfolio_allocation`: Aggregates active holdings by NSE sector and asset class (Equity, ETF), calculating percentage weights and issuing concentration warnings if any sector exceeds 35% or single position exceeds 25%.
+  - `compare_portfolio_to_benchmark`: Calculates portfolio alpha relative to an equity benchmark (e.g. NIFTY 50 @ 14.5% annual return).
+- Extended `backend/app/api/investing.py`:
+  - `POST /api/v1/investing/xirr`
+  - `GET /api/v1/investing/allocation`
+  - `POST /api/v1/investing/benchmark-comparison`
+- Authored acceptance contract in `docs/qa/acceptance/F10.2.md`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_investing_xirr_allocation.py` (7 tests passing):
+  - Proved bit-level Excel parity for 1-year holding (exact 10.00% return).
+  - Proved Excel parity for irregular multi-month SIP cash flows (~12.76% XIRR).
+  - Verified explicit failure modes for degenerate cash flows.
+  - Verified `HoldingsLedger` integration and cashflow extraction.
+  - Verified sector allocation weights and concentration warning triggers.
+  - Verified alpha calculation against market benchmark.
+  - Verified all three REST API endpoints end-to-end.
+- Full repository test suite: 506 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (263 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
