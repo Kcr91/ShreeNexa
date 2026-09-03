@@ -25,8 +25,7 @@ def prune_backups(
 
     # Find all .tar.gz archives
     archives: list[Path] = [
-        f for f in backup_dir.iterdir()
-        if f.is_file() and f.name.endswith(".tar.gz")
+        f for f in backup_dir.iterdir() if f.is_file() and f.name.endswith(".tar.gz")
     ]
 
     # Sort archives by modification/creation time descending (newest first)
@@ -37,7 +36,7 @@ def prune_backups(
         return []
 
     # Keep the newest max_daily snapshots
-    to_delete = archives[pol.max_daily:]
+    to_delete = archives[pol.max_daily :]
     deleted: list[Path] = []
 
     for arch in to_delete:

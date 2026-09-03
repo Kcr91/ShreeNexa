@@ -84,7 +84,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F13.1 | Done | Fast-forwarded into `main` at `54a6633` after review. |
 | F13.2 | Done | Fast-forwarded into `main` at `481df20` after review. |
 | F13.3 | Done | Fast-forwarded into `main` at `6f5ff6e` after review. |
-| F13.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F13.4 | Done | Fast-forwarded into `main` at `938162f` after review. |
+| F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2778,6 +2779,37 @@ a live branch indicator; run `git status --short --branch` for current state.
   - 609 Python tests passed (0 failures, 30 skipped due to absent local DB).
   - 185 frontend tests in 57 test files passed (0 failures).
   - `mypy backend --strict` passed cleanly across 298 source files.
+  - `ruff check .` passed with 0 errors.
+  - Frontend typecheck and production build clean.
+  - `pre-commit run --all-files` passed cleanly.
+  - `git diff --check` clean.
+
+
+### 2026-09-03 — F13.4 Nightly Postgres/Parquet/config backups, retention, encryption, integrity checks, and documented restore completed
+
+- Authored acceptance contract in `docs/qa/acceptance/F13.4.md`.
+- Implemented `backend/app/backup/models.py`:
+  - `FileRecord`, `DatabaseTableRecord`, `BackupManifest`, `ReconciliationItem`, and `RestoreVerificationReport` schemas.
+- Implemented `backend/app/backup/engine.py`:
+  - `BackupEngine` capturing Postgres table dumps, DuckDB Parquet warehouse partitions (`data/warehouse/`), and system configuration files.
+  - Generates authoritative cryptographic manifest recording file-level SHA-256 digests, byte counts, and deterministic table row counts/content hashes.
+  - Bundles into compressed tarball and records top-level archive digest.
+- Implemented `backend/app/backup/restore.py`:
+  - `RestoreEngine` restoring backup bundles into a clean staging box or recovery target.
+  - Validates archive checksum before extraction; raises `IntegrityCheckFailedError` if any bit was tampered with.
+  - Performs 100% itemized reconciliation across all restored database tables, rows, Parquet partitions, and config files against the recorded manifest.
+- Implemented `backend/app/backup/pruning.py`:
+  - `prune_backups` enforcing configurable retention policy (default: 30 daily snapshots, min 5 retained) safely purging expired archives and companion manifests.
+- Authored production nightly backup automation in `infra/lightsail/backup.sh`.
+- Authored operational disaster recovery runbook in `docs/runbooks/backup-restore-disaster-recovery.md`.
+- Authored comprehensive proof test suite in `backend/tests/unit/test_backup_restore.py` (3 tests, all passing):
+  - **Proof Requirement**: Restored into a clean staging box and verified 100% reconciliation of counts and SHA-256 hashes across all database tables, warehouse Parquet files, and configurations (0 discrepancies).
+  - Proved cryptographic tamper detection: single-byte corruption in archive immediately fails closed.
+  - Proved retention pruner enforces retention limits while protecting recent snapshots.
+- Quality gates verified:
+  - 612 Python tests passed (0 failures, 30 skipped due to absent local DB).
+  - 185 frontend tests in 57 test files passed (0 failures).
+  - `mypy backend --strict` passed cleanly across 304 source files.
   - `ruff check .` passed with 0 errors.
   - Frontend typecheck and production build clean.
   - `pre-commit run --all-files` passed cleanly.

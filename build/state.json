@@ -1,8 +1,8 @@
 {
-  "feature": "F11.7",
+  "feature": "F13.4",
   "status": "review",
-  "branch": "feature/F11.7-blue-green-promotion-rollback-history",
-  "commit": "d06eb67",
+  "branch": "feature/F13.4-nightly-backups-retention-restore",
+  "commit": "938162f",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1384,6 +1384,19 @@
       "evidence": [
         "backend/tests/unit/test_feature_builder_promotion.py",
         "docs/qa/acceptance/F11.7.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F13.4": {
+      "status": "review",
+      "branch": "feature/F13.4-nightly-backups-retention-restore",
+      "commit": "938162f",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_backup_restore.py",
+        "docs/qa/acceptance/F13.4.md",
+        "docs/runbooks/backup-restore-disaster-recovery.md"
       ],
       "verified_at": null,
       "blockers": []
