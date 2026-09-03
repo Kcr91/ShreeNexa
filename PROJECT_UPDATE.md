@@ -66,7 +66,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F9.5 | Done | Fast-forwarded into `main` at `561364f` after review. |
 | F9.6 | Done | Fast-forwarded into `main` at `e8e520b` after review. |
 | F9.7 | Done | Fast-forwarded into `main` at `d42e343` after review. |
-| F5.2, F10.1–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F10.1 | Done | Fast-forwarded into `main` at `8db63cf` after review. |
+| F5.2, F10.2–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2226,3 +2227,41 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified `/api/v1/paper/calendar` and `/returns` REST API endpoints.
 - Full repository test suite: 490 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (249 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F10.1 Holdings ledger, lots, average cost, corporate actions, and realised/unrealised P&L import/reconciliation completed
+
+- Implemented `backend/app/investing/models.py`:
+  - `TaxLot`: Discrete purchase tranches tracking acquisition date, unit price, original quantity, and remaining quantity.
+  - `CapitalGainsCategory`: Indian IT classification for equity (`STCG` < 365 days, `LTCG` >= 365 days).
+  - `DisposalRecord` & `DisposalAllocation`: Audit trail of depleted lots, gross realized P&L, net realized P&L, transaction costs, and STCG/LTCG breakdown.
+  - `CorporateAction` & `CorporateActionType`: Formal models for stock splits, bonus issues, cash dividends, and consolidations.
+  - `HoldingSummary` & `PortfolioHoldingsReport`: Consolidated holding views with weighted-average cost, CMP, unrealized P&L, and active tax lot details.
+  - `DhanHoldingItem`, `HoldingReconciliationItem`, `ReconciliationReport`: Broker holdings mapping and reconciliation models.
+- Implemented `backend/app/investing/ledger.py`:
+  - `HoldingsLedger`: Thread-safe portfolio holdings manager.
+  - `add_lot`: Records acquisition lot chronologically.
+  - `record_disposal`: Executes strict First-In-First-Out (FIFO) lot depletion, computes holding period in days, and segregates STCG from LTCG.
+  - `apply_corporate_action`:
+    - Stock split multiplies lot quantities and divides unit acquisition costs, keeping total invested capital constant.
+    - Bonus issue issues bonus lots at ₹0.00 acquisition cost (per Indian IT Act Sec 55(2)(aa)), adjusting blended average cost downward without distorting capital appreciation returns.
+  - Invariant verified: Transfers and corporate actions do not masquerade as investment returns.
+- Implemented `backend/app/investing/reconciliation.py`:
+  - `reconcile_dhan_holdings`: Compares local holdings against Dhan `/holdings` payload, matching quantity and weighted-average price within ₹0.01 tolerance, flagging discrepancies (`QUANTITY_MISMATCH`, `COST_DRIFT`, `MISSING_LOCAL`, `MISSING_BROKER`).
+  - `import_dhan_holdings_as_initial_lots`: Imports broker holdings as baseline purchase lots.
+- Extended `backend/app/api/investing.py` & mounted in `backend/app/main.py`:
+  - `GET /api/v1/investing/holdings`
+  - `POST /api/v1/investing/lots`
+  - `POST /api/v1/investing/disposals`
+  - `POST /api/v1/investing/corporate-actions`
+  - `POST /api/v1/investing/reconcile-dhan`
+  - `POST /api/v1/investing/import-dhan`
+- Created fixture `backend/tests/fixtures/dhan_holdings_fixture.json`.
+- Authored acceptance contract in `docs/qa/acceptance/F10.1.md`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_holdings_ledger_corporate_actions.py` (4 tests passing):
+  - Verified FIFO lot depletion and precise STCG/LTCG capital gains categorization.
+  - Proved corporate action neutrality (splits and bonus issues preserve invested capital without inflating returns).
+  - Verified full reconciliation against the redacted Dhan account holdings fixture.
+  - Verified end-to-end REST API endpoints.
+- Full repository test suite: 494 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (255 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
