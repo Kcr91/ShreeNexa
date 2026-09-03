@@ -121,11 +121,7 @@ def test_blue_green_promotion_and_rollback(tmp_path: Path) -> None:
     """Validate pre-traffic health gating and automated rollback."""
     temp_caddyfile = tmp_path / "Caddyfile"
     caddy_cfg = (
-        "example.com {\n"
-        "    reverse_proxy 127.0.0.1:8000 {\n"
-        "        health_uri /healthz\n"
-        "    }\n"
-        "}\n"
+        "example.com {\n    reverse_proxy 127.0.0.1:8000 {\n        health_uri /healthz\n    }\n}\n"
     )
     temp_caddyfile.write_text(caddy_cfg, encoding="utf-8")
 

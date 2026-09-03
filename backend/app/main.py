@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.ai import router as ai_router
+from app.api.auth import router as auth_router
 from app.api.backtests import router as backtests_router
 from app.api.calibration import router as calibration_router
 from app.api.depth import router as depth_router
@@ -92,6 +93,7 @@ app.include_router(paper_router)
 app.include_router(investing_router)
 app.include_router(ai_router)
 app.include_router(feature_builder_router)
+app.include_router(auth_router)
 
 
 @app.get("/healthz")

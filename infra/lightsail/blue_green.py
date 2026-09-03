@@ -117,8 +117,7 @@ def promote_candidate(
         previous_color=active_color,
         active_color=candidate_color,
         message=(
-            f"Successfully promoted {candidate_color} (port {candidate_port}) "
-            "to active upstream."
+            f"Successfully promoted {candidate_color} (port {candidate_port}) to active upstream."
         ),
     )
 
