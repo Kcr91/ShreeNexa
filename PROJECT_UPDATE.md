@@ -82,7 +82,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F5.4 | Done | Fast-forwarded into `main` at `748553e` after review. |
 | F13.1 | Done | Fast-forwarded into `main` at `54a6633` after review. |
 | F13.2 | Done | Fast-forwarded into `main` at `481df20` after review. |
-| F11.7, F13.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F13.3 | Done | Fast-forwarded into `main` at `6f5ff6e` after review. |
+| F11.7, F13.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2715,3 +2716,38 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `pre-commit run --all-files` passed.
   - `git diff --check` clean.
 
+
+### 2026-09-03 — F13.3 Single-user password + TOTP auth, secure sessions, recovery process, rate limiting, and audit completed
+
+- Authored acceptance contract in `docs/qa/acceptance/F13.3.md`.
+- Implemented `backend/app/auth/crypto.py`:
+  - PBKDF2-HMAC-SHA256 password hashing using 600,000 rounds and 16-byte random salt. Constant-time verification via `hmac.compare_digest`.
+  - RFC 6238 / RFC 4226 Time-based One-Time Password (TOTP) generator and verifier using HMAC-SHA1 with 30-second steps and ±1 step clock skew tolerance.
+  - Single-use emergency recovery code generation and deterministic SHA-256 digest hashing.
+- Implemented `backend/app/auth/models.py`:
+  - Typed Pydantic schemas for `LoginRequest`, `LoginResponse`, `TOTPVerifyRequest`, `RecoveryLoginRequest`, `AuthSuccessResponse`, `SessionInfo`, and `AuthAuditRecord`.
+- Implemented `backend/app/auth/service.py`:
+  - `AuthService` managing single-trader credentials, sliding-window rate limiting (max 5 failed attempts within 15 minutes before IP lockout), challenge token generation with 5-minute expiry, and cryptographically random session creation.
+  - Session fixation protection: on successful login, any existing session is revoked and a fresh 256-bit session token is issued.
+  - Single-use recovery code consumption: prevents replay attacks by invalidating the used hash.
+  - Redaction-safe security audit log ring buffer.
+- Implemented `backend/app/api/auth.py`:
+  - REST endpoints: `POST /api/v1/auth/login`, `POST /api/v1/auth/totp/verify`, `POST /api/v1/auth/recovery`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`, `GET /api/v1/auth/audit`.
+  - Sets hardened `HttpOnly`, `SameSite=Strict`, `Path=/` cookies.
+  - Double-submit anti-CSRF token verification helper (`verify_csrf_token`) rejecting mutating requests lacking matching `X-CSRF-Token`.
+- Registered `auth_router` in `backend/app/main.py`.
+- Authored comprehensive security proof suite in `backend/tests/unit/test_auth_security.py` (7 tests, all passing):
+  - Proved session fixation protection (session ID rotation and old session invalidation).
+  - Proved CSRF double-submit token enforcement (mutating requests rejected with HTTP 403 on missing or invalid token).
+  - Proved brute-force rate limiting and lockout (HTTP 429 after 5 failed attempts).
+  - Proved secret storage (PBKDF2 >= 600,000 rounds, hashed recovery codes, no secrets in logs).
+  - Proved single-use recovery code consumption and replay prevention.
+  - Proved end-to-end 2FA login, session validation, and logout.
+- Quality gates verified:
+  - 605 Python tests passed (0 failures, 30 skipped due to absent local DB).
+  - 185 frontend tests in 57 test files passed (0 failures).
+  - `mypy backend --strict` passed cleanly across 296 source files.
+  - `ruff check .` passed with 0 errors.
+  - Frontend typecheck and production build clean.
+  - `pre-commit run --all-files` passed cleanly.
+  - `git diff --check` clean.

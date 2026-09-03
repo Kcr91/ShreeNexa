@@ -12,9 +12,7 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    requires_totp: bool = Field(
-        ..., description="True if TOTP code is required to complete login"
-    )
+    requires_totp: bool = Field(..., description="True if TOTP code is required to complete login")
     challenge_token: str | None = Field(
         default=None, description="Time-limited challenge token for TOTP step"
     )

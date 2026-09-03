@@ -203,9 +203,7 @@ def test_api_auth_endpoints_end_to_end() -> None:
     assert res_bad.status_code == 401
 
     # Step 2: Login with default master password -> 200 with challenge token
-    res_step1 = client.post(
-        "/api/v1/auth/login", json={"password": "ShreeNexa2026!SecureTerminal"}
-    )
+    res_step1 = client.post("/api/v1/auth/login", json={"password": "ShreeNexa2026!SecureTerminal"})
     assert res_step1.status_code == 200
     data_step1 = res_step1.json()
     assert data_step1["requires_totp"] is True

@@ -63,8 +63,7 @@ class AuthService:
         """Check if an IP address is currently locked out due to excessive failed attempts."""
         now = time.time()
         attempts = [
-            t for t in self._failed_attempts.get(ip_address, [])
-            if now - t < LOCKOUT_WINDOW_SECONDS
+            t for t in self._failed_attempts.get(ip_address, []) if now - t < LOCKOUT_WINDOW_SECONDS
         ]
         self._failed_attempts[ip_address] = attempts
 

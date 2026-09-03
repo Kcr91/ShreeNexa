@@ -1,8 +1,8 @@
 {
-  "feature": "F13.2",
+  "feature": "F13.3",
   "status": "review",
-  "branch": "feature/F13.2-lightsail-caddy-blue-green",
-  "commit": "481df20",
+  "branch": "feature/F13.3-single-user-auth-totp-sessions",
+  "commit": "6f5ff6e",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1360,6 +1360,18 @@
       "evidence": [
         "backend/tests/unit/test_lightsail_caddy_blue_green.py",
         "docs/qa/acceptance/F13.2.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F13.3": {
+      "status": "review",
+      "branch": "feature/F13.3-single-user-auth-totp-sessions",
+      "commit": "6f5ff6e",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_auth_security.py",
+        "docs/qa/acceptance/F13.3.md"
       ],
       "verified_at": null,
       "blockers": []
