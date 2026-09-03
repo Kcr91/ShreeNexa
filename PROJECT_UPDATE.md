@@ -69,7 +69,8 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F10.1 | Done | Fast-forwarded into `main` at `655d9b0` after review. |
 | F5.2 | Done | Fast-forwarded into `main` at `a06f8c0` after review. |
 | F10.2 | Done | Fast-forwarded into `main` at `57cab9e` after review. |
-| F5.3–F5.4, F10.3–F13.5 | Pending | Pending completion of preceding features in dependency order. |
+| F10.3 | Done | Fast-forwarded into `main` at `c4f2caa` after review. |
+| F5.3–F5.4, F10.4–F13.5 | Pending | Pending completion of preceding features in dependency order. |
 
 ## Major-task log
 
@@ -2322,3 +2323,26 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Verified all three REST API endpoints end-to-end.
 - Full repository test suite: 506 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
 - All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (263 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+
+### 2026-09-03 — F10.3 Dividend event ledger, matching engine, and income views completed
+
+- Implemented `backend/app/investing/dividends.py`:
+  - `DividendRecord`: Immutable audit trail for corporate dividend events with Section 194 TDS withholding metadata.
+  - `DividendLedger`: Thread-safe storage with support for filtering by account, security, date range, and match status.
+  - `match_dividend_payments`: Matches imported bank credit/broker dividend notifications against settled demat holdings on the record date.
+  - Critical proof invariant: Unmatched dividend payments (unheld securities, zero shares on record date, ISIN mismatch) are isolated into `unmatched_items` and never attributed to another holding.
+  - `generate_income_view`: Generates monthly calendar income breakdown, computes annualized Yield on Cost (YoC) and Current Yield, and projects future cash flows from declared upcoming dividends.
+- Extended `backend/app/api/investing.py`:
+  - `GET /api/v1/investing/dividends`
+  - `POST /api/v1/investing/dividends/import`
+  - `GET /api/v1/investing/dividends/income-view`
+- Authored acceptance contract in `docs/qa/acceptance/F10.3.md`.
+- Authored comprehensive unit tests in `backend/tests/unit/test_investing_dividends.py` (5 tests passing):
+  - Verified exact match against hand fixtures with TDS withholding deduction.
+  - Verified critical invariant that unmatched payments for unheld stocks are reported in `unmatched_items` and never attributed to wrong holdings.
+  - Verified that payments prior to holding acquisition dates are rejected as unmatched.
+  - Verified dividend income view, monthly calendar distribution, and yield on cost metrics.
+  - Verified REST API endpoints end-to-end.
+- Full repository test suite: 511 Python tests passed (30 skipped due to absent local DB), 179 frontend tests passed (0 failures).
+- All code quality gates clean: `ruff check .` clean, `mypy backend --strict` (265 files) clean, frontend `typecheck`/`test`/`build` clean, `validate_manifest.py` clean, `validate_fixtures.py` clean, `pre-commit run --all-files` clean, `git diff --check` clean.
+

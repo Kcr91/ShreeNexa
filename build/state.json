@@ -1,8 +1,8 @@
 {
-  "feature": "F10.2",
+  "feature": "F10.3",
   "status": "review",
-  "branch": "feature/F10.2-investing-xirr-allocation-benchmark",
-  "commit": "57cab9e",
+  "branch": "feature/F10.3-dividends-matching-tax-income",
+  "commit": "c4f2caa",
   "tests": {},
   "started_at": null,
   "finished_at": null,
@@ -1204,6 +1204,18 @@
       "evidence": [
         "backend/tests/unit/test_investing_xirr_allocation.py",
         "docs/qa/acceptance/F10.2.md"
+      ],
+      "verified_at": null,
+      "blockers": []
+    },
+    "F10.3": {
+      "status": "review",
+      "branch": "feature/F10.3-dividends-matching-tax-income",
+      "commit": "c4f2caa",
+      "tests": {},
+      "evidence": [
+        "backend/tests/unit/test_investing_dividends.py",
+        "docs/qa/acceptance/F10.3.md"
       ],
       "verified_at": null,
       "blockers": []
