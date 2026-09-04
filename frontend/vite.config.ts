@@ -12,4 +12,16 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/lightweight-charts")) {
+            return "vendor-charts";
+          }
+        },
+      },
+    },
+  },
 });
