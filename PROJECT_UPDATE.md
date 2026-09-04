@@ -3044,3 +3044,21 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Frontend typecheck and production build pass. The complete frontend suite
   passes 189 tests across 59 files; the startup JavaScript chunk is 428.81 kB
   (119.00 kB gzip), reduced from the rejected 1,279.39 kB candidate.
+
+### 2026-09-04 — Order ticket API paper broker delegation and live risk gating resolved (QA-15, QA-18, QA-20)
+
+- Resolved **QA-15** (Critical): Replaced fabricated deterministic string-templated paper orders with full delegation to `PaperBroker.submit_orders([paper_order])`:
+  - Placed orders now create fully typed `PaperOrder` records with unique `ORD-PAPER-...` IDs.
+  - Paper orders are saved to `PaperRepository` and verified retrievable via `GET /api/v1/paper/orders`.
+  - Proper error responses and reject reasons are returned if funds are insufficient.
+- Resolved **QA-20** (High): Removed mock `_ = broker` scaffolding on the live path:
+  - Wired live order execution through `RiskFilteredBroker(DhanBroker())`, enforcing pre-trade caps (position limits, price bands, velocity, kill switch) before broker dispatch.
+  - Handled `LiveTradingDisabledError`, `StaticIPMismatchError`, `RiskCheckFailedError`, and `KillSwitchActiveError` cleanly returning 403 Forbidden with exact diagnostic details.
+- Resolved **QA-18** (High): Armed uncertain-order status tracking from real transport exceptions:
+  - Caught `DhanTimeoutError`, armed `_uncertain_orders[correlation_id]`, and returned 504 Gateway Timeout.
+  - Subsequent requests with the same correlation ID are blocked with 409 Conflict until broker truth converges.
+- Quality gates verified:
+  - 9 tests in `backend/tests/unit/test_order_ticket_api.py` passing (including new proofs for paper retrieval and timeout retry blocking).
+  - 591 passed, 16 skipped in backend unit suite.
+  - Strict mypy and ruff check passing across 328 source files.
+  - Fast-forward merged to `main` at `f24bca2`.
