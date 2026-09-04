@@ -4,8 +4,22 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
 from app.analytics.options_margin import BasketMarginResult, calculate_basket_margin
 from app.analytics.strategy_builder import OptionLeg
+from app.dhan.client import DhanRestClient
+from app.dhan.models import DhanMultiMarginScripItem
+
+
+class OrderMarginResult(BaseModel):
+    """Result of order margin requirement calculation with explicit availability."""
+
+    model_config = ConfigDict(frozen=True)
+
+    required_margin: float | None = None
+    is_available: bool = True
+    unreliable_reason: str | None = None
 
 
 class DhanMarginAdapter:
@@ -62,6 +76,74 @@ class DhanMarginAdapter:
             spot_price=spot_price,
             legs=legs,
         )
+
+    def calculate_order_margin(
+        self,
+        symbol: str,
+        exchange_segment: str,
+        transaction_type: str,
+        product_type: str,
+        quantity: int,
+        price: float,
+        security_id: str | None = None,
+        trigger_price: float = 0.0,
+        broker_response_override: dict[str, Any] | None = None,
+        client: DhanRestClient | None = None,
+    ) -> OrderMarginResult:
+        """Compute required margin for an order via Dhan /v2/margincalculator/multi.
+
+        CRITICAL INVARIANT (F8.6 / Spec §9.2 / QA-21):
+        Unavailable margin is explicit and NEVER quietly reported as 0.0 or replaced
+        with an invented heuristic.
+        """
+        if broker_response_override is not None:
+            try:
+                val = broker_response_override.get("totalMargin")
+                if val is None:
+                    val = broker_response_override.get("equityMargin")
+                if val is None:
+                    val = broker_response_override.get("foMargin", 0.0)
+                total_margin = float(val)
+                return OrderMarginResult(
+                    required_margin=round(total_margin, 2),
+                    is_available=True,
+                )
+            except Exception as e:
+                return OrderMarginResult(
+                    required_margin=None,
+                    is_available=False,
+                    unreliable_reason=f"Failed to parse Dhan margin response: {e}",
+                )
+
+        if not security_id:
+            return OrderMarginResult(
+                required_margin=None,
+                is_available=False,
+                unreliable_reason="Security ID required for Dhan margin calculation",
+            )
+
+        try:
+            dhan_client = client or DhanRestClient()
+            scrip_item = DhanMultiMarginScripItem(
+                exchangeSegment=exchange_segment,
+                transactionType=transaction_type,
+                quantity=quantity,
+                productType=product_type,
+                securityId=security_id,
+                price=price,
+                triggerPrice=trigger_price,
+            )
+            resp = dhan_client.calculate_multi_margin(scrip_list=[scrip_item])
+            return OrderMarginResult(
+                required_margin=round(resp.total_margin, 2),
+                is_available=True,
+            )
+        except Exception as exc:
+            return OrderMarginResult(
+                required_margin=None,
+                is_available=False,
+                unreliable_reason=f"Broker margin unavailable: {exc}",
+            )
 
 
 dhan_margin_adapter = DhanMarginAdapter()

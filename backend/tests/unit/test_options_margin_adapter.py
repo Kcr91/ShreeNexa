@@ -235,3 +235,52 @@ def test_margin_rest_api_endpoint() -> None:
     assert data["underlying"] == "NIFTY"
     assert data["net_required_margin"] == 3750.0
     assert data["is_available"] is True
+
+
+def test_order_margin_adapter_override() -> None:
+    """Explicit override passes through required margin accurately."""
+    res = dhan_margin_adapter.calculate_order_margin(
+        symbol="INFY",
+        exchange_segment="NSE_EQ",
+        transaction_type="BUY",
+        product_type="INTRADAY",
+        quantity=100,
+        price=1500.0,
+        security_id="1594",
+        broker_response_override={"totalMargin": 30000.0},
+    )
+    assert res.is_available is True
+    assert res.required_margin == 30000.0
+    assert res.unreliable_reason is None
+
+
+def test_order_margin_adapter_missing_security_id() -> None:
+    """Missing security ID returns explicit unavailable margin."""
+    res = dhan_margin_adapter.calculate_order_margin(
+        symbol="INFY",
+        exchange_segment="NSE_EQ",
+        transaction_type="BUY",
+        product_type="INTRADAY",
+        quantity=100,
+        price=1500.0,
+        security_id=None,
+    )
+    assert res.is_available is False
+    assert res.required_margin is None
+    assert "Security ID required" in (res.unreliable_reason or "")
+
+
+def test_order_margin_adapter_malformed_response() -> None:
+    """Malformed override returns explicit is_available=False, never 0.0."""
+    res = dhan_margin_adapter.calculate_order_margin(
+        symbol="INFY",
+        exchange_segment="NSE_EQ",
+        transaction_type="BUY",
+        product_type="INTRADAY",
+        quantity=100,
+        price=1500.0,
+        broker_response_override={"totalMargin": "NOT_A_FLOAT"},
+    )
+    assert res.is_available is False
+    assert res.required_margin is None
+    assert "Failed to parse Dhan margin response" in (res.unreliable_reason or "")

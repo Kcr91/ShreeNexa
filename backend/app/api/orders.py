@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -11,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.dhan.exceptions import DhanTimeoutError
+from app.dhan.margin_adapter import dhan_margin_adapter
 from app.dhan.orders import (
     DhanOrderRequest,
     ExchangeSegment,
@@ -24,6 +26,9 @@ from app.engine.broker import (
     LiveTradingDisabledError,
     StaticIPMismatchError,
 )
+from app.engine.contracts import OrderSide
+from app.engine.costs import ProductType as CostProductType
+from app.engine.costs import cost_calculator
 from app.engine.gateway import get_risk_filtered_broker
 from app.engine.risk import (
     KillSwitchActiveError,
@@ -62,6 +67,11 @@ class OrderChargesEstimateRequest(BaseModel):
     order_type: OrderType = OrderType.LIMIT
     quantity: int = Field(gt=0)
     price: float = Field(gt=0.0)
+    security_id: str | None = None
+    trigger_price: float | None = None
+    instrument_type: str | None = None
+    trade_date: date | None = None
+    broker_response_override: dict[str, Any] | None = None
 
 
 class OrderChargesEstimateResponse(BaseModel):
@@ -75,7 +85,10 @@ class OrderChargesEstimateResponse(BaseModel):
     stamp_duty: float
     gst: float
     total_charges: float
-    required_margin: float
+    required_margin: float | None = None
+    is_margin_available: bool = True
+    margin_unavailable_reason: str | None = None
+    cost_schedule_id: str | None = None
 
 
 class TicketPlaceOrderRequest(BaseModel):
@@ -113,67 +126,79 @@ class TicketPlaceOrderResponse(BaseModel):
 
 @router.post("/estimate", response_model=OrderChargesEstimateResponse)
 def estimate_order_charges(req: OrderChargesEstimateRequest) -> OrderChargesEstimateResponse:
-    """Calculate regulatory taxes, exchange fees, broker commissions, and margin for an order."""
-    turnover = req.quantity * req.price
+    """Calculate regulatory taxes, exchange fees, broker commissions, and margin for an order.
 
-    # Brokerage
-    if req.exchange_segment in (ExchangeSegment.NSE_FNO, ExchangeSegment.BSE_FNO):
-        brokerage = 20.0  # Flat ₹20 per derivative order
-    elif req.product_type == ProductType.CNC:
-        brokerage = 0.0  # Zero brokerage on delivery
-    else:
-        brokerage = min(20.0, turnover * 0.0003)
-
-    # STT / CTT
-    if req.product_type == ProductType.CNC:
-        stt_ctt = turnover * 0.001  # 0.1% on delivery
-    elif req.transaction_type == TransactionType.SELL:
-        stt_ctt = turnover * 0.00025  # 0.025% on intraday sell
-    else:
-        stt_ctt = 0.0
-
-    # Exchange transaction charges
-    if req.exchange_segment in (ExchangeSegment.NSE_FNO, ExchangeSegment.BSE_FNO):
-        exchange_charges = turnover * 0.0005
-    else:
-        exchange_charges = turnover * 0.0000297
-
-    # SEBI turnover fees (₹10 / crore)
-    sebi_charges = turnover * 0.000001
-
-    # Stamp duty (applicable on buy leg)
-    if req.transaction_type == TransactionType.BUY:
-        stamp_duty = (
-            turnover * 0.00015 if req.product_type == ProductType.CNC else turnover * 0.00003
-        )
-    else:
-        stamp_duty = 0.0
-
-    # GST (18% on brokerage + exchange charges + SEBI charges)
-    gst = (brokerage + exchange_charges + sebi_charges) * 0.18
-
-    total_charges = round(
-        brokerage + stt_ctt + exchange_charges + sebi_charges + stamp_duty + gst,
-        2,
+    CRITICAL PARITY INVARIANT (QA-21 / F3.3 / F8.6 / F9.4):
+    1. Statutory taxes and broker fees are calculated solely through the unified
+       effective-dated IndianCostCalculator (app/engine/costs.py).
+    2. Margin requirements are computed via the DhanMarginAdapter (app/dhan/margin_adapter.py).
+       Unavailable margin is returned as explicit None with is_margin_available=False,
+       NEVER fabricated with an invented leverage percentage or zero.
+    """
+    fno_segments = (
+        ExchangeSegment.NSE_FNO,
+        ExchangeSegment.BSE_FNO,
+        ExchangeSegment.MCX_COMM,
     )
-
-    # Margin calculation
-    if req.product_type == ProductType.INTRADAY:
-        required_margin = round(turnover * 0.20 + total_charges, 2)  # Approx 5x MIS leverage
+    if req.exchange_segment in fno_segments:
+        sym = req.symbol.upper()
+        inst = (req.instrument_type or "").upper()
+        if inst.startswith("FUT") or "FUT" in sym:
+            cost_prod = CostProductType.FUTURES
+        else:
+            cost_prod = CostProductType.OPTIONS
+    elif req.product_type == ProductType.CNC:
+        cost_prod = CostProductType.DELIVERY
     else:
-        required_margin = round(turnover + total_charges, 2)
+        cost_prod = CostProductType.INTRADAY
+
+    # 2. Map side
+    order_side = OrderSide.BUY if req.transaction_type == TransactionType.BUY else OrderSide.SELL
+
+    # 3. Resolve effective trade timestamp
+    if req.trade_date:
+        trade_ts = datetime.combine(req.trade_date, datetime.min.time(), tzinfo=UTC)
+    else:
+        trade_ts = datetime.now(UTC)
+
+    # 4. Delegate to unified cost calculator (F3.3)
+    breakdown = cost_calculator.calculate_cost(
+        product_type=cost_prod,
+        side=order_side,
+        quantity=req.quantity,
+        price=req.price,
+        timestamp=trade_ts,
+    )
+    turnover = round(req.quantity * req.price, 2)
+
+    # 5. Delegate margin to DhanMarginAdapter (F8.6)
+    margin_res = dhan_margin_adapter.calculate_order_margin(
+        symbol=req.symbol,
+        exchange_segment=str(req.exchange_segment),
+        transaction_type=str(req.transaction_type),
+        product_type=str(req.product_type),
+        quantity=req.quantity,
+        price=req.price,
+        security_id=req.security_id,
+        trigger_price=req.trigger_price or 0.0,
+        broker_response_override=req.broker_response_override,
+    )
 
     return OrderChargesEstimateResponse(
-        turnover=round(turnover, 2),
-        brokerage=round(brokerage, 2),
-        stt_ctt=round(stt_ctt, 2),
-        exchange_turnover_charges=round(exchange_charges, 2),
-        sebi_charges=round(sebi_charges, 2),
-        stamp_duty=round(stamp_duty, 2),
-        gst=round(gst, 2),
-        total_charges=total_charges,
-        required_margin=required_margin,
+        turnover=turnover,
+        brokerage=round(breakdown.brokerage, 2),
+        stt_ctt=round(breakdown.stt_ctt, 2),
+        exchange_turnover_charges=round(breakdown.exchange_txn_charge, 2),
+        sebi_charges=round(breakdown.sebi_fee, 2),
+        stamp_duty=round(breakdown.stamp_duty, 2),
+        gst=round(breakdown.gst, 2),
+        total_charges=round(breakdown.total_cost, 2),
+        required_margin=margin_res.required_margin,
+        is_margin_available=margin_res.is_available,
+        margin_unavailable_reason=margin_res.unreliable_reason,
+        cost_schedule_id=breakdown.schedule_id,
     )
+
 
 
 @router.post("/place", response_model=TicketPlaceOrderResponse)

@@ -5,8 +5,13 @@ Tests charges estimation, validation, mode gating, and status uncertainty.
 
 from __future__ import annotations
 
+from datetime import UTC, date, datetime
+
 import pytest
 from app.api.orders import _uncertain_orders
+from app.engine.contracts import OrderSide
+from app.engine.costs import ProductType as CostProductType
+from app.engine.costs import cost_calculator
 from app.main import app
 from fastapi.testclient import TestClient
 
@@ -25,6 +30,7 @@ def test_estimate_order_charges_equity_intraday(client: TestClient) -> None:
         "order_type": "LIMIT",
         "quantity": 100,
         "price": 1500.0,
+        "broker_response_override": {"totalMargin": 30000.0},
     }
     resp = client.post("/api/v1/orders/ticket/estimate", json=payload)
     assert resp.status_code == 200
@@ -40,8 +46,29 @@ def test_estimate_order_charges_equity_intraday(client: TestClient) -> None:
     assert data["stamp_duty"] > 0
     assert data["gst"] > 0
     assert data["total_charges"] > 0
-    # Intraday MIS margin ~ 20% of turnover + charges
-    assert data["required_margin"] < data["turnover"]
+    # Margin evaluation delegated to F8.6 adapter with override
+    assert data["is_margin_available"] is True
+    assert data["required_margin"] == 30000.0
+
+
+def test_estimate_order_charges_explicit_unavailable_margin(client: TestClient) -> None:
+    """When broker/security_id is not provided, unavailable margin is explicit None, never 0.0."""
+    payload = {
+        "symbol": "INFY",
+        "exchange_segment": "NSE_EQ",
+        "transaction_type": "BUY",
+        "product_type": "INTRADAY",
+        "order_type": "LIMIT",
+        "quantity": 100,
+        "price": 1500.0,
+    }
+    resp = client.post("/api/v1/orders/ticket/estimate", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["is_margin_available"] is False
+    assert data["required_margin"] is None
+    assert "Security ID required" in (data["margin_unavailable_reason"] or "")
 
 
 def test_estimate_order_charges_equity_delivery(client: TestClient) -> None:
@@ -81,6 +108,141 @@ def test_estimate_order_charges_derivatives_flat_brokerage(client: TestClient) -
 
     # Flat ₹20 brokerage for F&O
     assert data["brokerage"] == 20.0
+
+
+def test_estimate_order_charges_cost_model_parity(client: TestClient) -> None:
+    """CRITICAL PARITY TEST (QA-21): Verify ticket estimate matches F3.3 cost_calculator exactly."""
+    test_cases = [
+        # (symbol, segment, side, txn_type, product_type, cost_prod, qty, price, inst_type)
+        (
+            "INFY",
+            "NSE_EQ",
+            OrderSide.BUY,
+            "BUY",
+            "INTRADAY",
+            CostProductType.INTRADAY,
+            100,
+            1500.0,
+            None,
+        ),
+        (
+            "INFY",
+            "NSE_EQ",
+            OrderSide.SELL,
+            "SELL",
+            "INTRADAY",
+            CostProductType.INTRADAY,
+            100,
+            1500.0,
+            None,
+        ),
+        (
+            "TCS",
+            "NSE_EQ",
+            OrderSide.BUY,
+            "BUY",
+            "CNC",
+            CostProductType.DELIVERY,
+            25,
+            3800.0,
+            None,
+        ),
+        (
+            "TCS",
+            "NSE_EQ",
+            OrderSide.SELL,
+            "SELL",
+            "CNC",
+            CostProductType.DELIVERY,
+            25,
+            3800.0,
+            None,
+        ),
+        (
+            "NIFTY-FUT",
+            "NSE_FNO",
+            OrderSide.BUY,
+            "BUY",
+            "MARGIN",
+            CostProductType.FUTURES,
+            50,
+            24500.0,
+            "FUTIDX",
+        ),
+        (
+            "NIFTY-24500-CE",
+            "NSE_FNO",
+            OrderSide.BUY,
+            "BUY",
+            "MARGIN",
+            CostProductType.OPTIONS,
+            50,
+            180.0,
+            "OPTIDX",
+        ),
+        (
+            "NIFTY-24500-CE",
+            "NSE_FNO",
+            OrderSide.SELL,
+            "SELL",
+            "MARGIN",
+            CostProductType.OPTIONS,
+            50,
+            180.0,
+            "OPTIDX",
+        ),
+    ]
+
+    trade_d = date(2025, 2, 10)
+    trade_ts = datetime.combine(trade_d, datetime.min.time(), tzinfo=UTC)
+
+    for (
+        sym,
+        seg,
+        side,
+        txn_type,
+        prod_type,
+        cost_prod,
+        qty,
+        px,
+        inst_type,
+    ) in test_cases:
+        expected = cost_calculator.calculate_cost(
+            product_type=cost_prod,
+            side=side,
+            quantity=qty,
+            price=px,
+            timestamp=trade_ts,
+        )
+
+        req_body = {
+            "symbol": sym,
+            "exchange_segment": seg,
+            "transaction_type": txn_type,
+            "product_type": prod_type,
+            "order_type": "LIMIT",
+            "quantity": qty,
+            "price": px,
+            "trade_date": trade_d.isoformat(),
+        }
+        if inst_type:
+            req_body["instrument_type"] = inst_type
+
+        resp = client.post("/api/v1/orders/ticket/estimate", json=req_body)
+        assert resp.status_code == 200, f"Failed for {sym} {txn_type}: {resp.text}"
+        data = resp.json()
+
+        # Assert exact line-item parity between endpoint and cost engine
+        assert data["turnover"] == round(qty * px, 2)
+        assert data["brokerage"] == round(expected.brokerage, 2)
+        assert data["stt_ctt"] == round(expected.stt_ctt, 2)
+        assert data["exchange_turnover_charges"] == round(expected.exchange_txn_charge, 2)
+        assert data["sebi_charges"] == round(expected.sebi_fee, 2)
+        assert data["stamp_duty"] == round(expected.stamp_duty, 2)
+        assert data["gst"] == round(expected.gst, 2)
+        assert data["total_charges"] == round(expected.total_cost, 2)
+        assert data["cost_schedule_id"] == expected.schedule_id
+
 
 
 def test_ticket_place_paper_order_success(client: TestClient) -> None:
