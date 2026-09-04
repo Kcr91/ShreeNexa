@@ -3386,3 +3386,19 @@ a live branch indicator; run `git status --short --branch` for current state.
     - All 208 frontend tests passed (`vitest run`), `tsc --noEmit` clean, production bundle built cleanly (`vite build`).
     - Pre-commit hooks passed 100% (`pre-commit run --all-files`).
     - Fast-forward merged to `main` at `f88d50b`.
+
+### 2026-09-04 — Frontend Bundle Lazy Loading and Chunk Isolation (QA-14)
+
+- Resolved **QA-14** (Low): Verified and reinforced frontend bundle lazy loading, vendor chunk isolation, and size budget compliance:
+  - `frontend/vite.config.ts`:
+    - Configured Rollup `manualChunks` to cleanly split `lightweight-charts` into a dedicated `vendor-charts` chunk (354 kB), isolating it from the initial entry bundle and only loading it when `ChartWidget` is mounted.
+    - Set `chunkSizeWarningLimit: 500`.
+    - Shrank `ChartWidget` chunk size from 367 kB to 13.17 kB.
+  - `frontend/src/widgets/builtin/`:
+    - Verified all 22 built-in widgets are lazily loaded via `createLazyWidgetDefinition(manifest)` using dynamic imports (`load: () => import(...)`) and rendered inside `<Suspense fallback={<LoadingSkeleton count={3} />}>` in `WidgetFrame.tsx`.
+    - Expanded `frontend/src/widgets/builtin/index.test.ts` to assert that all built-in widgets maintain valid lazy-loading manifests and that heavy components (charts, options, blotter) are never imported synchronously.
+  - Testing & Quality Gates:
+    - All 62 frontend test suites passed (210 tests passed in Vitest, 0 failed).
+    - TypeScript clean (`tsc --noEmit`), Vite production build succeeded (`vite build`).
+    - Pre-commit hooks passed 100% (`pre-commit run --all-files`).
+    - Fast-forward merged to `main` at `6595ccf`.
