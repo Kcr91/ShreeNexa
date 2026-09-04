@@ -13,6 +13,7 @@ import {
   removeSymbolFromWatchlist,
   moveItem,
   updateWatchlist,
+  KNOWN_EQUITY_INSTRUMENTS,
 } from "../../watchlist/storage";
 
 export interface WatchlistSettings {
@@ -37,6 +38,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
   const [isConfiguringColumns, setIsConfiguringColumns] = useState(false);
   const [symbolSearchQuery, setSymbolSearchQuery] = useState("");
   const [searchSegment, setSearchSegment] = useState<"NSE_EQ" | "NSE_FNO">("NSE_EQ");
+  const [addSymbolError, setAddSymbolError] = useState<string | null>(null);
 
   // Reload watchlists from storage
   const refreshWatchlists = () => {
@@ -71,20 +73,54 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
     }
   };
 
-  const handleAddSymbol = (e: React.FormEvent) => {
+  const handleAddSymbol = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!symbolSearchQuery.trim() || !activeWatchlist) return;
 
     const sym = symbolSearchQuery.trim().toUpperCase();
+    setAddSymbolError(null);
+
+    let resolved: { securityId: string; tradingSymbol: string; ltp?: number } | null =
+      KNOWN_EQUITY_INSTRUMENTS[sym] || null;
+
+    if (!resolved) {
+      try {
+        const res = await fetch(
+          `/api/v1/instruments/search?query=${encodeURIComponent(sym)}&segment=${searchSegment}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const match = data.find((d: any) => d.symbol === sym) || data[0];
+            resolved = {
+              securityId: String(match.security_id || match.securityId),
+              tradingSymbol:
+                match.trading_symbol ||
+                match.tradingSymbol ||
+                `${sym}-${searchSegment === "NSE_EQ" ? "EQ" : "FUT"}`,
+              ltp: match.ltp,
+            };
+          }
+        }
+      } catch {
+        // Offline fallback
+      }
+    }
+
+    if (!resolved) {
+      setAddSymbolError(`Unknown instrument '${sym}'. Please enter a recognized listed symbol.`);
+      return;
+    }
+
     addSymbolToWatchlist(activeWatchlist.id, {
       symbol: sym,
       segment: searchSegment,
-      securityId: Math.floor(1000 + Math.random() * 90000).toString(),
-      tradingSymbol: `${sym}-${searchSegment === "NSE_EQ" ? "EQ" : "FUT"}`,
-      ltp: Math.floor(100 + Math.random() * 3000),
-      changePct: Number((Math.random() * 4 - 2).toFixed(2)),
-      changeAbs: Number((Math.random() * 20 - 10).toFixed(2)),
-      volume: Math.floor(100000 + Math.random() * 5000000),
+      securityId: resolved.securityId,
+      tradingSymbol: resolved.tradingSymbol,
+      ltp: resolved.ltp ?? 0,
+      changePct: 0,
+      changeAbs: 0,
+      volume: 0,
     });
 
     refreshWatchlists();
@@ -347,6 +383,39 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
           )}
         </div>
       </div>
+
+      {/* 3.1 Error message if symbol unresolved */}
+      {addSymbolError && (
+        <div
+          role="alert"
+          style={{
+            padding: "var(--spacing-1) var(--spacing-2)",
+            backgroundColor: "rgba(239, 68, 68, 0.15)",
+            color: "var(--color-down, #ef4444)",
+            fontSize: "var(--font-size-xs)",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>{addSymbolError}</span>
+          <button
+            type="button"
+            onClick={() => setAddSymbolError(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              padding: "0 4px",
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* 4. Column Configuration Panel */}
       {isConfiguringColumns && (

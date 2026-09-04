@@ -59,6 +59,18 @@ describe("WatchlistWidget Component", () => {
     expect(screen.getByText("COIN")).toBeInTheDocument();
   });
 
+  it("shows error alert and prevents adding unknown instrument", async () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    const symInput = screen.getByPlaceholderText(/Add symbol/i);
+    fireEvent.change(symInput, { target: { value: "UNKNOWNXYZ" } });
+    const addBtn = screen.getByText("Add");
+    fireEvent.click(addBtn);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Unknown instrument 'UNKNOWNXYZ'");
+  });
+
   it("toggles column visibility in column configuration panel", () => {
     render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
 

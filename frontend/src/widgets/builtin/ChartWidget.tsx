@@ -15,14 +15,19 @@ function generateMockBars(symbol: string, _timeframe: string): BarData[] {
     "14:00:00", "14:30:00", "15:00:00", "15:15:00", "15:30:00",
   ];
 
+  let step = 0;
   for (const date of dates) {
     for (const time of times) {
+      step += 1;
       const open = currentPrice;
-      const change = (Math.random() - 0.48) * 12;
+      // Deterministic pseudo-historical oscillation without Math.random
+      const change = Number((Math.sin(step * 0.45) * 6.5 + Math.cos(step * 0.15) * 3.2).toFixed(2));
       const close = Number((open + change).toFixed(2));
-      const high = Number((Math.max(open, close) + Math.random() * 6).toFixed(2));
-      const low = Number((Math.min(open, close) - Math.random() * 6).toFixed(2));
-      const volume = Math.floor(1000 + Math.random() * 5000);
+      const highOffset = Number((Math.abs(Math.sin(step * 0.8)) * 4.0 + 1.0).toFixed(2));
+      const lowOffset = Number((Math.abs(Math.cos(step * 0.8)) * 4.0 + 1.0).toFixed(2));
+      const high = Number((Math.max(open, close) + highOffset).toFixed(2));
+      const low = Number((Math.min(open, close) - lowOffset).toFixed(2));
+      const volume = 25000 + Math.floor(Math.abs(Math.sin(step * 0.5)) * 40000);
 
       bars.push({
         time: Math.floor(new Date(`${date}T${time}Z`).getTime() / 1000),
@@ -122,6 +127,19 @@ export const ChartWidget: React.FC<WidgetComponentProps<ChartWidgetSettings>> = 
               </button>
             ))}
           </div>
+
+          <span
+            style={{
+              padding: "1px 6px",
+              borderRadius: "var(--radius-sm)",
+              backgroundColor: "var(--bg-elevated)",
+              color: "var(--text-muted)",
+              fontSize: "0.625rem",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            Sample Historical Data
+          </span>
         </div>
 
         {/* Indicator Toggles */}

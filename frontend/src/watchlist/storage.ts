@@ -2,6 +2,34 @@ import { Watchlist, WatchlistItem, WatchlistColumn } from "./types";
 
 const WATCHLISTS_STORAGE_KEY = "shreenexa_watchlists_v1";
 
+export const KNOWN_EQUITY_INSTRUMENTS: Record<
+  string,
+  { securityId: string; tradingSymbol: string; ltp: number }
+> = {
+  RELIANCE: { securityId: "2885", tradingSymbol: "RELIANCE-EQ", ltp: 2980.5 },
+  TCS: { securityId: "11536", tradingSymbol: "TCS-EQ", ltp: 4210.0 },
+  HDFCBANK: { securityId: "1333", tradingSymbol: "HDFCBANK-EQ", ltp: 1640.2 },
+  INFY: { securityId: "1594", tradingSymbol: "INFY-EQ", ltp: 1890.1 },
+  ICICIBANK: { securityId: "4963", tradingSymbol: "ICICIBANK-EQ", ltp: 1215.3 },
+  SBIN: { securityId: "3045", tradingSymbol: "SBIN-EQ", ltp: 815.4 },
+  BHARTIARTL: { securityId: "10604", tradingSymbol: "BHARTIARTL-EQ", ltp: 1620.0 },
+  ITC: { securityId: "1660", tradingSymbol: "ITC-EQ", ltp: 495.0 },
+  KOTAKBANK: { securityId: "1922", tradingSymbol: "KOTAKBANK-EQ", ltp: 1810.0 },
+  LT: { securityId: "11483", tradingSymbol: "LT-EQ", ltp: 3620.0 },
+  AXISBANK: { securityId: "5900", tradingSymbol: "AXISBANK-EQ", ltp: 1180.0 },
+  WIPRO: { securityId: "3787", tradingSymbol: "WIPRO-EQ", ltp: 540.0 },
+  HCLTECH: { securityId: "7229", tradingSymbol: "HCLTECH-EQ", ltp: 1780.0 },
+  BAJFINANCE: { securityId: "317", tradingSymbol: "BAJFINANCE-EQ", ltp: 7100.0 },
+  MARUTI: { securityId: "10999", tradingSymbol: "MARUTI-EQ", ltp: 12400.0 },
+  TATAMOTORS: { securityId: "3456", tradingSymbol: "TATAMOTORS-EQ", ltp: 980.0 },
+  TATASTEEL: { securityId: "3499", tradingSymbol: "TATASTEEL-EQ", ltp: 154.8 },
+  SUNPHARMA: { securityId: "3351", tradingSymbol: "SUNPHARMA-EQ", ltp: 1850.0 },
+  NIFTY: { securityId: "13", tradingSymbol: "NIFTY 50", ltp: 24500.0 },
+  BANKNIFTY: { securityId: "25", tradingSymbol: "NIFTY BANK", ltp: 52100.0 },
+  FINNIFTY: { securityId: "27", tradingSymbol: "NIFTY FIN SERVICE", ltp: 23800.0 },
+  COIN: { securityId: "9999", tradingSymbol: "COIN-EQ", ltp: 150.0 },
+};
+
 export const DEFAULT_WATCHLISTS: Watchlist[] = [
   {
     id: "wl-nifty50",
@@ -188,7 +216,21 @@ export function loadWatchlists(): Watchlist[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      // Purge/sanitize: re-resolve missing security IDs against known instruments
+      const sanitized = parsed.map((wl: Watchlist) => ({
+        ...wl,
+        items: (wl.items || []).map((it) => {
+          if ((!it.securityId || it.securityId.trim() === "") && KNOWN_EQUITY_INSTRUMENTS[it.symbol]) {
+            return {
+              ...it,
+              securityId: KNOWN_EQUITY_INSTRUMENTS[it.symbol].securityId,
+              tradingSymbol: it.tradingSymbol || KNOWN_EQUITY_INSTRUMENTS[it.symbol].tradingSymbol,
+            };
+          }
+          return it;
+        }),
+      }));
+      return sanitized;
     }
   } catch {
     // Fall back gracefully on corrupt storage
@@ -211,7 +253,7 @@ export function createWatchlist(
 ): Watchlist {
   const watchlists = loadWatchlists();
   const newWatchlist: Watchlist = {
-    id: `wl-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+    id: `wl-${Date.now().toString(36)}-${(watchlists.length + 1).toString(36)}`,
     name: name.trim() || "Untitled Watchlist",
     description,
     isDefault: false,
