@@ -3261,4 +3261,22 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `git diff --check` clean.
   - Fast-forward merged to `main` at `8867d1b`.
 
+### 2026-09-04 — Formalize correlation-ID charset ADR and DhanBroker read-only preflight exemption (QA-12, QA-13)
+
+- Resolved **QA-12** (Low): Formalized correlation-ID charset and length invariant:
+  - Created `docs/decisions/0007-correlation-id-charset-and-limits.md` (ADR-0007).
+  - Explicitly resolved the Dhan documentation discrepancy (`dhan-api-docs.md:1328` allowing spaces vs `dhan-api-docs.md:3730` disallowing spaces) by formally adopting the stricter `^[a-zA-Z0-9_-]+$` set capped at 25 characters to prevent URL/path encoding errors, log delimiter corruption, and downstream gateway rejections.
+- Resolved **QA-13** (Low): Formalized read-only broker methods exemption from placement safety preflight:
+  - `docs/qa/acceptance/F12.1.md`:
+    - Updated acceptance contract §6 to explicitly document that `get_order_by_id`, `get_order_by_correlation_id`, and `reconcile_pending_order` are read-only broker queries authorized across all execution modes (including default Paper mode) without requiring live order placement gates.
+  - `backend/tests/unit/test_dhan_broker.py`:
+    - Added AST/reflection architecture test `test_dhan_broker_read_only_methods_are_sole_unguarded_endpoints` asserting that `get_order_by_id`, `get_order_by_correlation_id`, and `reconcile_pending_order` are the **only** public methods accessing `self.client` without calling `_verify_preflight_safety()`, and that all mutating methods (`place_order`, `modify_order`, `cancel_order`, `place_sliced_order`) strictly enforce `_verify_preflight_safety()`.
+- Quality gates verified:
+  - 6/6 tests passing in `test_dhan_broker.py`.
+  - `ruff check .` clean (0 errors).
+  - `mypy backend --strict` clean across 333 source files.
+  - `git diff --check` clean.
+  - Fast-forward merged to `main` at `07a6482`.
+
+
 
