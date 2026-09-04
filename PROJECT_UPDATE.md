@@ -3303,3 +3303,30 @@ a live branch indicator; run `git status --short --branch` for current state.
     - Updated `test_dhan_architecture_no_bypass.py` allowing `ip.py` outbound IP discovery.
     - All 626 tests passed in pytest (0 failed), `ruff check .` clean, `mypy backend --strict` clean, frontend vitest 197 tests passed, production build succeeded.
     - Fast-forward merged to `main` at `c88cfc2`.
+
+### 2026-09-04 — API Session Authentication and CSRF Protection Enforcement (QA-02)
+
+- Resolved **QA-02** (High): Enforced session authentication and double-submit CSRF protection on API endpoints:
+  - `backend/app/api/deps.py`:
+    - Created `get_current_session` extracting and validating active trader sessions from `shreenexa_session` cookie or `Authorization: Bearer <token>` header, raising 401 with `WWW-Authenticate: Bearer` on missing or expired sessions.
+    - Created `require_session` dependency for all protected read-only and mutating endpoints.
+    - Created `require_csrf` dependency enforcing double-submit `x-csrf-token` header validation against `session.csrf_token` using constant-time `secrets.compare_digest` on mutating HTTP methods (`POST`, `PUT`, `DELETE`, `PATCH`), while exempting programmatic Bearer token callers outside browser cookies.
+  - `backend/app/main.py`:
+    - Grouped router inclusions into:
+      1. Self-authenticating/public routes: `auth_router`, `ws_router` (WebSocket auth via session cookie/token with 4401 closure code), and `/healthz`.
+      2. Read-only protected routers (`instruments`, `universe`, `feed`, `indicators`, `indicators_alias`, `heatmap`, `depth`, `options`, `options_analytics`, `margin`, `monitoring`, `/api/v1/dhan/token-health`) enforcing `_AUTH_DEPS = [Depends(require_session)]`.
+      3. Mutating/trading protected routers (`orders`, `paper`, `screeners`, `backtests`, `watchlists`, `calibration`, `strategy_builder`, `strategy_ir`, `investing`, `ai`, `feature_builder`) enforcing `_STATE_MUTATING_DEPS = [Depends(require_session), Depends(require_csrf)]`.
+  - `backend/tests/conftest.py`:
+    - Unified root test configuration combining infrastructure integration fixtures (`postgres_or_skip`, `redis_or_skip`) with autouse `default_auth_dependency_overrides` mock fixture so existing test suites remain isolated and hermetic without code churn.
+    - Registered custom `@pytest.mark.no_auth_override` marker in `pyproject.toml`.
+  - `backend/tests/unit/test_api_auth_enforcement.py`:
+    - Architecture AST route traversal test asserting 100% of non-allowlisted routes enforce `require_session`.
+    - Architecture test asserting all mutating/trading routes enforce `require_csrf`.
+    - Integration tests asserting 401 on unauthenticated calls, 403 on missing/invalid CSRF cookie calls, 200 on authenticated calls with valid CSRF, and CSRF exemption for programmatic Bearer token calls.
+- Quality gates verified:
+  - 632 backend tests passed (30 skipped, 0 failed).
+  - 197 frontend vitest tests passed across 60 test suites (0 failed).
+  - `ruff check .` clean (0 errors).
+  - `mypy backend --strict` clean across 335 source files (0 errors).
+  - Frontend production build succeeded (`npm run build`).
+  - Fast-forward merged to `main` at `1c063c7`.
