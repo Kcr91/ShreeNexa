@@ -3187,3 +3187,23 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `ruff check .` clean.
   - `mypy backend --strict` clean across 332 source files.
   - Fast-forward merged to `main` at `ca28450`.
+
+### 2026-09-04 — Enforce Dhan credential precedence (OS env > DPAPI > .env file) and security warnings (QA-01)
+
+- Resolved **QA-01** (Critical remainder): Fixed credential precedence inversion where plaintext `.env` previously shadowed encrypted DPAPI storage:
+  - `backend/app/config.py`:
+    - Updated `Settings` to distinguish values loaded directly from the OS environment (`dhan_os_client_id`, `dhan_os_access_token`) from those parsed from a plaintext dotenv file (`dhan_dotenv_client_id`, `dhan_dotenv_access_token`).
+    - Added `dotenv_path_loaded` tracking.
+  - `backend/app/dhan/credentials.py`:
+    - Reordered resolution logic to strictly enforce: **OS environment variables > DPAPI encrypted storage > plaintext .env file**.
+    - If OS environment variables are present, they win immediately (`source="environment"`).
+    - If DPAPI credentials exist, they win over any plaintext `.env` file (`source="dpapi"`), logging an informational notice that the plaintext file was safely ignored.
+    - If credentials must fall back to plaintext `.env`, sets `source="dotenv"` and emits a visible security warning advising the operator to migrate tokens into Windows DPAPI storage via `python -m app.dhan.token set`.
+  - `backend/tests/unit/test_dpapi.py`:
+    - Added `test_dpapi_credentials_override_dotenv_file` regression test verifying that an encrypted DPAPI store takes precedence over competing credentials in `.env`.
+    - Added `test_dotenv_file_used_as_fallback_when_dpapi_absent` verifying fallback behavior and `source="dotenv"`.
+- Quality gates verified:
+  - 49 tests passing across `test_dpapi.py`, `test_dhan_token_cli.py`, `test_dhan_token_health.py`, `test_dhan_client.py`.
+  - `ruff check .` clean.
+  - `mypy backend --strict` clean across 332 source files.
+  - Fast-forward merged to `main` at `ff46e78`.
