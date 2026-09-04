@@ -3139,5 +3139,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `ruff check` clean.
   - Fast-forward merged to `main` at `47c1a5d`.
 
+### 2026-09-04 — Connect F12.6 Audit Ledger to production paths, reconcilers, and order gateway (QA-16)
 
-
+- Resolved **QA-16** (Critical): Connected `AuditLedger` to production execution boundaries, added disk-backed fsync persistence, and verified end-to-end lifecycle reconstruction across restarts:
+  - `backend/app/engine/audit.py`:
+    - Added durable JSONL disk logging (`log_path: Path | str | None`) with `os.fsync` on every recorded audit event.
+    - Implemented automatic ledger hydration on startup (`_load_from_disk()`) verifying existing events and restoring the previous cryptographic SHA-256 hash chain.
+    - Added process-scoped singleton accessors `get_audit_ledger()` and `reset_audit_ledger()`.
+    - Made `correlation_id` and `payload` gracefully handle system events (`SYS-...`) for reconciliation and operator actions.
+  - `backend/app/engine/gateway.py`:
+    - Implemented `AuditedRiskFilteredBroker` extending `RiskFilteredBroker` to record all pre-trade lifecycle events: `RISK_FILTER_EVALUATED`, `RISK_DECISION` (APPROVED or REJECTED), `ORDER_SUBMITTED`, and `ORDER_RESPONSE`.
+    - Configured `get_risk_filtered_broker()` factory to return `AuditedRiskFilteredBroker`.
+  - `backend/app/api/orders.py`:
+    - Wired `ORDER_SUBMITTED` and `ORDER_RESPONSE` recording into paper trading execution path.
+  - `backend/app/engine/order_reconciler.py`:
+    - Wired `AuditLedger` into `OrderReconciler` recording `ORDER_UPDATE`, `RECONCILIATION_EVENT` (on sequence gaps), and `RECONCILIATION_EVENT` (on broker truth convergence).
+  - `backend/app/engine/continuous_recon.py`:
+    - Wired `AuditLedger` into `ContinuousReconciler` recording `RECONCILIATION_EVENT` (on position/order discrepancies and freeze actions) and `OPERATOR_OVERRIDE` (on manual operator resolution/unfreeze).
+  - `backend/tests/unit/test_audit_integration.py`:
+    - Authored integration tests verifying paper ticket audit chain, live gateway lifecycle recording (`RISK_FILTER_EVALUATED` -> `RISK_DECISION` -> `ORDER_SUBMITTED` -> `ORDER_RESPONSE`), cryptographic hash chain verification, secret redaction, and restart durability from disk log.
+- Quality gates verified:
+  - Complete backend test suite clean: 605 passed, 30 skipped.
+  - Complete frontend test suite clean: 197 passed across 60 test files.
+  - `ruff check .` clean with 0 issues.
+  - `mypy backend --strict` clean across 332 source files.
+  - Fast-forward merged to `main` at `9dd3419`.
