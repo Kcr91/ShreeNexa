@@ -3278,5 +3278,28 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `git diff --check` clean.
   - Fast-forward merged to `main` at `07a6482`.
 
+### 2026-09-04 — Multi-Window Rate Limiting, Modification Cap, and Budget Monitoring (QA-10)
 
-
+- Resolved **QA-10** (High): Enforced multi-window rate limiting (`per_minute`, `per_hour`, `per_day`), per-order 25-modification cap, per-underlying option chain keying, and daily budget monitoring:
+  - `config/dhan_limits.yaml` & `backend/app/dhan/limits_config.py`:
+    - Added `per_minute: 250`, `per_hour: 1000`, and `per_day: 7000` to `orders` category.
+    - Added `per_day: 7000` to `historical_daily` and `historical_intraday` categories.
+    - Extended `RateLimitSpec` with `per_minute`, `per_hour`, and `per_day` optional integer limits.
+    - Updated `get_rate_limit()` to map `option_chain:*` prefix keys to the base `option_chain` spec.
+  - `backend/app/dhan/limiter.py`:
+    - Updated `InMemoryTokenBucket` with sliding timestamp deques (`_history[category]`) enforcing minute (60s), hour (3600s), and day (86400s) windows with exact deficit wait calculations alongside the per-second token bucket.
+    - Extended `REDIS_TOKEN_BUCKET_LUA` and `RedisTokenBucket` to check and increment fixed-window Redis counters (`:min:`, `:hr:`, `:day:`) with automatic TTLs.
+    - Implemented `get_budget_usage(category)` exposing current requests, daily limit, remaining budget, percentage utilized, and an alert flag when usage reaches or exceeds 80%.
+  - `backend/app/dhan/client.py`:
+    - Added `_order_modification_counts: dict[str, int]` tracking modification attempts per order.
+    - In `modify_order()`, pre-checks count and rejects with `DhanRateLimitError` if the SEBI/Dhan 25-modification cap is reached before dispatching.
+    - In `_request()`, dynamically keys option chain requests as `option_chain:{underlying}:{expiry}` to allow concurrent rate limiting per unique underlying/expiry rather than serializing all chains globally.
+  - `backend/app/api/monitoring.py`:
+    - Added `GET /api/v1/monitoring/limits` endpoint exposing rate limit budget usage, remaining quotas, and 80% threshold warnings across all categories.
+  - Testing & Quality Gates:
+    - Added unit tests in `test_dhan_limiter.py` verifying minute window, day window, budget usage, and 80% threshold alerts for both in-memory and fake Redis buckets.
+    - Added unit tests in `test_dhan_client.py` for 25-modification cap rejection and option chain per-underlying bucket keying.
+    - Added integration test in `test_monitoring_system.py` verifying `/api/v1/monitoring/limits`.
+    - Updated `test_dhan_architecture_no_bypass.py` allowing `ip.py` outbound IP discovery.
+    - All 626 tests passed in pytest (0 failed), `ruff check .` clean, `mypy backend --strict` clean, frontend vitest 197 tests passed, production build succeeded.
+    - Fast-forward merged to `main` at `c88cfc2`.
