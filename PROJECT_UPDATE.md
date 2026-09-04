@@ -3207,3 +3207,31 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `ruff check .` clean.
   - `mypy backend --strict` clean across 332 source files.
   - Fast-forward merged to `main` at `ff46e78`.
+
+### 2026-09-04 — Eliminate cost model fork and delegate margin to DhanMarginAdapter (QA-21)
+
+- Resolved **QA-21** (Medium): Unified order ticket statutory fee calculation with F3.3 cost engine and delegated margin evaluation to F8.6 `DhanMarginAdapter`:
+  - `backend/app/api/orders.py`:
+    - Eliminated embedded hardcoded statutory tax/fee literals (`0.001`, `0.00025`, `0.0005`, `0.0000297`, `0.000001`, `0.00015`, `0.18`) in `estimate_order_charges`.
+    - Integrated with `cost_calculator.calculate_cost(...)` from `app.engine.costs`, supporting effective date resolution (`config/costs.yaml`) across Equity Delivery, Equity Intraday, Futures, and Options.
+    - Eliminated the fabricated 20% margin heuristic (`turnover * 0.20 + total_charges` / "# Approx 5x MIS leverage").
+    - Delegated margin evaluation to `dhan_margin_adapter.calculate_order_margin(...)`.
+    - Updated `OrderChargesEstimateResponse` to explicitly return `required_margin: float | None`, `is_margin_available: bool`, `margin_unavailable_reason: str | None`, and `cost_schedule_id: str | None`. Unavailable margin is never reported as zero or guessed with leverage.
+    - Updated `OrderChargesEstimateRequest` to support `security_id`, `trigger_price`, `instrument_type`, `trade_date`, and `broker_response_override`.
+  - `backend/app/dhan/margin_adapter.py`:
+    - Added `OrderMarginResult` model and `calculate_order_margin(...)` method to `DhanMarginAdapter`.
+    - Supports mock/recorded `broker_response_override` parsing as well as live broker `calculate_multi_margin` delegation via `DhanRestClient`.
+    - If broker is unavailable, offline, or missing security ID, explicitly returns `is_available=False` with descriptive reason.
+  - `backend/tests/unit/test_options_margin_adapter.py`:
+    - Added unit tests verifying `calculate_order_margin` with override, missing security ID, and malformed response safety.
+  - `backend/tests/unit/test_order_ticket_api.py`:
+    - Added `test_estimate_order_charges_cost_model_parity` asserting exact line-item parity (turnover, brokerage, stt_ctt, exchange charges, sebi fee, stamp duty, gst, total charges, and schedule id) between `/api/v1/orders/ticket/estimate` and `cost_calculator.calculate_cost` across 7 shared market scenarios.
+    - Added tests for explicit unavailable margin safety and recorded override passthrough.
+- Quality gates verified:
+  - All 21 tests in `test_order_ticket_api.py` and `test_options_margin_adapter.py` passing.
+  - Full backend test suite passing (613 passed, 30 skipped).
+  - `ruff check .` clean (0 errors).
+  - `mypy backend --strict` clean across 332 source files.
+  - Full frontend suite: typecheck clean, 197 tests passing (60 test files), production build clean (11.99s).
+  - Fast-forward merged to `main` at `a5c6873`.
+
