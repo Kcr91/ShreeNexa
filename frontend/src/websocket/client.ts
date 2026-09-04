@@ -24,7 +24,11 @@ export class NexaWebSocketClient {
   private subscribedChannels: Set<FeedChannel> = new Set(["quotes", "positions", "orders"]);
 
   constructor(options: WebSocketClientOptions = {}) {
-    this.url = options.url || "ws://127.0.0.1:8000/api/v1/feed/ws";
+    const defaultWsUrl =
+      typeof window !== "undefined" && window.location && window.location.host
+        ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/v1/feed/ws`
+        : "ws://127.0.0.1:8000/api/v1/feed/ws";
+    this.url = options.url || defaultWsUrl;
     this.maxReconnectAttempts = options.reconnectAttempts ?? 5;
     this.reconnectDelayMs = options.reconnectDelayMs ?? 1000;
     this.mockFeedEnabled = options.mockFeedEnabled ?? true;

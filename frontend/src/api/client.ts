@@ -18,11 +18,21 @@ export class ApiError extends Error {
   }
 }
 
+export type TokenStatus =
+  | "valid"
+  | "expiring_soon"
+  | "expired"
+  | "unknown_expiry"
+  | "missing"
+  | "revoked";
+
 export interface TokenHealthResponse {
-  status: "active" | "expiring_soon" | "expired" | "not_configured";
-  expires_at?: string;
-  days_remaining?: number;
-  message?: string;
+  status: TokenStatus;
+  is_valid: boolean;
+  expires_at?: string | null;
+  expires_in_seconds?: number | null;
+  client_id_masked: string;
+  source: string;
 }
 
 export interface ProcessHealthResponse {
@@ -34,8 +44,12 @@ export interface ProcessHealthResponse {
 export class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = "http://127.0.0.1:8000") {
-    this.baseUrl = baseUrl.replace(/\/$/, "");
+  constructor(baseUrl?: string) {
+    const envUrl =
+      typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL
+        ? (import.meta.env.VITE_API_BASE_URL as string)
+        : "";
+    this.baseUrl = (baseUrl ?? envUrl).replace(/\/$/, "");
   }
 
   public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -48,6 +62,7 @@ export class ApiClient {
 
     try {
       const response = await fetch(url, {
+        credentials: "include",
         ...options,
         headers,
       });
