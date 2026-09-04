@@ -3402,3 +3402,50 @@ a live branch indicator; run `git status --short --branch` for current state.
     - TypeScript clean (`tsc --noEmit`), Vite production build succeeded (`vite build`).
     - Pre-commit hooks passed 100% (`pre-commit run --all-files`).
     - Fast-forward merged to `main` at `6595ccf`.
+
+### 2026-09-04 — Order Slicing Wire-Up, ADR-0007 25-Character Cap, and Strategy-Linked Correlation IDs (QA-11)
+
+- Resolved **QA-11** (Medium): Eliminated dead code around exchange freeze-quantity slicing, resolved acceptance contract divergence, and enforced ADR-0007 correlation ID limits and strategy-intent embedding across the broker and order ticket:
+  - `backend/app/dhan/orders.py`:
+    - Updated `generate_correlation_id(prefix="NX", strategy_id=None)`:
+      - Strictly enforces ADR-0007 invariant (`^[a-zA-Z0-9_-]+$`, max 25 characters).
+      - Deterministically links correlation IDs to trade intent / `strategy_id` when provided (e.g. `NX-<strat>-<ts>-<suffix>`).
+      - Verified character budget guarantees generated IDs never exceed 25 characters under any strategy length or prefix.
+    - Updated `DhanOrderRequest.validate_correlation_id` validator to reject values exceeding 25 characters (aligning Pydantic validation with ADR-0007).
+    - Refactored `calculate_order_slices`: returns `[total_quantity]` unsliced when `freeze_limit is None or <= 0` (preventing erroneous slicing of equities).
+    - Added `get_freeze_limit(symbol, exchange_segment)` helper: returns `None` for equities (`NSE_EQ`, `BSE_EQ`) and matches index derivative caps (NIFTY 1800, BANKNIFTY 900, FINNIFTY 1800, MIDCPNIFTY 4200, default 1800) for derivatives.
+    - Implemented `DhanSliceOrderResponse` model conforming to F12.1 deliverable list (§3 & §4) with list iteration and index access.
+  - `backend/app/engine/broker.py` (`DhanBroker`):
+    - Added `place_order_with_slicing(request, freeze_limit, lot_size, strategy_id)` partitioning large orders exceeding freeze limits into sequential slices with unique sequential correlation IDs (`*-S1`, `*-S2`, ...) capped at 25 chars.
+    - In `place_sliced_order`, invoked `calculate_order_slices(request.quantity)` to compute, validate, and log planned slice distribution before forwarding to the Dhan endpoint.
+  - `backend/app/engine/gateway.py` (`AuditedRiskFilteredBroker`):
+    - Implemented `place_order_with_slicing` routing sliced orders through pre-trade risk evaluation and recording `RISK_FILTER_EVALUATED`, `RISK_DECISION`, `ORDER_SUBMITTED`, and `ORDER_RESPONSE` audit events for all slices.
+  - `backend/app/api/orders.py`:
+    - Added `strategy_id: str | None = None` to `TicketPlaceOrderRequest`.
+    - In `place_ticket_order`:
+      - Uses `generate_correlation_id(prefix="TKT", strategy_id=req.strategy_id)` when no correlation ID is provided.
+      - Resolves `get_freeze_limit(req.symbol, req.exchange_segment)`; when exceeded, routes LIVE orders to `risk_filtered.place_order_with_slicing` returning slice counts and primary order ID.
+      - In Paper mode, logs planned slice distribution via `calculate_order_slices`.
+  - `backend/app/dhan/__init__.py`:
+    - Exported `DhanSliceOrderResponse`, `get_freeze_limit`, `calculate_order_slices`, and `generate_correlation_id`.
+  - Testing & Quality Gates:
+    - Expanded `backend/tests/unit/test_dhan_orders.py` (15 tests) testing:
+      - `generate_correlation_id` with prefix, short and long `strategy_id`, asserting length <= 25 and character set validity.
+      - `validate_correlation_id` rejecting IDs > 25 characters.
+      - `get_freeze_limit` returning `None` for equities and matching index caps for F&O.
+      - `calculate_order_slices` leaving equity orders unsliced when `freeze_limit=None`.
+      - `DhanSliceOrderResponse` model deserialization and iteration.
+    - Expanded `backend/tests/unit/test_dhan_broker.py` (9 tests):
+      - Verified `place_order_with_slicing` partitions orders into sequential slices with unique sequential correlation IDs <= 25 characters.
+      - Verified `LiveTradingDisabledError` is raised when disabled.
+      - Verified AST architecture invariant: read-only query methods remain the sole unguarded endpoints.
+    - Expanded `backend/tests/unit/test_order_ticket_api.py` (13 tests):
+      - Verified `strategy_id` propagation into generated ticket correlation IDs.
+      - Verified sliced live order placement across multiple legs.
+    - All 644 backend tests passed (`pytest backend/tests`), 0 failures.
+    - All 75 build tests passed (`pytest build/tests`), 0 failures.
+    - All 210 frontend tests passed (`vitest run`), 0 failures.
+    - TypeScript clean (`tsc --noEmit`), strict static typing clean across 335 source files (`mypy backend --strict`).
+    - Ruff linting and formatting clean (`ruff check .`).
+    - Pre-commit hooks passed 100% (`pre-commit run --all-files`).
+    - Fast-forward merged to `main` at `1fcd0db`.
