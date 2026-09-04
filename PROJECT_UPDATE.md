@@ -3119,4 +3119,25 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Backend unit tests and `ruff check` clean.
   - Fast-forward merged to `main` at `8d9479d`.
 
+### 2026-09-04 — Risk-filtered broker gateway and AST architecture validation (QA-17)
+
+- Resolved **QA-17** (Critical): Enforced the F12.4 architectural invariant that no execution path reaches live `DhanBroker` without passing pre-trade risk checks:
+  - Created `backend/app/engine/gateway.py`:
+    - Provides `get_risk_filtered_broker()`, which acts as the exclusive factory for live broker execution.
+    - Always shields `DhanBroker` inside `RiskFilteredBroker`, with risk caps, order velocity limits, price bands, and kill switch unconditionally active.
+  - Updated `backend/app/api/orders.py`:
+    - Removed direct `DhanBroker` import and instantiation.
+    - Routes live order submissions strictly through `get_risk_filtered_broker()`.
+  - Authored AST architecture test suite `backend/tests/unit/test_risk_architecture.py` (3 tests passing):
+    - `test_ast_prohibits_direct_dhan_broker_instantiation`: Traverses the Python AST across all modules of `backend/app/**` and asserts that no module outside the authorized risk gateway (`app/engine/gateway.py` and `app/engine/broker.py`) constructs `DhanBroker`.
+    - `test_ast_prohibits_raw_place_order_outside_risk_layer`: Traverses the AST and asserts that raw `.place_order` and `.place_sliced_order` calls cannot be made outside the risk layer.
+    - `test_gateway_enforces_risk_filters_and_killswitch`: Verifies end-to-end rejection of orders exceeding notional value caps (`max_order_value`) and instant blocking when the emergency kill switch is triggered.
+  - Preserved protected paths without unauthorized edits (`backend/app/engine/risk.py`, `backend/app/engine/broker.py`).
+- Quality gates verified:
+  - 27 tests passing across risk architecture, risk engine, order ticket API, continuous recon, and CORS suites.
+  - Strict mypy clean across all modified files.
+  - `ruff check` clean.
+  - Fast-forward merged to `main` at `47c1a5d`.
+
+
 
