@@ -3330,3 +3330,32 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `mypy backend --strict` clean across 335 source files (0 errors).
   - Frontend production build succeeded (`npm run build`).
   - Fast-forward merged to `main` at `1c063c7`.
+
+### 2026-09-04 — Frontend 2FA Login View, Session Hydration, and AuthGuard (QA-03)
+
+- Resolved **QA-03** (Critical): Replaced hardcoded always-authenticated dev stub with complete 2FA Login Flow, unauthenticated defaults, session hydration, and AuthGuard:
+  - `frontend/src/api/client.ts`:
+    - Added CSRF double-submit token tracking (`setCsrfToken`, `getCsrfToken`), automatically attaching `x-csrf-token` headers on mutating HTTP requests (`POST`, `PUT`, `DELETE`, `PATCH`).
+    - Added typed methods for `login`, `verifyTotp`, `loginWithRecovery`, `getCurrentUser`, and `logout`.
+  - `frontend/src/auth/AuthContext.tsx`:
+    - Updated default state to `isAuthenticated: false` (`unauthenticatedUser`).
+    - Implemented session hydration on mount via `GET /api/v1/auth/me`, cleanly setting user session and `csrf_token` on 200 responses, or resetting to unauthenticated on 401.
+    - Implemented `initiateLogin`, `completeTotp`, `completeRecovery`, and `logout` actions.
+    - Supported optional `initialUser` and `autoCheck` props for hermetic testing.
+  - `frontend/src/auth/LoginView.tsx`:
+    - Implemented institutional dark terminal themed login interface with branding, error alert banner, and three authentication modes:
+      1. Master Trader Password step.
+      2. 6-Digit TOTP Challenge verification step (monospace letter-spaced input with autofocus).
+      3. Single-Use Emergency Recovery Code login fallback.
+  - `frontend/src/auth/AuthGuard.tsx` & `frontend/src/App.tsx`:
+    - Created `AuthGuard` displaying a terminal session loading indicator while verifying session, rendering `LoginView` when unauthenticated, and mounting the full terminal `Shell` only when authenticated.
+  - `frontend/src/components/Header.tsx`:
+    - Added "Sign Out" button next to User Pill terminating session and returning cleanly to `LoginView`.
+  - Testing & Quality Gates:
+    - Added `frontend/src/auth/LoginView.test.tsx` (6 tests) verifying 2FA advancement, invalid password errors, TOTP verification, emergency recovery code mode, and step toggling.
+    - Added `frontend/src/auth/AuthContext.test.tsx` (4 tests) asserting `isAuthenticated: false` default, session hydration on mount, 401 unauthenticated fallback, and session logout revocation.
+    - Updated `frontend/src/App.test.tsx` to verify unauthenticated `LoginView` rendering by default and authenticated `Shell` layout.
+    - All 62 test suites passed (208 tests passed in Vitest, 0 failed).
+    - TypeScript clean (`tsc --noEmit`), production bundling clean (`vite build`).
+    - Fast-forward merged to `main` at `b37a0c3`.
+
