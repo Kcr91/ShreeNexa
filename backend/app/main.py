@@ -14,13 +14,14 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.ai import router as ai_router
 from app.api.auth import router as auth_router
 from app.api.backtests import router as backtests_router
 from app.api.calibration import router as calibration_router
+from app.api.deps import require_csrf, require_session
 from app.api.depth import router as depth_router
 from app.api.feature_builder import router as feature_builder_router
 from app.api.feed import router as feed_router
@@ -75,7 +76,6 @@ async def _heartbeat_task() -> None:
         engine.dispose()
 
 
-
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     task = asyncio.create_task(_heartbeat_task())
@@ -102,30 +102,39 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(instruments_router)
-app.include_router(universe_router)
-app.include_router(feed_router)
-app.include_router(ws_router)
-app.include_router(indicators_router)
-app.include_router(indicators_alias_router)
-app.include_router(screeners_router)
-app.include_router(backtests_router)
-app.include_router(watchlists_router)
-app.include_router(heatmap_router)
-app.include_router(depth_router)
-app.include_router(options_router)
-app.include_router(calibration_router)
-app.include_router(options_analytics_router)
-app.include_router(strategy_builder_router)
-app.include_router(strategy_ir_router)
-app.include_router(margin_router)
-app.include_router(orders_router)
-app.include_router(paper_router)
-app.include_router(investing_router)
-app.include_router(ai_router)
-app.include_router(feature_builder_router)
+
+_AUTH_DEPS = [Depends(require_session)]
+_STATE_MUTATING_DEPS = [Depends(require_session), Depends(require_csrf)]
+
+# 1. Self-authenticating or public routers
 app.include_router(auth_router)
-app.include_router(monitoring_router)
+app.include_router(ws_router)
+
+# 2. Read-only protected routers (require authenticated session)
+app.include_router(instruments_router, dependencies=_AUTH_DEPS)
+app.include_router(universe_router, dependencies=_AUTH_DEPS)
+app.include_router(feed_router, dependencies=_AUTH_DEPS)
+app.include_router(indicators_router, dependencies=_AUTH_DEPS)
+app.include_router(indicators_alias_router, dependencies=_AUTH_DEPS)
+app.include_router(heatmap_router, dependencies=_AUTH_DEPS)
+app.include_router(depth_router, dependencies=_AUTH_DEPS)
+app.include_router(options_router, dependencies=_AUTH_DEPS)
+app.include_router(options_analytics_router, dependencies=_AUTH_DEPS)
+app.include_router(margin_router, dependencies=_AUTH_DEPS)
+app.include_router(monitoring_router, dependencies=_AUTH_DEPS)
+
+# 3. Mutating / trading protected routers (require authenticated session + CSRF token)
+app.include_router(orders_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(paper_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(screeners_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(backtests_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(watchlists_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(calibration_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(strategy_builder_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(strategy_ir_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(investing_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(ai_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(feature_builder_router, dependencies=_STATE_MUTATING_DEPS)
 
 
 @app.get("/healthz")
@@ -155,7 +164,11 @@ def healthz() -> dict[str, object]:
     }
 
 
-@app.get("/api/v1/dhan/token-health", response_model=DhanTokenHealth)
+@app.get(
+    "/api/v1/dhan/token-health",
+    response_model=DhanTokenHealth,
+    dependencies=[Depends(require_session)],
+)
 def get_dhan_token_health() -> DhanTokenHealth:
     """Return non-secret Dhan token health and expiry metadata for dashboard banners."""
     creds = resolve_dhan_credentials()

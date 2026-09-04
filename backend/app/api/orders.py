@@ -8,9 +8,10 @@ from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.api.deps import require_csrf, require_session
 from app.dhan.exceptions import DhanTimeoutError
 from app.dhan.margin_adapter import dhan_margin_adapter
 from app.dhan.orders import (
@@ -44,7 +45,11 @@ from app.paper.models import (
 
 logger = logging.getLogger("shreenexa.api.orders")
 
-router = APIRouter(prefix="/api/v1/orders/ticket", tags=["Order Ticket"])
+router = APIRouter(
+    prefix="/api/v1/orders/ticket",
+    tags=["Order Ticket"],
+    dependencies=[Depends(require_session), Depends(require_csrf)],
+)
 
 # In-memory tracking of correlation IDs and orders with uncertain status to block blind retries
 _uncertain_orders: dict[str, str] = {}
@@ -200,7 +205,6 @@ def estimate_order_charges(req: OrderChargesEstimateRequest) -> OrderChargesEsti
     )
 
 
-
 @router.post("/place", response_model=TicketPlaceOrderResponse)
 def place_ticket_order(req: TicketPlaceOrderRequest) -> TicketPlaceOrderResponse:
     """Submit an order from order ticket with explicit mode validation and confirmation."""
@@ -274,9 +278,7 @@ def place_ticket_order(req: TicketPlaceOrderRequest) -> TicketPlaceOrderResponse
 
     # Paper mode execution delegated to PaperBroker
     side = (
-        PaperOrderSide.BUY
-        if req.transaction_type == TransactionType.BUY
-        else PaperOrderSide.SELL
+        PaperOrderSide.BUY if req.transaction_type == TransactionType.BUY else PaperOrderSide.SELL
     )
     if req.order_type == OrderType.MARKET:
         order_type = PaperOrderType.MARKET
@@ -360,4 +362,3 @@ def get_ticket_order_status(order_id: str) -> dict[str, Any]:
         "is_uncertain": is_uncertain,
         "retry_allowed": not is_uncertain,
     }
-

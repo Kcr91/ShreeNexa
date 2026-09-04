@@ -64,3 +64,6 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["backend/tests", "build/tests"]
 addopts = "--basetemp=build/pytest_tmp"
+markers = [
+    "no_auth_override: disable automatic session and csrf test dependency overrides",
+]
