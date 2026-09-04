@@ -103,6 +103,15 @@ def test_ticket_place_paper_order_success(client: TestClient) -> None:
     assert data["order_id"].startswith("ORD-PAPER-")
     assert data["order_status"] == "PENDING"
 
+    # QA-15 proof: Assert returned order ID is retrievable via GET /api/v1/paper/orders
+    paper_orders_resp = client.get("/api/v1/paper/orders")
+    assert paper_orders_resp.status_code == 200
+    orders = paper_orders_resp.json()
+    matching = [o for o in orders if o["order_id"] == data["order_id"]]
+    assert len(matching) == 1
+    assert matching[0]["symbol"] == "RELIANCE"
+    assert matching[0]["quantity"] == 10
+
 
 def test_ticket_place_live_order_blocked_without_confirmation(client: TestClient) -> None:
     payload = {
@@ -139,6 +148,46 @@ def test_ticket_place_live_order_blocked_by_live_gate(client: TestClient) -> Non
     # Live trading is disabled by default invariant -> returns 403 Forbidden
     assert resp.status_code == 403
     assert "Live trading is disabled" in resp.json()["detail"]
+
+
+def test_ticket_place_live_order_timeout_arms_uncertainty(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.dhan.exceptions import DhanTimeoutError
+    from app.engine.risk import RiskFilteredBroker
+
+    def mock_place_order(*args: object, **kwargs: object) -> None:
+        raise DhanTimeoutError("Mock timeout contacting Dhan broker")
+
+    monkeypatch.setattr(RiskFilteredBroker, "place_order", mock_place_order)
+
+    corr_id = "CORR-TIMEOUT-TEST-001"
+    payload = {
+        "mode": "LIVE",
+        "confirmation_acknowledged": True,
+        "correlation_id": corr_id,
+        "symbol": "RELIANCE",
+        "security_id": "2885",
+        "exchange_segment": "NSE_EQ",
+        "transaction_type": "BUY",
+        "order_type": "LIMIT",
+        "product_type": "INTRADAY",
+        "quantity": 10,
+        "price": 2900.0,
+    }
+
+    try:
+        # First attempt: raises 504 and arms _uncertain_orders
+        resp = client.post("/api/v1/orders/ticket/place", json=payload)
+        assert resp.status_code == 504
+        assert "PENDING_BROKER_CONFIRMATION" in resp.json()["detail"]
+
+        # Second attempt with same correlation_id: blocked with 409 Conflict
+        resp2 = client.post("/api/v1/orders/ticket/place", json=payload)
+        assert resp2.status_code == 409
+        assert "Blind retry is blocked" in resp2.json()["detail"]
+    finally:
+        _uncertain_orders.pop(corr_id, None)
 
 
 def test_ticket_blind_retry_blocked_on_uncertain_status(client: TestClient) -> None:

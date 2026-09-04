@@ -3,20 +3,39 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from enum import StrEnum
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.dhan.exceptions import DhanTimeoutError
 from app.dhan.orders import (
+    DhanOrderRequest,
     ExchangeSegment,
     OrderStatus,
     OrderType,
     ProductType,
     TransactionType,
 )
-from app.engine.broker import DhanBroker, LiveTradingDisabledError
+from app.engine.broker import (
+    DhanBroker,
+    LiveTradingDisabledError,
+    StaticIPMismatchError,
+)
+from app.engine.risk import (
+    KillSwitchActiveError,
+    RiskCheckFailedError,
+    RiskFilteredBroker,
+)
+from app.paper.broker import paper_broker
+from app.paper.models import (
+    PaperOrder,
+    PaperOrderSide,
+    PaperOrderStatus,
+    PaperOrderType,
+)
 
 logger = logging.getLogger("shreenexa.api.orders")
 
@@ -180,26 +199,104 @@ def place_ticket_order(req: TicketPlaceOrderRequest) -> TicketPlaceOrderResponse
                 detail="Live order requires explicit confirmation_acknowledged=True",
             )
 
-        # Attempt broker live execution (feature-gated)
-        broker = DhanBroker(enable_live_trading=False)  # Default disabled
+        # Route through pre-trade risk-filtered broker gateway
+        broker = DhanBroker()
+        risk_filtered = RiskFilteredBroker(broker)
+        dhan_req = DhanOrderRequest(
+            securityId=req.security_id,
+            exchangeSegment=req.exchange_segment,
+            transactionType=req.transaction_type,
+            orderType=req.order_type,
+            productType=req.product_type,
+            quantity=req.quantity,
+            price=req.price or 0.0,
+            triggerPrice=req.trigger_price or 0.0,
+            correlationId=correlation_id,
+        )
         try:
-            # If broker live trading is disabled, this raises LiveTradingDisabledError
-            _ = broker
-            raise LiveTradingDisabledError(
-                "Live trading is disabled. Explicit operator approval is required."
+            order_resp = risk_filtered.place_order(dhan_req)
+            order_id = order_resp.order_id or ""
+            if isinstance(order_resp.order_status, OrderStatus):
+                status_val = order_resp.order_status.value
+            elif order_resp.order_status is not None:
+                status_val = str(order_resp.order_status)
+            else:
+                status_val = "PENDING"
+            return TicketPlaceOrderResponse(
+                success=True,
+                mode=req.mode,
+                order_id=order_id,
+                correlation_id=correlation_id,
+                order_status=status_val,
+                message=f"Live order {order_id} submitted successfully.",
             )
-        except LiveTradingDisabledError as exc:
+        except (
+            LiveTradingDisabledError,
+            StaticIPMismatchError,
+            RiskCheckFailedError,
+            KillSwitchActiveError,
+        ) as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except DhanTimeoutError as exc:
+            uncertain_id = f"UNCERTAIN-{correlation_id}"
+            _uncertain_orders[correlation_id] = uncertain_id
+            raise HTTPException(
+                status_code=504,
+                detail=(
+                    f"Broker transport timed out for correlation ID '{correlation_id}'. "
+                    "Order state is PENDING_BROKER_CONFIRMATION; blind retry is blocked."
+                ),
+            ) from exc
 
-    # Paper mode execution
-    simulated_order_id = f"ORD-PAPER-{req.security_id}-{req.quantity}"
+    # Paper mode execution delegated to PaperBroker
+    side = (
+        PaperOrderSide.BUY
+        if req.transaction_type == TransactionType.BUY
+        else PaperOrderSide.SELL
+    )
+    if req.order_type == OrderType.MARKET:
+        order_type = PaperOrderType.MARKET
+    elif req.order_type == OrderType.LIMIT:
+        order_type = PaperOrderType.LIMIT
+    elif req.order_type == OrderType.STOP_LOSS:
+        order_type = PaperOrderType.STOP_LOSS_LIMIT
+    elif req.order_type == OrderType.STOP_LOSS_MARKET:
+        order_type = PaperOrderType.STOP_LOSS_MARKET
+    else:
+        order_type = PaperOrderType.LIMIT
+
+    order_id = f"ORD-PAPER-{uuid.uuid4().hex[:8].upper()}"
+    paper_order = PaperOrder(
+        order_id=order_id,
+        account_id="default",
+        symbol=req.symbol,
+        segment=req.exchange_segment.value,
+        security_id=req.security_id,
+        side=side,
+        order_type=order_type,
+        quantity=req.quantity,
+        price=req.price,
+        trigger_price=req.trigger_price,
+    )
+    _ = paper_broker.submit_orders([paper_order])
+
+    if paper_order.status == PaperOrderStatus.REJECTED:
+        return TicketPlaceOrderResponse(
+            success=False,
+            mode=req.mode,
+            order_id=paper_order.order_id,
+            correlation_id=correlation_id,
+            order_status=paper_order.status.value,
+            message=paper_order.reject_reason or "Order rejected by paper broker.",
+        )
+
     return TicketPlaceOrderResponse(
         success=True,
         mode=req.mode,
-        order_id=simulated_order_id,
+        order_id=paper_order.order_id,
         correlation_id=correlation_id,
-        order_status=OrderStatus.PENDING,
-        message=f"Paper order {simulated_order_id} placed successfully.",
+        order_status=OrderStatus.PENDING.value,
+        message=f"Paper order {paper_order.order_id} placed successfully.",
     )
 
 
@@ -214,3 +311,4 @@ def get_ticket_order_status(order_id: str) -> dict[str, Any]:
         "is_uncertain": is_uncertain,
         "retry_allowed": not is_uncertain,
     }
+
