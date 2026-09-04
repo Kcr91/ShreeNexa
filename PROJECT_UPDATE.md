@@ -3466,4 +3466,23 @@ a live branch indicator; run `git status --short --branch` for current state.
   - All 719 backend and build pytest tests passed (`pytest`).
   - Ruff linting clean (`ruff check .`), Mypy strict clean across 335 source files (`mypy backend --strict`).
   - Pre-commit hooks passed 100% (`pre-commit run --all-files`).
+  - Fast-forward merged to `main` at `5e668ac`.
 
+### 2026-09-04 — Full-Screen Widget Navigation Integration
+
+- **Feature / UX Alignment**:
+  - Integrated all 20 built-in Widget Palette options directly into the primary `Navigation` sidebar panel (`Navigation.tsx`), categorized into institutional trading sections:
+    - `Workspace`: Dashboard, Settings
+    - `Watchlist & Markets`: Market Watchlist, Sector & Index Drill-In, Market Depth Ladder, Market Breadth Heatmap, PIT Screener
+    - `Charts & Orders`: Candlestick Chart, Order Ticket & Leg Builder, Positions & Orders Blotter, Paper Trading Blotter
+    - `Options Desk`: Option Chain & Greeks, Multi-Leg Option Builder, Options Analytics & Volatility
+    - `Quant & Strategy`: Visual Strategy Builder, Strategy Lab, Backtest Performance Summary, Backtest Analytics & Scorecard, Grading Thresholds, Strategy Marketplace
+    - `Performance & Logs`: P&L Calendar, Returns & Timeline, Daily P&L / TWR, Live Feed & Telemetry, Alerts & Audit Log
+  - Added instant navigation search filter input to immediately search across all 25 terminal views and widgets.
+  - Implemented full-screen widget rendering in `Shell.tsx`: selecting any widget option renders that widget at 100% full screen in the main workspace using `WidgetFrame` (retaining live controls, data feeds, and settings editor), while retaining fast return to the multi-widget grid workspace via `Dashboard`.
+- **Testing & Quality Gates**:
+  - Expanded `Shell.test.tsx` (3 tests) verifying route navigation, full-screen widget rendering, and search filter execution.
+  - Updated `App.test.tsx` (2 tests) scoping overview widget assertions to main content area.
+  - All 63 frontend test suites passed (220 tests passed in Vitest, 0 failed).
+  - TypeScript clean (`tsc --noEmit`), Vite production build succeeded (`vite build`).
+  - Pre-commit hooks passed 100% (`pre-commit run --all-files`).

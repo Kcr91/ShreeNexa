@@ -8,6 +8,8 @@ import { ResearchView } from "../views/ResearchView";
 import { ScreenerView } from "../views/ScreenerView";
 import { PnLView } from "../views/PnLView";
 import { SettingsView } from "../views/SettingsView";
+import { WidgetFrame } from "../widgets/WidgetFrame";
+import { widgetRegistry } from "../widgets/registry";
 
 export const Shell: React.FC = () => {
   const [activeRoute, setActiveRoute] = useState<ActiveRoute>("dashboard");
@@ -17,15 +19,48 @@ export const Shell: React.FC = () => {
       case "dashboard":
         return <DashboardView />;
       case "research":
-        return <ResearchView />;
+        return (
+          <div style={{ overflowY: "auto", flex: 1, height: "100%" }}>
+            <ResearchView />
+          </div>
+        );
       case "screener":
-        return <ScreenerView />;
+        return (
+          <div style={{ overflowY: "auto", flex: 1, height: "100%" }}>
+            <ScreenerView />
+          </div>
+        );
       case "pnl":
-        return <PnLView />;
+        return (
+          <div style={{ overflowY: "auto", flex: 1, height: "100%" }}>
+            <PnLView />
+          </div>
+        );
       case "settings":
-        return <SettingsView />;
-      default:
+        return (
+          <div style={{ overflowY: "auto", flex: 1, height: "100%" }}>
+            <SettingsView />
+          </div>
+        );
+      default: {
+        if (widgetRegistry.get(activeRoute)) {
+          return (
+            <div
+              style={{
+                height: "100%",
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                boxSizing: "border-box",
+                padding: "var(--spacing-2)",
+              }}
+            >
+              <WidgetFrame instanceId={`fullscreen-${activeRoute}`} widgetId={activeRoute} />
+            </div>
+          );
+        }
         return <DashboardView />;
+      }
     }
   };
 
@@ -47,7 +82,10 @@ export const Shell: React.FC = () => {
           role="main"
           style={{
             flex: 1,
-            overflowY: "auto",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
             backgroundColor: "var(--bg-primary)",
           }}
         >

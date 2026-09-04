@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { AuthProvider } from "../auth/AuthContext";
@@ -37,5 +37,56 @@ describe("Shell Navigation and Route Switching", () => {
     const settingsNavBtn = within(nav).getByRole("tab", { name: /Settings/i });
     fireEvent.click(settingsNavBtn);
     expect(screen.getByRole("heading", { name: "Terminal Settings & Integrations" })).toBeInTheDocument();
+  });
+
+  it("navigates to widget palette options and renders them full-screen", async () => {
+    render(
+      <AuthProvider>
+        <Shell />
+      </AuthProvider>
+    );
+
+    const nav = screen.getByRole("navigation", { name: "Terminal primary navigation" });
+    const main = screen.getByRole("main");
+
+    // 1. Navigate to Technical Chart full screen
+    const chartBtn = within(nav).getByRole("tab", { name: /Candlestick Chart/i });
+    fireEvent.click(chartBtn);
+
+    expect(await within(main).findByText("Candlestick Chart")).toBeInTheDocument();
+
+    // 2. Navigate to Options Chain full screen
+    const optionsBtn = within(nav).getByRole("tab", { name: /Option Chain & Greeks/i });
+    fireEvent.click(optionsBtn);
+
+    expect(await within(main).findByText("Option Chain & Greeks")).toBeInTheDocument();
+
+    // 3. Navigate to Positions & Orders Blotter full screen
+    const blotterBtn = within(nav).getByRole("tab", { name: /Positions & Orders Blotter/i });
+    fireEvent.click(blotterBtn);
+
+    expect(await within(main).findByText("Positions & Orders Blotter")).toBeInTheDocument();
+
+    // 4. Return to Dashboard
+    const dashboardBtn = within(nav).getByRole("tab", { name: /Dashboard/i });
+    fireEvent.click(dashboardBtn);
+
+    expect(within(main).getByRole("tab", { name: /Main Overview/i })).toBeInTheDocument();
+  });
+
+  it("filters navigation items via search box", () => {
+    render(
+      <AuthProvider>
+        <Shell />
+      </AuthProvider>
+    );
+
+    const nav = screen.getByRole("navigation", { name: "Terminal primary navigation" });
+    const searchInput = within(nav).getByPlaceholderText(/Filter views & apps/i);
+
+    fireEvent.change(searchInput, { target: { value: "Blotter" } });
+
+    expect(within(nav).getByRole("tab", { name: /Positions & Orders Blotter/i })).toBeInTheDocument();
+    expect(within(nav).queryByRole("tab", { name: /Settings/i })).not.toBeInTheDocument();
   });
 });
