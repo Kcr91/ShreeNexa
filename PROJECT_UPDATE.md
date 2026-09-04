@@ -3164,3 +3164,26 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `ruff check .` clean with 0 issues.
   - `mypy backend --strict` clean across 332 source files.
   - Fast-forward merged to `main` at `9dd3419`.
+
+### 2026-09-04 — Mount authenticated browser WebSocket fan-out endpoint in ws.py (QA-05)
+
+- Resolved **QA-05** (High): Mounted the browser WebSocket fan-out router into the running FastAPI application with pre-accept session cookie authentication:
+  - `backend/app/api/ws.py`:
+    - Changed `ClientSession` default `is_authenticated` from `True` to `False` enforcing strict authorization boundaries.
+    - Added `router = APIRouter(tags=["feed"])` with `@router.websocket("/api/v1/feed/ws")`.
+    - Enforced session cookie authentication (`shreenexa_session` or query `token`) validated against `AuthService` **before** `websocket.accept()`.
+    - If unauthenticated, rejects and closes connection immediately with WebSocket close code `4401` (`Unauthorized: valid session cookie required`).
+    - Wires outbound bounded queue pump, JSON action dispatcher (`subscribe`, `unsubscribe`, `resync`, `ping`), and clean session unregistration on disconnect.
+  - `backend/app/api/feed.py`:
+    - Removed unauthenticated duplicate WebSocket stub and kept clean REST telemetry endpoints (`/budget`, `/metrics`).
+  - `backend/app/main.py`:
+    - Imported `from app.api.ws import router as ws_router` and mounted `app.include_router(ws_router)`.
+  - `backend/tests/unit/test_market_ws_fanout.py`:
+    - Added `test_unauthenticated_websocket_rejected` asserting unauthenticated connections are rejected with close code `4401`.
+    - Updated `test_fastapi_websocket_endpoint_integration` to connect with genuine authenticated session cookie, asserting full ping/pong, subscribe, and unsubscribe lifecycle.
+- Quality gates verified:
+  - 5 tests passing in `test_market_ws_fanout.py`.
+  - Complete backend test suite passes (605 passed, 30 skipped).
+  - `ruff check .` clean.
+  - `mypy backend --strict` clean across 332 source files.
+  - Fast-forward merged to `main` at `ca28450`.
