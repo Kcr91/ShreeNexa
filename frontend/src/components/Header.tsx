@@ -3,7 +3,7 @@ import { useAuth } from "../auth/AuthContext";
 import { apiClient, TokenHealthResponse } from "../api/client";
 
 export const Header: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [tokenHealth, setTokenHealth] = useState<TokenHealthResponse | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>("");
@@ -208,22 +208,45 @@ export const Header: React.FC = () => {
           {currentTime || "--:--:-- IST"}
         </div>
 
-        {/* User Pill */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--spacing-2)",
-            padding: "var(--spacing-1) var(--spacing-3)",
-            borderRadius: "var(--radius-md)",
-            backgroundColor: "var(--bg-surface)",
-            border: "1px solid var(--border-default)",
-            fontSize: "var(--font-size-xs)",
-            color: "var(--text-primary)",
-          }}
-        >
-          <span style={{ color: "var(--text-muted)" }}>User:</span>
-          <strong>{user.username}</strong>
+        {/* User Pill & Sign Out */}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--spacing-2)",
+              padding: "var(--spacing-1) var(--spacing-3)",
+              borderRadius: "var(--radius-md)",
+              backgroundColor: "var(--bg-surface)",
+              border: "1px solid var(--border-default)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--text-primary)",
+            }}
+          >
+            <span style={{ color: "var(--text-muted)" }}>User:</span>
+            <strong>{user.username || "anonymous"}</strong>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void logout()}
+            aria-label="Sign out from terminal"
+            title="Terminate session"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "var(--spacing-1) var(--spacing-2)",
+              borderRadius: "var(--radius-md)",
+              backgroundColor: "transparent",
+              border: "1px solid var(--border-default)",
+              color: "var(--text-muted)",
+              fontSize: "var(--font-size-xs)",
+              cursor: "pointer",
+            }}
+          >
+            Sign Out
+          </button>
         </div>
       </div>
     </header>
