@@ -6,7 +6,7 @@ import type {
   WidgetSettingsSchema,
 } from "../types";
 
-type WidgetMetadata = Omit<WidgetDefinition, "component" | "schema">;
+type WidgetMetadata = Omit<WidgetDefinition, "component">;
 
 export interface LazyWidgetManifest extends WidgetMetadata {
   load: () => Promise<WidgetDefinition>;
@@ -22,6 +22,7 @@ const metadataKeys: (keyof WidgetMetadata)[] = [
   "defaultHeight",
   "minWidth",
   "minHeight",
+  "schema",
 ];
 
 function defaultsFrom(schema: WidgetSettingsSchema): Record<string, unknown> {
@@ -42,16 +43,17 @@ export function createLazyWidgetDefinition(
     const loaded = await load();
 
     for (const key of metadataKeys) {
-      if (loaded[key] !== metadata[key]) {
+      const matches =
+        key === "schema"
+          ? JSON.stringify(loaded.schema) === JSON.stringify(metadata.schema)
+          : loaded[key] === metadata[key];
+      if (!matches) {
         throw new Error(
           `Lazy widget metadata mismatch for '${metadata.id}' at '${key}'.`,
         );
       }
     }
 
-    // Keep settings validation authoritative in the widget module. The object
-    // identity is retained so registry consumers see the loaded schema.
-    definition.schema = loaded.schema;
     const LoadedComponent = loaded.component as React.ComponentType<
       WidgetComponentProps<Record<string, unknown>>
     >;
@@ -72,7 +74,6 @@ export function createLazyWidgetDefinition(
 
   definition = {
     ...metadata,
-    schema: { fields: [] },
     component,
   };
   return definition;

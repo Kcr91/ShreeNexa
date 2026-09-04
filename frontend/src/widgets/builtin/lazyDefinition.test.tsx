@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { WidgetComponentProps, WidgetDefinition } from "../types";
+import { WidgetRegistry } from "../registry";
 import { createLazyWidgetDefinition } from "./lazyDefinition";
 
 describe("createLazyWidgetDefinition", () => {
@@ -22,6 +23,7 @@ describe("createLazyWidgetDefinition", () => {
             label: "Message",
             type: "string",
             default: "loaded lazily",
+            required: true,
           },
         ],
       },
@@ -38,10 +40,19 @@ describe("createLazyWidgetDefinition", () => {
       icon: loadedDefinition.icon,
       defaultWidth: loadedDefinition.defaultWidth,
       defaultHeight: loadedDefinition.defaultHeight,
+      schema: loadedDefinition.schema,
       load,
     });
 
     expect(load).not.toHaveBeenCalled();
+    const registry = new WidgetRegistry();
+    registry.register(definition);
+    expect(registry.getDefaultSettings("lazy-fixture")).toEqual({
+      message: "loaded lazily",
+    });
+    expect(
+      registry.validateSettings("lazy-fixture", { message: "" }).isValid,
+    ).toBe(false);
 
     const Component = definition.component;
     render(

@@ -3042,5 +3042,5 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Browser validation passed at 1900x900 and 1366x768 with no horizontal
   document overflow; default widgets rendered without missing-widget alerts.
 - Frontend typecheck and production build pass. The complete frontend suite
-  passes 188 tests across 58 files; the startup JavaScript chunk is 420.63 kB
-  (116.98 kB gzip), reduced from the rejected 1,279.39 kB candidate.
+  passes 189 tests across 59 files; the startup JavaScript chunk is 428.81 kB
+  (119.00 kB gzip), reduced from the rejected 1,279.39 kB candidate.

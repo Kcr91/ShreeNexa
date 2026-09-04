@@ -3,8 +3,9 @@ import {
   createLazyWidgetDefinition,
   type LazyWidgetManifest,
 } from "./lazyDefinition";
+import { builtinSchemas } from "./schemas";
 
-const builtinManifests: LazyWidgetManifest[] = [
+export const builtinManifests: LazyWidgetManifest[] = [
   {
     id: "market-clock",
     title: "Market Clock",
@@ -13,6 +14,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "⏰",
     defaultWidth: 300,
     defaultHeight: 180,
+    schema: builtinSchemas["market-clock"],
     load: () =>
       import("./MarketClockWidget").then((module) => module.marketClockDefinition),
   },
@@ -25,6 +27,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📋",
     defaultWidth: 420,
     defaultHeight: 480,
+    schema: builtinSchemas.watchlist,
     load: () =>
       import("./WatchlistWidget").then((module) => module.watchlistDefinition),
   },
@@ -37,6 +40,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📊",
     defaultWidth: 460,
     defaultHeight: 520,
+    schema: builtinSchemas["sector-drill-in"],
     load: () =>
       import("./SectorDrillInWidget").then(
         (module) => module.sectorDrillInDefinition,
@@ -51,6 +55,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "🔥",
     defaultWidth: 540,
     defaultHeight: 460,
+    schema: builtinSchemas["market-heatmap"],
     load: () =>
       import("./MarketHeatmapWidget").then(
         (module) => module.marketHeatmapDefinition,
@@ -65,6 +70,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📊",
     defaultWidth: 500,
     defaultHeight: 520,
+    schema: builtinSchemas["market-depth"],
     load: () =>
       import("./MarketDepthWidget").then(
         (module) => module.marketDepthDefinition,
@@ -78,6 +84,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📊",
     defaultWidth: 340,
     defaultHeight: 220,
+    schema: builtinSchemas["backtest-summary"],
     load: () =>
       import("./BacktestSummaryWidget").then(
         (module) => module.backtestSummaryDefinition,
@@ -91,6 +98,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "🧩",
     defaultWidth: 280,
     defaultHeight: 160,
+    schema: builtinSchemas["fixture-test"],
     load: () =>
       import("./FixtureTestWidget").then(
         (module) => module.fixtureTestDefinition,
@@ -105,6 +113,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📈",
     defaultWidth: 500,
     defaultHeight: 380,
+    schema: builtinSchemas.chart,
     load: () =>
       import("./ChartWidget").then((module) => module.chartDefinition),
   },
@@ -117,6 +126,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "🎫",
     defaultWidth: 380,
     defaultHeight: 460,
+    schema: builtinSchemas["order-ticket"],
     load: () =>
       import("./OrderTicketWidget").then(
         (module) => module.orderTicketDefinition,
@@ -131,6 +141,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📑",
     defaultWidth: 500,
     defaultHeight: 380,
+    schema: builtinSchemas.blotter,
     load: () =>
       import("./BlotterWidget").then((module) => module.blotterDefinition),
   },
@@ -143,6 +154,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "⛓️",
     defaultWidth: 550,
     defaultHeight: 420,
+    schema: builtinSchemas["option-chain"],
     load: () =>
       import("./OptionChainWidget").then(
         (module) => module.optionChainDefinition,
@@ -157,6 +169,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📊",
     defaultWidth: 520,
     defaultHeight: 400,
+    schema: builtinSchemas["backtest-analytics"],
     load: () =>
       import("./BacktestAnalyticsWidget").then(
         (module) => module.backtestAnalyticsDefinition,
@@ -171,6 +184,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📡",
     defaultWidth: 460,
     defaultHeight: 320,
+    schema: builtinSchemas["live-feed-status"],
     load: () =>
       import("./LiveFeedStatusWidget").then(
         (module) => module.liveFeedStatusDefinition,
@@ -185,6 +199,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "🔔",
     defaultWidth: 480,
     defaultHeight: 340,
+    schema: builtinSchemas["alerts-log"],
     load: () =>
       import("./AlertsLogWidget").then(
         (module) => module.alertsLogDefinition,
@@ -199,6 +214,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "🧱",
     defaultWidth: 700,
     defaultHeight: 450,
+    schema: builtinSchemas["strategy-builder"],
     load: () =>
       import("./StrategyBuilderWidget").then(
         (module) => module.strategyBuilderDefinition,
@@ -213,6 +229,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "🏪",
     defaultWidth: 720,
     defaultHeight: 480,
+    schema: builtinSchemas["strategy-marketplace"],
     load: () =>
       import("./StrategyMarketplaceWidget").then(
         (module) => module.strategyMarketplaceDefinition,
@@ -227,6 +244,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📅",
     defaultWidth: 640,
     defaultHeight: 420,
+    schema: builtinSchemas["pnl-calendar"],
     load: () =>
       import("./PnlCalendarWidget").then(
         (module) => module.pnlCalendarDefinition,
@@ -241,6 +259,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📈",
     defaultWidth: 720,
     defaultHeight: 440,
+    schema: builtinSchemas["returns-timeline"],
     load: () =>
       import("./ReturnsTimelineWidget").then(
         (module) => module.returnsTimelineDefinition,
@@ -255,6 +274,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "⚖️",
     defaultWidth: 700,
     defaultHeight: 460,
+    schema: builtinSchemas["grading-thresholds"],
     load: () =>
       import("./GradingThresholdsWidget").then(
         (module) => module.gradingThresholdsDefinition,
@@ -269,6 +289,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📊",
     defaultWidth: 550,
     defaultHeight: 400,
+    schema: builtinSchemas["options-analytics"],
     load: () =>
       import("../../optionchain/OptionsAnalyticsPanel").then(
         (module) => module.optionsAnalyticsDefinition,
@@ -283,6 +304,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "🧩",
     defaultWidth: 600,
     defaultHeight: 450,
+    schema: builtinSchemas["option-strategy-builder"],
     load: () =>
       import("./OptionStrategyBuilderWidget").then(
         (module) => module.optionStrategyBuilderDefinition,
@@ -297,6 +319,7 @@ const builtinManifests: LazyWidgetManifest[] = [
     icon: "📜",
     defaultWidth: 620,
     defaultHeight: 420,
+    schema: builtinSchemas.paper_trading,
     load: () =>
       import("./PaperTradingWidget").then(
         (module) => module.paperTradingDefinition,

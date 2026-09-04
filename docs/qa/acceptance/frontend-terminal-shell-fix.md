@@ -15,8 +15,8 @@ HTML and `Widget not found` errors for valid shipped layout entries.
 4. The production bundle contains a generated CSS asset.
 5. The application fills the viewport with the dark terminal shell at desktop
    and laptop viewport sizes without horizontal document overflow.
-6. Built-in metadata registers synchronously while each widget implementation
-   remains lazy-loaded in a separate production chunk.
+6. Built-in metadata and settings schemas register synchronously while each
+   widget implementation remains lazy-loaded in a separate production chunk.
 7. Frontend typecheck, tests, production build, and browser inspection pass.
 
 ## Boundaries
