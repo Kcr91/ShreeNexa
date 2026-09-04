@@ -71,7 +71,6 @@ class DhanRestClient:
             "dhanClientId": self.credentials.client_id,
         }
 
-
     def _request(
         self,
         method: str,
@@ -102,11 +101,7 @@ class DhanRestClient:
                     or params.get("underlying")
                     or params.get("securityId")
                 )
-                expiry = (
-                    params.get("Expiry")
-                    or params.get("expiry")
-                    or params.get("expiryDate")
-                )
+                expiry = params.get("Expiry") or params.get("expiry") or params.get("expiryDate")
             if underlying:
                 suffix = f"{underlying}:{expiry}" if expiry else str(underlying)
                 category = f"option_chain:{suffix}"
@@ -347,9 +342,7 @@ class DhanRestClient:
         data = self._request("POST", "orders/slicing", json_data=payload)
         if isinstance(data, list):
             return [
-                DhanOrderResponse.model_validate(item)
-                for item in data
-                if isinstance(item, dict)
+                DhanOrderResponse.model_validate(item) for item in data if isinstance(item, dict)
             ]
         if isinstance(data, dict):
             return [DhanOrderResponse.model_validate(data)]

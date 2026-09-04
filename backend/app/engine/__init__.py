@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+from app.engine.audit import (
+    AuditEvent,
+    AuditEventType,
+    AuditLedger,
+    get_audit_ledger,
+)
+from app.engine.continuous_recon import (
+    ContinuousReconciler,
+    IncidentStatus,
+    MismatchDimension,
+    MismatchIncident,
+)
 from app.engine.contracts import (
     Broker,
     Clock,
@@ -21,6 +33,7 @@ from app.engine.contracts import (
     SimClock,
     TimeInForce,
 )
+from app.engine.core import create_engine_order_stream
 from app.engine.costs import (
     IndianCostCalculator,
     ProductType,
@@ -34,6 +47,10 @@ from app.engine.daily_pnl import (
     MonthlyPnLSummary,
     YearlyPnLSummary,
 )
+from app.engine.order_reconciler import (
+    OrderReconciler,
+    ReconciledOrderState,
+)
 from app.engine.sim_broker import (
     FillTiming,
     SimBroker,
@@ -46,8 +63,12 @@ from app.engine.slippage import (
 )
 
 __all__ = [
+    "AuditEvent",
+    "AuditEventType",
+    "AuditLedger",
     "Broker",
     "Clock",
+    "ContinuousReconciler",
     "DailyPnLRecord",
     "DailyPnLTracker",
     "DataSource",
@@ -57,9 +78,13 @@ __all__ = [
     "FillEvent",
     "FillTiming",
     "HistoricalDataSource",
+    "IncidentStatus",
     "IndianCostCalculator",
+    "MismatchDimension",
+    "MismatchIncident",
     "MonthlyPnLSummary",
     "NoSlippageModel",
+    "OrderReconciler",
     "OrderRequest",
     "OrderResult",
     "OrderSide",
@@ -70,6 +95,7 @@ __all__ = [
     "Position",
     "ProductType",
     "RealClock",
+    "ReconciledOrderState",
     "SimBroker",
     "SimClock",
     "SlippageModel",
@@ -78,4 +104,6 @@ __all__ = [
     "TradeCostBreakdown",
     "YearlyPnLSummary",
     "cost_calculator",
+    "create_engine_order_stream",
+    "get_audit_ledger",
 ]

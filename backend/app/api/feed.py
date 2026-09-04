@@ -38,4 +38,3 @@ def get_fanout_metrics() -> dict[str, Any]:
     """Retrieve browser WebSocket fan-out telemetry, session counts, and backpressure metrics."""
     manager = get_market_data_fanout_manager()
     return manager.get_metrics()
-

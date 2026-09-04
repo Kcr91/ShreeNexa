@@ -166,8 +166,7 @@ def test_dpapi_credentials_override_dotenv_file(tmp_path: Path) -> None:
     # 2. Create a plaintext .env file with competing credentials
     env_file = tmp_path / ".env"
     env_file.write_text(
-        "DHAN_CLIENT_ID=DOTENV_CLIENT_ID\n"
-        "DHAN_ACCESS_TOKEN=DOTENV_PLAINTEXT_TOKEN\n",
+        "DHAN_CLIENT_ID=DOTENV_CLIENT_ID\nDHAN_ACCESS_TOKEN=DOTENV_PLAINTEXT_TOKEN\n",
         encoding="utf-8",
     )
 
@@ -196,8 +195,7 @@ def test_dotenv_file_used_as_fallback_when_dpapi_absent(tmp_path: Path) -> None:
 
     env_file = tmp_path / ".env"
     env_file.write_text(
-        "DHAN_CLIENT_ID=DOTENV_FALLBACK_CLIENT\n"
-        "DHAN_ACCESS_TOKEN=DOTENV_FALLBACK_TOKEN\n",
+        "DHAN_CLIENT_ID=DOTENV_FALLBACK_CLIENT\nDHAN_ACCESS_TOKEN=DOTENV_FALLBACK_TOKEN\n",
         encoding="utf-8",
     )
 
@@ -212,4 +210,3 @@ def test_dotenv_file_used_as_fallback_when_dpapi_absent(tmp_path: Path) -> None:
     assert resolved.source == "dotenv"
     assert resolved.client_id == "DOTENV_FALLBACK_CLIENT"
     assert resolved.get_token_value() == "DOTENV_FALLBACK_TOKEN"
-

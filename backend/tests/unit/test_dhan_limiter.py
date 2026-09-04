@@ -212,9 +212,7 @@ def test_in_memory_token_bucket_per_minute_window() -> None:
         as_of="2026-09-01",
         default_limit=RateLimitSpec(rate=100.0, burst=100, description="Default"),
         categories={
-            "min_test": RateLimitSpec(
-                rate=100.0, burst=100, per_minute=3, description="3 per min"
-            ),
+            "min_test": RateLimitSpec(rate=100.0, burst=100, per_minute=3, description="3 per min"),
         },
     )
     limiter = InMemoryTokenBucket(config)

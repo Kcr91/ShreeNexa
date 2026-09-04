@@ -35,14 +35,12 @@ def _extract_all_routes(application: object) -> list[tuple[str, set[str], list[s
         if hasattr(r, "effective_route_contexts"):
             for ctx in r.effective_route_contexts():
                 dep_names = [
-                    getattr(d.dependency, "__name__", str(d.dependency))
-                    for d in ctx.dependencies
+                    getattr(d.dependency, "__name__", str(d.dependency)) for d in ctx.dependencies
                 ]
                 routes.append((ctx.path, set(ctx.methods), dep_names))
         elif isinstance(r, APIRoute):
             dep_names = [
-                getattr(d.dependency, "__name__", str(d.dependency))
-                for d in r.dependencies
+                getattr(d.dependency, "__name__", str(d.dependency)) for d in r.dependencies
             ]
             routes.append((r.path, set(r.methods or ()), dep_names))
         elif hasattr(r, "path"):
@@ -93,9 +91,7 @@ def test_mutating_trading_routes_require_csrf_dependency() -> None:
             if "require_csrf" not in deps:
                 missing_csrf.append(path)
 
-    assert not missing_csrf, (
-        f"Found mutating routes missing require_csrf: {missing_csrf}"
-    )
+    assert not missing_csrf, f"Found mutating routes missing require_csrf: {missing_csrf}"
 
 
 @pytest.mark.no_auth_override

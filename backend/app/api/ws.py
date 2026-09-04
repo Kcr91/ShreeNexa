@@ -332,7 +332,7 @@ async def _pump_outbound_messages(websocket: WebSocket, session: ClientSession) 
             msg = await session.queue.get()
             await websocket.send_json(msg)
             session.queue.task_done()
-    except (WebSocketDisconnect, asyncio.CancelledError):
+    except WebSocketDisconnect, asyncio.CancelledError:
         pass
     except Exception as exc:
         logger.debug(
@@ -414,7 +414,7 @@ async def market_data_websocket(
             elif action == "ping":
                 session.send_nowait({"type": "pong", "timestamp": data.get("timestamp")})
 
-    except (WebSocketDisconnect, asyncio.CancelledError):
+    except WebSocketDisconnect, asyncio.CancelledError:
         pass
     finally:
         pump_task.cancel()
@@ -423,4 +423,3 @@ async def market_data_websocket(
         except asyncio.CancelledError:
             pass
         fanout_manager.unregister_session(session.session_id)
-

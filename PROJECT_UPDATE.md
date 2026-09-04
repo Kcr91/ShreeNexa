@@ -2876,7 +2876,7 @@ a live branch indicator; run `git status --short --branch` for current state.
   - **Expired options rolling backfill**: Confirmed up to 45-day call window, parameter `drvOptionType`, `requiredData` array, and `BSE_FNO` segment support.
   - **Margin and risk controls**: Documented `POST /v2/margincalculator/multi` (portfolio margin with hedge benefits), `DELETE /v2/positions` (Exit All Positions), and broker `/v2/killswitch`.
 - Synchronized `SHREENEXA_TECHNICAL_SPEC.md` (§3.1, §3.4, §3.5, §3.6, §3.8, §3.9, §3.10) and `SHREENEXA_CODEX_VSCODE_BUILD_PLAN.md` (C10, F0.4, F0.6, F1.3, F1.4, F8.6, F12.1, F12.4, F13.2, Live Activation checklist).
- 
+
 
 ### 2026-09-03 — F12.1 typed DhanBroker order mapping, slicing, and static IP validation completed
 
@@ -3358,4 +3358,3 @@ a live branch indicator; run `git status --short --branch` for current state.
     - All 62 test suites passed (208 tests passed in Vitest, 0 failed).
     - TypeScript clean (`tsc --noEmit`), production bundling clean (`vite build`).
     - Fast-forward merged to `main` at `b37a0c3`.
-

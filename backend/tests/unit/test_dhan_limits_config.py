@@ -80,7 +80,6 @@ def test_get_category_for_endpoint() -> None:
     assert get_category_for_endpoint("GET", "unknown/endpoint") == "default"
 
 
-
 def test_rate_limit_spec_validation() -> None:
     spec = RateLimitSpec(rate=5.0, burst=10, description="Test")
     assert spec.rate == 5.0

@@ -421,7 +421,7 @@ It provides a set of REST-like APIs that integrate directly with our trading pla
 The platform uses resource-based URLs and supports JSON as well as form-encoded requests. Responses are returned in JSON format using standard HTTP response codes, verbs, and authentication methods.
 
 
-  
+
   - [DhanHQ Python Client](https://github.com/dhan-oss/DhanHQ-py)
 
 

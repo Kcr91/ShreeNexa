@@ -110,8 +110,7 @@ def test_ast_prohibits_raw_place_order_outside_risk_layer() -> None:
                     )
 
     assert not violations, (
-        "Architecture invariant violated: direct order placement found:\n"
-        + "\n".join(violations)
+        "Architecture invariant violated: direct order placement found:\n" + "\n".join(violations)
     )
 
 

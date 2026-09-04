@@ -91,9 +91,7 @@ class ContinuousReconciler:
     ) -> list[MismatchIncident]:
         """Compare local net positions against broker truth. Freezes on mismatch."""
         broker_map: dict[str, int] = {
-            pos.security_id: pos.net_qty
-            for pos in broker_positions
-            if pos.security_id
+            pos.security_id: pos.net_qty for pos in broker_positions if pos.security_id
         }
 
         all_keys = set(local_positions.keys()) | set(broker_map.keys())
@@ -161,9 +159,7 @@ class ContinuousReconciler:
             has_status_mismatch = (
                 str(local_state.status).upper() != str(broker_order.order_status).upper()
             )
-            has_qty_mismatch = (
-                local_state.cumulative_traded_qty != broker_order.traded_quantity
-            )
+            has_qty_mismatch = local_state.cumulative_traded_qty != broker_order.traded_quantity
 
             if has_status_mismatch or has_qty_mismatch:
                 incident_id = f"INC-ORD-{order_id}-{uuid.uuid4().hex[:6]}"

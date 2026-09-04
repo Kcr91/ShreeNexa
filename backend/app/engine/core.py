@@ -9,9 +9,35 @@ with F3.1+.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 from app.contracts.process_loop import main_for
 
+if TYPE_CHECKING:
+    from app.dhan.order_stream import DhanOrderStreamClient
+    from app.engine.audit import AuditLedger
+    from app.engine.order_reconciler import OrderReconciler
+
 PROCESS_NAME = "engine"
+
+
+def create_engine_order_stream(
+    *,
+    ws_url: str | None = None,
+    reconciler: OrderReconciler | None = None,
+    audit_ledger: AuditLedger | None = None,
+) -> DhanOrderStreamClient:
+    """Create and configure a DhanOrderStreamClient wired to an OrderReconciler and AuditLedger."""
+    from app.dhan.order_stream import DhanOrderStreamClient
+    from app.engine.audit import get_audit_ledger
+    from app.engine.order_reconciler import OrderReconciler
+
+    ledger = audit_ledger or get_audit_ledger()
+    rec = reconciler or OrderReconciler(audit_ledger=ledger)
+    kwargs: dict[str, Any] = {"reconciler": rec}
+    if ws_url is not None:
+        kwargs["ws_url"] = ws_url
+    return DhanOrderStreamClient(**kwargs)
 
 
 def run() -> None:

@@ -95,17 +95,19 @@ def test_seeded_order_mismatch_freezes_symbol() -> None:
     }
     # Broker shows order was actually CANCELLED with only 20 filled
     broker_orders = [
-        DhanOrderDetail.model_validate({
-            "orderId": "ORD-001",
-            "orderStatus": "CANCELLED",
-            "transactionType": "BUY",
-            "exchangeSegment": "NSE_EQ",
-            "productType": "INTRADAY",
-            "orderType": "LIMIT",
-            "quantity": 50,
-            "tradedQuantity": 20,
-            "securityId": "1333",
-        }),
+        DhanOrderDetail.model_validate(
+            {
+                "orderId": "ORD-001",
+                "orderStatus": "CANCELLED",
+                "transactionType": "BUY",
+                "exchangeSegment": "NSE_EQ",
+                "productType": "INTRADAY",
+                "orderType": "LIMIT",
+                "quantity": 50,
+                "tradedQuantity": 20,
+                "securityId": "1333",
+            }
+        ),
     ]
 
     incidents = reconciler.reconcile_orders(local_orders, broker_orders)

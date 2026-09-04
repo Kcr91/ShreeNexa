@@ -244,7 +244,6 @@ def test_estimate_order_charges_cost_model_parity(client: TestClient) -> None:
         assert data["cost_schedule_id"] == expected.schedule_id
 
 
-
 def test_ticket_place_paper_order_success(client: TestClient) -> None:
     payload = {
         "mode": "PAPER",
