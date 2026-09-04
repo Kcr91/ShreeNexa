@@ -3447,5 +3447,23 @@ a live branch indicator; run `git status --short --branch` for current state.
     - All 210 frontend tests passed (`vitest run`), 0 failures.
     - TypeScript clean (`tsc --noEmit`), strict static typing clean across 335 source files (`mypy backend --strict`).
     - Ruff linting and formatting clean (`ruff check .`).
-    - Pre-commit hooks passed 100% (`pre-commit run --all-files`).
     - Fast-forward merged to `main` at `1fcd0db`.
+
+### 2026-09-04 — TradingView-Style Footer Timezone Clock and Dashboard Clock Cleanup
+
+- **Feature / UX Alignment**:
+  - Removed `Market Clock` widget from `DEFAULT_LAYOUT` (`storage.ts`), `PREBUILT_TEMPLATES` (`templates.ts`), and built-in widget catalog (`builtin/index.ts`, `builtin/schemas.ts`, and deleted `MarketClockWidget.tsx`).
+  - Adjusted default overview dashboard layout: `Market Watchlist` expanded to `{ x: 0, y: 0, w: 7, h: 5 }` and `Backtest Performance Summary` positioned cleanly at `{ x: 7, y: 0, w: 5, h: 5 }`.
+  - Enforced single-clock terminal invariant by removing top navigation header clock from `Header.tsx`.
+  - Implemented `FooterClock.tsx` in `StatusFooter.tsx` situated directly before `v1.1`, formatted as `(HH:mm:ss UTC+offset) v1.1` (e.g. `(00:35:22 UTC+5:30) v1.1`).
+  - Added TradingView-style upward popover dropdown menu providing instant search and selection across comprehensive worldwide timezones (UTC, Exchange / IST, Honolulu, Los Angeles, Chicago, New York, London, Berlin, Dubai, Tokyo, Sydney, Auckland, etc.).
+  - Persisted user timezone selection in `localStorage` under `shreenexa_terminal_timezone`.
+- **Testing & Quality Gates**:
+  - Added `FooterClock.test.tsx` (7 tests) verifying live ticking, offset calculation, timezone selection, search filter, Escape key dismissal, and `localStorage` persistence.
+  - Updated `App.test.tsx`, `LayoutManager.test.tsx`, `WidgetFrame.test.tsx`, `WidgetPalette.test.tsx`, and `storage.test.ts`.
+  - All 63 frontend test suites passed (218 tests passed in Vitest, 0 failed).
+  - TypeScript clean (`tsc --noEmit`), Vite production build succeeded (`vite build`).
+  - All 719 backend and build pytest tests passed (`pytest`).
+  - Ruff linting clean (`ruff check .`), Mypy strict clean across 335 source files (`mypy backend --strict`).
+  - Pre-commit hooks passed 100% (`pre-commit run --all-files`).
+
