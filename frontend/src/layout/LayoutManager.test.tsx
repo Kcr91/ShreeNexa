@@ -24,7 +24,7 @@ describe("LayoutManager Component and Tab Switching", () => {
     expect(screen.getByText("Market Watchlist")).toBeInTheDocument();
   });
 
-  it("switches tabs when clicking on a tab button", () => {
+  it("switches tabs when clicking on a tab button", async () => {
     render(
       <LayoutProvider>
         <LayoutManager />
@@ -35,7 +35,9 @@ describe("LayoutManager Component and Tab Switching", () => {
     fireEvent.click(labTab);
 
     // Active tab is now Strategy Lab with BankNifty Strangle widget
-    expect(screen.getByText(/BankNifty Multi-Leg Strangle/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/BankNifty Multi-Leg Strangle/i),
+    ).toBeInTheDocument();
   });
 
   it("opens widget palette, adds a widget, and closes modal", () => {

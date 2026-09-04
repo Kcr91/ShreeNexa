@@ -3027,3 +3027,20 @@ a live branch indicator; run `git status --short --branch` for current state.
   - `validate_manifest.py` and `validate_fixtures.py` OK.
   - Fast-forwarded into `main` at `43a7657`.
   - **Epic 12 is fully delivered and merged!**
+
+### 2026-09-04 — Frontend terminal shell runtime repair ready for review
+
+- Restored the global terminal theme/reset stylesheet at the application root,
+  replacing unstyled document-flow HTML with the intended full-viewport dark
+  terminal shell.
+- Registered all shipped built-in widget metadata during application startup,
+  eliminating `Widget not found` errors for valid persisted/default layouts.
+- Preserved F4.2 lazy-loading guarantees: widget implementations now use
+  `React.lazy` dynamic imports and build into independent production chunks.
+- Added regression coverage for application-root registration, lazy widget
+  rendering/defaults, and layout navigation across suspended widgets.
+- Browser validation passed at 1900x900 and 1366x768 with no horizontal
+  document overflow; default widgets rendered without missing-widget alerts.
+- Frontend typecheck and production build pass. The complete frontend suite
+  passes 188 tests across 58 files; the startup JavaScript chunk is 420.63 kB
+  (116.98 kB gzip), reduced from the rejected 1,279.39 kB candidate.

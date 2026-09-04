@@ -1,51 +1,314 @@
 import { widgetRegistry } from "../registry";
-import { marketClockDefinition } from "./MarketClockWidget";
-import { watchlistDefinition } from "./WatchlistWidget";
-import { backtestSummaryDefinition } from "./BacktestSummaryWidget";
-import { fixtureTestDefinition } from "./FixtureTestWidget";
-import { chartDefinition } from "./ChartWidget";
-import { orderTicketDefinition } from "./OrderTicketWidget";
-import { blotterDefinition } from "./BlotterWidget";
-import { optionChainDefinition } from "./OptionChainWidget";
-import { backtestAnalyticsDefinition } from "./BacktestAnalyticsWidget";
-import { liveFeedStatusDefinition } from "./LiveFeedStatusWidget";
-import { alertsLogDefinition } from "./AlertsLogWidget";
-import { strategyBuilderDefinition } from "./StrategyBuilderWidget";
-import { strategyMarketplaceDefinition } from "./StrategyMarketplaceWidget";
-import { pnlCalendarDefinition } from "./PnlCalendarWidget";
-import { returnsTimelineDefinition } from "./ReturnsTimelineWidget";
-import { gradingThresholdsDefinition } from "./GradingThresholdsWidget";
-import { sectorDrillInDefinition } from "./SectorDrillInWidget";
-import { marketHeatmapDefinition } from "./MarketHeatmapWidget";
-import { marketDepthDefinition } from "./MarketDepthWidget";
-import { optionStrategyBuilderDefinition } from "./OptionStrategyBuilderWidget";
-import { optionsAnalyticsDefinition } from "../../optionchain/OptionsAnalyticsPanel";
-import { paperTradingDefinition } from "./PaperTradingWidget";
+import {
+  createLazyWidgetDefinition,
+  type LazyWidgetManifest,
+} from "./lazyDefinition";
+
+const builtinManifests: LazyWidgetManifest[] = [
+  {
+    id: "market-clock",
+    title: "Market Clock",
+    description: "Live session clock with timezone selection.",
+    category: "system",
+    icon: "⏰",
+    defaultWidth: 300,
+    defaultHeight: 180,
+    load: () =>
+      import("./MarketClockWidget").then((module) => module.marketClockDefinition),
+  },
+  {
+    id: "watchlist",
+    title: "Market Watchlist",
+    description:
+      "Multiple manual and F&O watchlists with configurable columns and stable ordering.",
+    category: "watchlist",
+    icon: "📋",
+    defaultWidth: 420,
+    defaultHeight: 480,
+    load: () =>
+      import("./WatchlistWidget").then((module) => module.watchlistDefinition),
+  },
+  {
+    id: "sector-drill-in",
+    title: "Sector & Index Drill-In",
+    description:
+      "Browse sector constituents, effective membership intervals, and transparent provenance.",
+    category: "watchlist",
+    icon: "📊",
+    defaultWidth: 460,
+    defaultHeight: 520,
+    load: () =>
+      import("./SectorDrillInWidget").then(
+        (module) => module.sectorDrillInDefinition,
+      ),
+  },
+  {
+    id: "market-heatmap",
+    title: "Market Heatmap & Breadth",
+    description:
+      "Sectoral indices and constituent heatmaps with market breadth and transparent weighting.",
+    category: "analytics",
+    icon: "🔥",
+    defaultWidth: 540,
+    defaultHeight: 460,
+    load: () =>
+      import("./MarketHeatmapWidget").then(
+        (module) => module.marketHeatmapDefinition,
+      ),
+  },
+  {
+    id: "market-depth",
+    title: "Market Depth Ladder & Watchlist",
+    description:
+      "20-level standard depth, on-demand 200-level book, and 5-level fallback with connection cost tracking.",
+    category: "watchlist",
+    icon: "📊",
+    defaultWidth: 500,
+    defaultHeight: 520,
+    load: () =>
+      import("./MarketDepthWidget").then(
+        (module) => module.marketDepthDefinition,
+      ),
+  },
+  {
+    id: "backtest-summary",
+    title: "Backtest Performance Summary",
+    description: "Key strategy performance metrics and return indicators.",
+    category: "analytics",
+    icon: "📊",
+    defaultWidth: 340,
+    defaultHeight: 220,
+    load: () =>
+      import("./BacktestSummaryWidget").then(
+        (module) => module.backtestSummaryDefinition,
+      ),
+  },
+  {
+    id: "fixture-test",
+    title: "Fixture Dynamic Test Widget",
+    description: "Test fixture verifying dynamic palette registration.",
+    category: "custom",
+    icon: "🧩",
+    defaultWidth: 280,
+    defaultHeight: 160,
+    load: () =>
+      import("./FixtureTestWidget").then(
+        (module) => module.fixtureTestDefinition,
+      ),
+  },
+  {
+    id: "chart",
+    title: "Candlestick Chart",
+    description:
+      "Multi-pane candlestick chart with indicators and session breaks.",
+    category: "chart",
+    icon: "📈",
+    defaultWidth: 500,
+    defaultHeight: 380,
+    load: () =>
+      import("./ChartWidget").then((module) => module.chartDefinition),
+  },
+  {
+    id: "order-ticket",
+    title: "Order Ticket & Leg Builder",
+    description:
+      "Stock and multi-leg options ticket with margin calculation and risk gates.",
+    category: "order",
+    icon: "🎫",
+    defaultWidth: 380,
+    defaultHeight: 460,
+    load: () =>
+      import("./OrderTicketWidget").then(
+        (module) => module.orderTicketDefinition,
+      ),
+  },
+  {
+    id: "blotter",
+    title: "Positions & Orders Blotter",
+    description:
+      "Real-time mark-to-market positions, working orders, trade log, and panic cancel button.",
+    category: "order",
+    icon: "📑",
+    defaultWidth: 500,
+    defaultHeight: 380,
+    load: () =>
+      import("./BlotterWidget").then((module) => module.blotterDefinition),
+  },
+  {
+    id: "option-chain",
+    title: "Option Chain & Greeks",
+    description:
+      "Symmetrical strike ladder with Black-Scholes Greeks, IV, PCR, and leg selector.",
+    category: "analytics",
+    icon: "⛓️",
+    defaultWidth: 550,
+    defaultHeight: 420,
+    load: () =>
+      import("./OptionChainWidget").then(
+        (module) => module.optionChainDefinition,
+      ),
+  },
+  {
+    id: "backtest-analytics",
+    title: "Backtest Analytics & Scorecard",
+    description:
+      "Institutional tear sheet, underwater drawdown, monthly return heatmap, and trade distribution.",
+    category: "analytics",
+    icon: "📊",
+    defaultWidth: 520,
+    defaultHeight: 400,
+    load: () =>
+      import("./BacktestAnalyticsWidget").then(
+        (module) => module.backtestAnalyticsDefinition,
+      ),
+  },
+  {
+    id: "live-feed-status",
+    title: "Live Feed & Telemetry",
+    description:
+      "Real-time WebSocket connection state, latency telemetry, and incoming tick streamer.",
+    category: "analytics",
+    icon: "📡",
+    defaultWidth: 460,
+    defaultHeight: 320,
+    load: () =>
+      import("./LiveFeedStatusWidget").then(
+        (module) => module.liveFeedStatusDefinition,
+      ),
+  },
+  {
+    id: "alerts-log",
+    title: "Alerts & Audit Log",
+    description:
+      "Real-time notification manager, risk event alerts, and synthesized sound chime controls.",
+    category: "analytics",
+    icon: "🔔",
+    defaultWidth: 480,
+    defaultHeight: 340,
+    load: () =>
+      import("./AlertsLogWidget").then(
+        (module) => module.alertsLogDefinition,
+      ),
+  },
+  {
+    id: "strategy-builder",
+    title: "Visual Strategy Builder",
+    description:
+      "Block-based StrategyIR rule composer and instant vector backtest runner.",
+    category: "analytics",
+    icon: "🧱",
+    defaultWidth: 700,
+    defaultHeight: 450,
+    load: () =>
+      import("./StrategyBuilderWidget").then(
+        (module) => module.strategyBuilderDefinition,
+      ),
+  },
+  {
+    id: "strategy-marketplace",
+    title: "Strategy Marketplace",
+    description:
+      "Browse curated quantitative strategy library, preview backtest tear sheets, and clone to workspace.",
+    category: "analytics",
+    icon: "🏪",
+    defaultWidth: 720,
+    defaultHeight: 480,
+    load: () =>
+      import("./StrategyMarketplaceWidget").then(
+        (module) => module.strategyMarketplaceDefinition,
+      ),
+  },
+  {
+    id: "pnl-calendar",
+    title: "P&L Calendar",
+    description:
+      "Monthly trading performance grid, holiday schedule indicators, and trade book drill-down.",
+    category: "analytics",
+    icon: "📅",
+    defaultWidth: 640,
+    defaultHeight: 420,
+    load: () =>
+      import("./PnlCalendarWidget").then(
+        (module) => module.pnlCalendarDefinition,
+      ),
+  },
+  {
+    id: "returns-timeline",
+    title: "Returns & Timeline",
+    description:
+      "Monthly/yearly compounded returns, rolling return distributions, and Backtest -> Paper -> Live continuous timeline.",
+    category: "analytics",
+    icon: "📈",
+    defaultWidth: 720,
+    defaultHeight: 440,
+    load: () =>
+      import("./ReturnsTimelineWidget").then(
+        (module) => module.returnsTimelineDefinition,
+      ),
+  },
+  {
+    id: "grading-thresholds",
+    title: "Grading Thresholds",
+    description:
+      "Configurable metric grading bands, live preview before save, stale scorecard tracking, and explicit re-grade.",
+    category: "analytics",
+    icon: "⚖️",
+    defaultWidth: 700,
+    defaultHeight: 460,
+    load: () =>
+      import("./GradingThresholdsWidget").then(
+        (module) => module.gradingThresholdsDefinition,
+      ),
+  },
+  {
+    id: "options-analytics",
+    title: "Options Analytics & Volatility",
+    description:
+      "Advanced ATM IV, IV Rank/Percentile, Max Pain, Volatility Smile/Skew, and Term Structure.",
+    category: "analytics",
+    icon: "📊",
+    defaultWidth: 550,
+    defaultHeight: 400,
+    load: () =>
+      import("../../optionchain/OptionsAnalyticsPanel").then(
+        (module) => module.optionsAnalyticsDefinition,
+      ),
+  },
+  {
+    id: "option-strategy-builder",
+    title: "Multi-Leg Option Strategy Builder",
+    description:
+      "Interactive multi-leg option payoff builder, breakevens, extrema, and net Greeks.",
+    category: "analytics",
+    icon: "🧩",
+    defaultWidth: 600,
+    defaultHeight: 450,
+    load: () =>
+      import("./OptionStrategyBuilderWidget").then(
+        (module) => module.optionStrategyBuilderDefinition,
+      ),
+  },
+  {
+    id: "paper_trading",
+    title: "Paper Trading Blotter",
+    description:
+      "Paper order book, trade book, open positions, live MTM, and statutory costs.",
+    category: "order",
+    icon: "📜",
+    defaultWidth: 620,
+    defaultHeight: 420,
+    load: () =>
+      import("./PaperTradingWidget").then(
+        (module) => module.paperTradingDefinition,
+      ),
+  },
+];
 
 export function registerBuiltinWidgets(): void {
-  widgetRegistry.register(marketClockDefinition);
-  widgetRegistry.register(watchlistDefinition);
-  widgetRegistry.register(sectorDrillInDefinition);
-  widgetRegistry.register(marketHeatmapDefinition);
-  widgetRegistry.register(marketDepthDefinition);
-  widgetRegistry.register(backtestSummaryDefinition);
-  widgetRegistry.register(fixtureTestDefinition);
-  widgetRegistry.register(chartDefinition);
-  widgetRegistry.register(orderTicketDefinition);
-  widgetRegistry.register(blotterDefinition);
-  widgetRegistry.register(optionChainDefinition);
-  widgetRegistry.register(backtestAnalyticsDefinition);
-  widgetRegistry.register(liveFeedStatusDefinition);
-  widgetRegistry.register(alertsLogDefinition);
-  widgetRegistry.register(strategyBuilderDefinition);
-  widgetRegistry.register(strategyMarketplaceDefinition);
-  widgetRegistry.register(pnlCalendarDefinition);
-  widgetRegistry.register(returnsTimelineDefinition);
-  widgetRegistry.register(gradingThresholdsDefinition);
-  widgetRegistry.register(optionsAnalyticsDefinition);
-  widgetRegistry.register(optionStrategyBuilderDefinition);
-  widgetRegistry.register(paperTradingDefinition);
+  for (const manifest of builtinManifests) {
+    widgetRegistry.register(createLazyWidgetDefinition(manifest));
+  }
 }
 
-// Auto-register built-in widgets
+// Auto-register built-in widget metadata. Implementations remain lazy.
 registerBuiltinWidgets();

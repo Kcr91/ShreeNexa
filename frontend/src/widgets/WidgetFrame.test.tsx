@@ -4,14 +4,14 @@ import { WidgetFrame } from "./WidgetFrame";
 import "./builtin";
 
 describe("WidgetFrame Component", () => {
-  it("renders widget title and content", () => {
+  it("renders widget title and lazy-loaded content", async () => {
     render(<WidgetFrame instanceId="inst-1" widgetId="market-clock" />);
 
     expect(screen.getByText("Market Clock")).toBeInTheDocument();
-    expect(screen.getByText(/Market Session Clock/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Market Session Clock/i)).toBeInTheDocument();
   });
 
-  it("handles settings editor toggle and validation error display", () => {
+  it("handles settings editor toggle and validation error display", async () => {
     const handleUpdate = vi.fn();
     render(
       <WidgetFrame
@@ -20,6 +20,8 @@ describe("WidgetFrame Component", () => {
         onUpdateSettings={handleUpdate}
       />
     );
+
+    await screen.findByText("NIFTY 50");
 
     // Open settings editor
     const settingsBtn = screen.getByLabelText("Widget Settings");
