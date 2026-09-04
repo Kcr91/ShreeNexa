@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import pytest
 from app.api.ws import (
     ClientSession,
     MarketDataFanoutManager,
@@ -20,6 +21,7 @@ from app.dhan import (
 from app.feedd.cache import InMemoryHotCache
 from app.main import app
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 
 def _make_quote_packet(segment: int, sec_id: int, ltp: float, vol: int = 1000) -> QuotePacket:
@@ -180,10 +182,26 @@ def test_unsubscribe_cleans_routing() -> None:
     assert session.queue.empty()
 
 
+def test_unauthenticated_websocket_rejected() -> None:
+    """QA-05: Opening WebSocket without valid session cookie is rejected before accept with 4401."""
+    client = TestClient(app)
+    with pytest.raises(WebSocketDisconnect) as exc_info:
+        with client.websocket_connect("/api/v1/feed/ws"):
+            pass
+    assert exc_info.value.code == 4401
+
+
 def test_fastapi_websocket_endpoint_integration() -> None:
+    """QA-05: Authenticated browser WebSocket connects and exchanges frames."""
+    from app.auth.service import auth_service
+
+    session = auth_service._create_session("ws_test_trader")
     client = TestClient(app)
 
-    with client.websocket_connect("/api/v1/feed/ws") as ws:
+    with client.websocket_connect(
+        "/api/v1/feed/ws",
+        cookies={"shreenexa_session": session.session_id},
+    ) as ws:
         # 1. Ping / Pong
         ws.send_json({"action": "ping", "timestamp": 999888})
         pong = ws.receive_json()

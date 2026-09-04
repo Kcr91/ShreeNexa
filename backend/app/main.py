@@ -40,6 +40,7 @@ from app.api.strategy_builder import router as strategy_builder_router
 from app.api.strategy_ir import router as strategy_ir_router
 from app.api.universe import router as universe_router
 from app.api.watchlists import router as watchlists_router
+from app.api.ws import router as ws_router
 from app.contracts import heartbeat as hb
 from app.contracts.process_loop import HEARTBEAT_INTERVAL_S
 from app.dhan.credentials import resolve_dhan_credentials
@@ -104,6 +105,7 @@ app.add_middleware(
 app.include_router(instruments_router)
 app.include_router(universe_router)
 app.include_router(feed_router)
+app.include_router(ws_router)
 app.include_router(indicators_router)
 app.include_router(indicators_alias_router)
 app.include_router(screeners_router)
