@@ -69,6 +69,13 @@ class Settings(BaseModel):
     dhan_access_token: SecretStr | None = Field(default=None)
     dhan_token_expires_at: str | None = Field(default=None)
 
+    # Specific credential origin tracking (QA-01)
+    dhan_os_client_id: str | None = Field(default=None)
+    dhan_os_access_token: SecretStr | None = Field(default=None)
+    dhan_dotenv_client_id: str | None = Field(default=None)
+    dhan_dotenv_access_token: SecretStr | None = Field(default=None)
+    dotenv_path_loaded: Path | None = Field(default=None)
+
     # Runtime root directory for local operational state
     runtime_root: Path = Field(default=Path(".runtime"))
 
@@ -82,9 +89,11 @@ class Settings(BaseModel):
                 target_env = override.strip() or None
 
         file_values: dict[str, Any] = {}
+        dotenv_path_loaded: Path | None = None
         if target_env:
             path = Path(target_env)
             if path.is_file():
+                dotenv_path_loaded = path
                 file_values = {
                     k.lower(): v for k, v in dotenv_values(path).items() if v is not None
                 }
@@ -94,6 +103,20 @@ class Settings(BaseModel):
             env_values[key.lower()] = val
 
         merged: dict[str, Any] = {**file_values, **env_values}
+
+        # Track explicit OS env values
+        if "dhan_client_id" in env_values:
+            merged["dhan_os_client_id"] = env_values["dhan_client_id"]
+        if "dhan_access_token" in env_values:
+            merged["dhan_os_access_token"] = env_values["dhan_access_token"]
+
+        # Track explicit dotenv file values
+        if "dhan_client_id" in file_values:
+            merged["dhan_dotenv_client_id"] = file_values["dhan_client_id"]
+        if "dhan_access_token" in file_values:
+            merged["dhan_dotenv_access_token"] = file_values["dhan_access_token"]
+
+        merged["dotenv_path_loaded"] = dotenv_path_loaded
         return cls(**merged)
 
     def get_database_dsn(self) -> str:

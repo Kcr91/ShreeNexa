@@ -148,3 +148,68 @@ def test_clear_credentials_dpapi() -> None:
         assert clear_dhan_credentials_dpapi(runtime_root=runtime_root) is True
         assert not target.is_file()
         assert clear_dhan_credentials_dpapi(runtime_root=runtime_root) is False
+
+
+def test_dpapi_credentials_override_dotenv_file(tmp_path: Path) -> None:
+    """QA-01: Encrypted DPAPI storage must take precedence over plaintext .env files."""
+    fake_adapter = FakeDPAPI()
+    runtime_root = tmp_path / "runtime"
+
+    # 1. Store credentials in DPAPI
+    store_dhan_credentials_dpapi(
+        client_id="DPAPI_CLIENT_ID",
+        access_token="DPAPI_SECRET_TOKEN",
+        runtime_root=runtime_root,
+        dpapi_adapter=fake_adapter,
+    )
+
+    # 2. Create a plaintext .env file with competing credentials
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "DHAN_CLIENT_ID=DOTENV_CLIENT_ID\n"
+        "DHAN_ACCESS_TOKEN=DOTENV_PLAINTEXT_TOKEN\n",
+        encoding="utf-8",
+    )
+
+    # 3. Load settings pointing to the .env file
+    settings = Settings.load(env_file=env_file)
+    assert settings.dhan_dotenv_client_id == "DOTENV_CLIENT_ID"
+    assert settings.dhan_dotenv_access_token is not None
+
+    # 4. Resolve credentials - DPAPI MUST WIN over .env
+    resolved = resolve_dhan_credentials(
+        settings=settings,
+        runtime_root=runtime_root,
+        dpapi_adapter=fake_adapter,
+    )
+
+    assert resolved is not None
+    assert resolved.source == "dpapi"
+    assert resolved.client_id == "DPAPI_CLIENT_ID"
+    assert resolved.get_token_value() == "DPAPI_SECRET_TOKEN"
+
+
+def test_dotenv_file_used_as_fallback_when_dpapi_absent(tmp_path: Path) -> None:
+    """QA-01: Plaintext .env is used with source='dotenv' when DPAPI and OS env are absent."""
+    fake_adapter = FakeDPAPI()
+    runtime_root = tmp_path / "runtime"
+
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "DHAN_CLIENT_ID=DOTENV_FALLBACK_CLIENT\n"
+        "DHAN_ACCESS_TOKEN=DOTENV_FALLBACK_TOKEN\n",
+        encoding="utf-8",
+    )
+
+    settings = Settings.load(env_file=env_file)
+    resolved = resolve_dhan_credentials(
+        settings=settings,
+        runtime_root=runtime_root,
+        dpapi_adapter=fake_adapter,
+    )
+
+    assert resolved is not None
+    assert resolved.source == "dotenv"
+    assert resolved.client_id == "DOTENV_FALLBACK_CLIENT"
+    assert resolved.get_token_value() == "DOTENV_FALLBACK_TOKEN"
+

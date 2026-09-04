@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ from app.dhan.dpapi import (
     read_encrypted_file,
     save_encrypted_file,
 )
+
+logger = logging.getLogger(__name__)
 
 CREDENTIALS_FILENAME = "dhan.enc"
 
@@ -127,13 +130,34 @@ def resolve_dhan_credentials(
     runtime_root: Path | None = None,
     dpapi_adapter: DPAPIAdapter | None = None,
 ) -> DhanCredentials | None:
-    """Resolve Dhan credentials with precedence: Environment > DPAPI storage > None."""
-    cfg = settings or get_settings()
+    """Resolve Dhan credentials with precedence: OS environment > DPAPI storage > .env file > None.
 
-    # 1. Environment / .env resolution (production standard)
-    if cfg.dhan_access_token and cfg.dhan_client_id:
-        token_str = cfg.dhan_access_token.get_secret_value().strip()
-        client_id_str = cfg.dhan_client_id.strip()
+    Invariants (QA-01):
+    1. OS environment variables (DHAN_ACCESS_TOKEN, DHAN_CLIENT_ID) always take highest precedence.
+    2. Encrypted Windows DPAPI storage takes precedence over plaintext .env files.
+    3. Plaintext .env file values serve as lowest fallback, triggering a security warning if used.
+    """
+    cfg = settings or get_settings()
+    root = runtime_root or cfg.runtime_root
+    enc_path = get_credentials_path(root)
+
+    # 1. OS Environment variables (highest precedence)
+    os_token = cfg.dhan_os_access_token
+    os_client_id = cfg.dhan_os_client_id
+    if (
+        os_token is None
+        and os_client_id is None
+        and cfg.dhan_dotenv_access_token is None
+        and cfg.dhan_access_token
+        and cfg.dhan_client_id
+    ):
+        # Direct Settings(...) construction without Settings.load() (e.g. in tests)
+        os_token = cfg.dhan_access_token
+        os_client_id = cfg.dhan_client_id
+
+    if os_token and os_client_id:
+        token_str = os_token.get_secret_value().strip()
+        client_id_str = os_client_id.strip()
         if token_str and client_id_str:
             expires_at = parse_iso_datetime(cfg.dhan_token_expires_at) or token_expiry_from_claims(
                 token_str
@@ -145,9 +169,8 @@ def resolve_dhan_credentials(
                 source="environment",
             )
 
-    # 2. Local DPAPI encrypted storage resolution (local Windows development)
-    root = runtime_root or cfg.runtime_root
-    enc_path = get_credentials_path(root)
+    # 2. Local DPAPI encrypted storage resolution (local Windows development, precedes .env file)
+    dpapi_creds: DhanCredentials | None = None
     if enc_path.is_file():
         try:
             adapter = dpapi_adapter or get_dpapi_adapter()
@@ -161,15 +184,55 @@ def resolve_dhan_credentials(
                 expires_at = parse_iso_datetime(data.get("expires_at")) or token_expiry_from_claims(
                     token_value
                 )
-                return DhanCredentials(
+                dpapi_creds = DhanCredentials(
                     client_id=str(client_id).strip(),
                     access_token=SecretStr(token_value),
                     expires_at=expires_at,
                     source="dpapi",
                 )
-        except DPAPIError, json.JSONDecodeError, UnicodeDecodeError, OSError:
-            # Fail closed if encrypted file cannot be read/decrypted
-            return None
+        except (DPAPIError, json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
+            logger.warning("Failed to decrypt DPAPI credentials at %s: %s", enc_path, exc)
+
+    if dpapi_creds is not None:
+        if cfg.dhan_dotenv_access_token:
+            logger.info(
+                "Dhan credentials resolved from encrypted DPAPI store. "
+                "Plaintext token in %s was ignored in favor of DPAPI.",
+                cfg.dotenv_path_loaded or ".env",
+            )
+        return dpapi_creds
+
+    # 3. Plaintext .env file resolution (fallback)
+    dotenv_token = cfg.dhan_dotenv_access_token or cfg.dhan_access_token
+    dotenv_client = cfg.dhan_dotenv_client_id or cfg.dhan_client_id
+    if dotenv_token and dotenv_client:
+        token_str = dotenv_token.get_secret_value().strip()
+        client_id_str = dotenv_client.strip()
+        if token_str and client_id_str:
+            expires_at = parse_iso_datetime(cfg.dhan_token_expires_at) or token_expiry_from_claims(
+                token_str
+            )
+            if enc_path.is_file():
+                logger.warning(
+                    "SECURITY NOTICE: Dhan credentials resolved from plaintext %s while an "
+                    "encrypted DPAPI file exists at %s (which could not be decrypted). "
+                    "Ensure DPAPI credentials are valid via 'python -m app.dhan.token set'.",
+                    cfg.dotenv_path_loaded or ".env",
+                    enc_path,
+                )
+            else:
+                logger.warning(
+                    "SECURITY NOTICE: Dhan credentials resolved from plaintext %s "
+                    "(source: dotenv). Storing secrets in plaintext files is discouraged; "
+                    "run 'python -m app.dhan.token set' to store credentials securely in DPAPI.",
+                    cfg.dotenv_path_loaded or ".env",
+                )
+            return DhanCredentials(
+                client_id=client_id_str,
+                access_token=SecretStr(token_str),
+                expires_at=expires_at,
+                source="dotenv",
+            )
 
     return None
 
