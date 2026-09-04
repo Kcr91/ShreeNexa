@@ -3098,3 +3098,25 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Production Vite build passes cleanly (26 lazy-loaded chunks, 0 errors).
   - Fast-forward merged to `main` at `6569651`.
 
+### 2026-09-04 — Token-health badge contract alignment and CORS/base URL resolution (QA-07, QA-08)
+
+- Resolved **QA-07** (High): Aligned frontend token health types and badge rendering with the backend's six canonical `TokenStatus` literals (`valid`, `expiring_soon`, `expired`, `unknown_expiry`, `missing`, `revoked`):
+  - `frontend/src/api/client.ts`: Replaced mismatched enum (`active`/`not_configured`) with exact backend union and fields (`is_valid`, `expires_in_seconds`, `client_id_masked`, `source`).
+  - `frontend/src/components/Header.tsx`:
+    - Distinct visual styling and labels for every status: `valid` (green pill, label `HEALTHY`), `expiring_soon` (amber, label `EXPIRING SOON`), `expired`/`revoked`/`missing` (red, label `EXPIRED`/`REVOKED`/`NOT CONFIGURED`), `unknown_expiry` (amber, label `UNKNOWN EXPIRY`).
+    - Formats remaining validity duration as `Xh Ym` from `expires_in_seconds`.
+    - Distinguishes network transport failures (`API UNREACHABLE` in red) from credential statuses, eliminating misleading offline stubs.
+  - Authored comprehensive test suite `frontend/src/components/Header.test.tsx` (6 tests passing).
+- Resolved **QA-08** (High): Removed hardcoded cross-origin absolute URL `http://127.0.0.1:8000` and configured FastAPI CORS middleware:
+  - `frontend/src/api/client.ts`: Default `baseUrl` to `import.meta.env.VITE_API_BASE_URL ?? ""` (same-origin relative in both dev proxy and production Caddy) with `credentials: "include"` for session cookies.
+  - `frontend/src/websocket/client.ts`: Derived default WebSocket URL dynamically from `window.location` (`${protocol === "https:" ? "wss:" : "ws:"}//${host}/api/v1/feed/ws`).
+  - `backend/app/main.py`: Configured `CORSMiddleware` with allowed dev frontend origins (`http://localhost:5173`, `http://127.0.0.1:5173`, `http://localhost:4173`, `http://127.0.0.1:4173`) and `allow_credentials=True`.
+  - Authored unit test suite `backend/tests/unit/test_api_cors.py` (2 tests passing) validating preflight and origin credentials headers.
+- Quality gates verified:
+  - 197 frontend tests passing across 60 files (0 failures).
+  - TypeScript `tsc --noEmit` clean.
+  - Production Vite build clean.
+  - Backend unit tests and `ruff check` clean.
+  - Fast-forward merged to `main` at `8d9479d`.
+
+
