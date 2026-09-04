@@ -3062,3 +3062,17 @@ a live branch indicator; run `git status --short --branch` for current state.
   - 591 passed, 16 skipped in backend unit suite.
   - Strict mypy and ruff check passing across 328 source files.
   - Fast-forward merged to `main` at `f24bca2`.
+
+### 2026-09-04 — Frontend order ticket real API execution wiring resolved (QA-04)
+
+- Resolved **QA-04** (Critical): Replaced client-side fabricated order IDs (`ORD-${Date.now()}-${Math.random()}...`) with live network calls to the backend order placement API:
+  - `frontend/src/order/execution.ts`: `placeOrder` is now an asynchronous function executing against `POST /api/v1/orders/ticket/place`.
+  - Returned `orderId` is the broker-assigned ID from the backend engine; client-side ID synthesis is completely removed.
+  - Handles non-2xx responses and 504 gateway timeouts by surfacing the backend's `PENDING_BROKER_CONFIRMATION` invariant and blocking blind retries.
+  - Updated `OrderTicketWidget.tsx` to asynchronously submit orders and display real API execution status.
+  - Extended `StockOrder` with `securityId` and updated `ProductType` with DhanHQ v2.5 enum support (`INTRADAY`, `MARGIN`, `MTF`).
+- Quality gates verified:
+  - `npm test src/order/execution.test.ts src/widgets/builtin/OrderTicketWidget.test.tsx` (11/11 tests pass).
+  - Complete frontend test suite passes (190 tests across 59 test files).
+  - Frontend `tsc --noEmit` and production Vite build pass cleanly with code splitting.
+  - Fast-forward merged to `main` at `fcf5258`.
