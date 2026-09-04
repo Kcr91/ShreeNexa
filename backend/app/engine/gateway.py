@@ -96,6 +96,78 @@ class AuditedRiskFilteredBroker(RiskFilteredBroker):
             )
             raise
 
+    def place_order_with_slicing(
+        self,
+        order: DhanOrderRequest,
+        freeze_limit: int | None = None,
+        lot_size: int = 1,
+        strategy_id: str | None = None,
+        ref_ltp: float | None = None,
+        current_positions_count: int = 0,
+    ) -> list[DhanOrderResponse]:
+        """Filter order through pre-trade risk and delegate sliced execution to DhanBroker."""
+        cid = order.correlation_id or f"NX-{int(time.time())}"
+
+        self.audit_ledger.record_event(
+            AuditEventType.RISK_FILTER_EVALUATED,
+            correlation_id=cid,
+            payload={
+                "security_id": order.security_id,
+                "quantity": order.quantity,
+                "price": order.price,
+                "transaction_type": str(order.transaction_type),
+                "is_sliced": True,
+            },
+        )
+
+        try:
+            self.risk_engine.filter_order(
+                order,
+                ref_ltp=ref_ltp,
+                current_positions_count=current_positions_count,
+            )
+            self.audit_ledger.record_event(
+                AuditEventType.RISK_DECISION,
+                correlation_id=cid,
+                payload={"decision": "APPROVED", "is_sliced": True},
+            )
+        except Exception as exc:
+            self.audit_ledger.record_event(
+                AuditEventType.RISK_DECISION,
+                correlation_id=cid,
+                payload={"decision": "REJECTED", "reason": str(exc), "is_sliced": True},
+            )
+            raise
+
+        self.audit_ledger.record_event(
+            AuditEventType.ORDER_SUBMITTED,
+            correlation_id=cid,
+            payload={"order_request": order.model_dump(by_alias=True), "is_sliced": True},
+        )
+
+        try:
+            responses = self.broker.place_order_with_slicing(
+                request=order,
+                freeze_limit=freeze_limit,
+                lot_size=lot_size,
+                strategy_id=strategy_id,
+            )
+            for resp in responses:
+                self.audit_ledger.record_event(
+                    AuditEventType.ORDER_RESPONSE,
+                    correlation_id=cid,
+                    order_id=resp.order_id,
+                    payload={"order_response": resp.model_dump(by_alias=True)},
+                )
+            return responses
+        except Exception as exc:
+            self.audit_ledger.record_event(
+                AuditEventType.ORDER_RESPONSE,
+                correlation_id=cid,
+                payload={"error": str(exc), "is_sliced": True},
+            )
+            raise
+
 
 def get_risk_filtered_broker(
     limits: RiskLimits | None = None,
@@ -103,7 +175,7 @@ def get_risk_filtered_broker(
     audit_ledger: AuditLedger | None = None,
     broker: DhanBroker | None = None,
     **broker_kwargs: Any,
-) -> RiskFilteredBroker:
+) -> AuditedRiskFilteredBroker:
     """Construct a DhanBroker exclusively shielded by RiskFilteredBroker and AuditLedger.
 
     Any orders placed through the returned broker instance are unconditionally

@@ -21,6 +21,9 @@ from app.dhan.orders import (
     OrderType,
     ProductType,
     TransactionType,
+    calculate_order_slices,
+    generate_correlation_id,
+    get_freeze_limit,
 )
 from app.engine.audit import AuditEventType, get_audit_ledger
 from app.engine.broker import (
@@ -116,6 +119,7 @@ class TicketPlaceOrderRequest(BaseModel):
     price: float | None = None
     trigger_price: float | None = None
     correlation_id: str | None = None
+    strategy_id: str | None = None
 
 
 class TicketPlaceOrderResponse(BaseModel):
@@ -138,8 +142,15 @@ def estimate_order_charges(req: OrderChargesEstimateRequest) -> OrderChargesEsti
        effective-dated IndianCostCalculator (app/engine/costs.py).
     2. Margin requirements are computed via the DhanMarginAdapter (app/dhan/margin_adapter.py).
        Unavailable margin is returned as explicit None with is_margin_available=False,
-       NEVER fabricated with an invented leverage percentage or zero.
+       and unverified fallbacks are strictly blocked.
+    3. The frontend displays this exact breakdown prior to order placement.
     """
+    trade_d = req.trade_date or date.today()
+    trade_ts = datetime.combine(trade_d, datetime.min.time(), tzinfo=UTC)
+
+    # 1. Map transaction type to OrderSide
+    order_side = OrderSide.BUY if req.transaction_type == TransactionType.BUY else OrderSide.SELL
+
     fno_segments = (
         ExchangeSegment.NSE_FNO,
         ExchangeSegment.BSE_FNO,
@@ -152,21 +163,12 @@ def estimate_order_charges(req: OrderChargesEstimateRequest) -> OrderChargesEsti
             cost_prod = CostProductType.FUTURES
         else:
             cost_prod = CostProductType.OPTIONS
-    elif req.product_type == ProductType.CNC:
+    elif req.product_type in (ProductType.CNC, ProductType.MTF):
         cost_prod = CostProductType.DELIVERY
     else:
         cost_prod = CostProductType.INTRADAY
 
-    # 2. Map side
-    order_side = OrderSide.BUY if req.transaction_type == TransactionType.BUY else OrderSide.SELL
-
-    # 3. Resolve effective trade timestamp
-    if req.trade_date:
-        trade_ts = datetime.combine(req.trade_date, datetime.min.time(), tzinfo=UTC)
-    else:
-        trade_ts = datetime.now(UTC)
-
-    # 4. Delegate to unified cost calculator (F3.3)
+    # 3. Calculate statutory charges & taxes
     breakdown = cost_calculator.calculate_cost(
         product_type=cost_prod,
         side=order_side,
@@ -208,7 +210,13 @@ def estimate_order_charges(req: OrderChargesEstimateRequest) -> OrderChargesEsti
 @router.post("/place", response_model=TicketPlaceOrderResponse)
 def place_ticket_order(req: TicketPlaceOrderRequest) -> TicketPlaceOrderResponse:
     """Submit an order from order ticket with explicit mode validation and confirmation."""
-    correlation_id = req.correlation_id or f"TICKET-{req.security_id}"
+    correlation_id = req.correlation_id or generate_correlation_id(
+        prefix="TKT",
+        strategy_id=req.strategy_id,
+    )
+
+    freeze_limit = get_freeze_limit(req.symbol, req.exchange_segment)
+    is_sliced = freeze_limit is not None and req.quantity > freeze_limit
 
     # Check for status uncertainty to block blind retry
     if correlation_id in _uncertain_orders:
@@ -242,22 +250,46 @@ def place_ticket_order(req: TicketPlaceOrderRequest) -> TicketPlaceOrderResponse
             correlationId=correlation_id,
         )
         try:
-            order_resp = risk_filtered.place_order(dhan_req)
-            order_id = order_resp.order_id or ""
-            if isinstance(order_resp.order_status, OrderStatus):
-                status_val = order_resp.order_status.value
-            elif order_resp.order_status is not None:
-                status_val = str(order_resp.order_status)
+            if is_sliced:
+                order_responses = risk_filtered.place_order_with_slicing(
+                    order=dhan_req,
+                    freeze_limit=freeze_limit,
+                    strategy_id=req.strategy_id,
+                )
+                primary_resp = order_responses[0]
+                order_id = primary_resp.order_id or ""
+                status_val = (
+                    primary_resp.order_status.value
+                    if isinstance(primary_resp.order_status, OrderStatus)
+                    else str(primary_resp.order_status or "PENDING")
+                )
+                slice_count = len(order_responses)
+                msg = f"Live order {order_id} submitted successfully across {slice_count} slices."
+                return TicketPlaceOrderResponse(
+                    success=True,
+                    mode=req.mode,
+                    order_id=order_id,
+                    correlation_id=correlation_id,
+                    order_status=status_val,
+                    message=msg,
+                )
             else:
-                status_val = "PENDING"
-            return TicketPlaceOrderResponse(
-                success=True,
-                mode=req.mode,
-                order_id=order_id,
-                correlation_id=correlation_id,
-                order_status=status_val,
-                message=f"Live order {order_id} submitted successfully.",
-            )
+                order_resp = risk_filtered.place_order(dhan_req)
+                order_id = order_resp.order_id or ""
+                if isinstance(order_resp.order_status, OrderStatus):
+                    status_val = order_resp.order_status.value
+                elif order_resp.order_status is not None:
+                    status_val = str(order_resp.order_status)
+                else:
+                    status_val = "PENDING"
+                return TicketPlaceOrderResponse(
+                    success=True,
+                    mode=req.mode,
+                    order_id=order_id,
+                    correlation_id=correlation_id,
+                    order_status=status_val,
+                    message=f"Live order {order_id} submitted successfully.",
+                )
         except (
             LiveTradingDisabledError,
             StaticIPMismatchError,
@@ -277,6 +309,16 @@ def place_ticket_order(req: TicketPlaceOrderRequest) -> TicketPlaceOrderResponse
             ) from exc
 
     # Paper mode execution delegated to PaperBroker
+    if is_sliced:
+        planned_slices = calculate_order_slices(req.quantity, freeze_limit=freeze_limit)
+        logger.info(
+            "Paper order for %s (%d) exceeds freeze limit (%d); planned %d slices: %s",
+            req.symbol,
+            req.quantity,
+            freeze_limit,
+            len(planned_slices),
+            planned_slices,
+        )
     side = (
         PaperOrderSide.BUY if req.transaction_type == TransactionType.BUY else PaperOrderSide.SELL
     )

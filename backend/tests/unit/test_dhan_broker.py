@@ -9,6 +9,7 @@ from app.dhan.exceptions import DhanTimeoutError
 from app.dhan.orders import (
     DhanOrderModifyRequest,
     DhanOrderRequest,
+    DhanOrderResponse,
     DhanSliceOrderRequest,
     ExchangeSegment,
     OrderStatus,
@@ -247,3 +248,107 @@ def test_dhan_broker_read_only_methods_are_sole_unguarded_endpoints() -> None:
         "get_order_by_id",
         "reconcile_pending_order",
     ], f"Unexpected unguarded broker methods: {unguarded}"
+
+
+def test_dhan_broker_place_order_with_slicing_disabled(
+    test_credentials: DhanCredentials, sample_order_request: DhanOrderRequest
+) -> None:
+    mock_transport = MockTransport()
+    client = DhanRestClient(credentials=test_credentials, transport=mock_transport)
+    broker = DhanBroker(client=client, enable_live_trading=False)
+
+    with pytest.raises(LiveTradingDisabledError):
+        broker.place_order_with_slicing(sample_order_request, freeze_limit=1800)
+
+
+def test_dhan_broker_place_order_with_slicing_sequential_execution(
+    test_credentials: DhanCredentials,
+) -> None:
+    import re
+
+    mock_transport = MockTransport()
+    placed_requests: list[DhanOrderRequest] = []
+
+    def _mock_place_order(req: DhanOrderRequest) -> DhanOrderResponse:
+        placed_requests.append(req)
+        return DhanOrderResponse(
+            orderId=f"ORD-{len(placed_requests)}",
+            orderStatus=OrderStatus.PENDING,
+        )
+
+    client = DhanRestClient(credentials=test_credentials, transport=mock_transport)
+    client.place_order = _mock_place_order  # type: ignore[assignment]
+
+    broker = DhanBroker(
+        client=client,
+        enable_live_trading=True,
+        enforce_static_ip=False,
+    )
+
+    # 4000 quantity with freeze limit of 1800 -> 3 slices: 1800, 1800, 400
+    large_req = DhanOrderRequest(
+        transactionType=TransactionType.BUY,
+        exchangeSegment=ExchangeSegment.NSE_FNO,
+        securityId="45231",
+        quantity=4000,
+        price=150.0,
+        correlationId="NX-ALPHA-TEST",
+    )
+
+    responses = broker.place_order_with_slicing(
+        request=large_req,
+        freeze_limit=1800,
+        strategy_id="alpha",
+    )
+
+    assert len(responses) == 3
+    assert len(placed_requests) == 3
+    assert [r.quantity for r in placed_requests] == [1800, 1800, 400]
+
+    # Verify unique sequential correlation IDs adhering strictly to ADR-0007 (len <= 25)
+    cids: list[str] = [r.correlation_id for r in placed_requests if r.correlation_id is not None]
+    assert len(cids) == 3
+    assert len(set(cids)) == 3
+    for cid in cids:
+        assert len(cid) <= 25, f"Correlation ID exceeds 25 chars: {cid}"
+        assert re.match(r"^[a-zA-Z0-9_-]+$", cid), f"Invalid chars in correlation ID: {cid}"
+
+    assert cids[0].endswith("-S1")
+    assert cids[1].endswith("-S2")
+    assert cids[2].endswith("-S3")
+
+
+def test_dhan_broker_place_order_with_slicing_single_slice(
+    test_credentials: DhanCredentials,
+) -> None:
+    mock_transport = MockTransport()
+    placed_requests: list[DhanOrderRequest] = []
+
+    def _mock_place_order(req: DhanOrderRequest) -> DhanOrderResponse:
+        placed_requests.append(req)
+        return DhanOrderResponse(orderId="ORD-SINGLE", orderStatus=OrderStatus.TRANSIT)
+
+    client = DhanRestClient(credentials=test_credentials, transport=mock_transport)
+    client.place_order = _mock_place_order  # type: ignore[assignment]
+
+    broker = DhanBroker(
+        client=client,
+        enable_live_trading=True,
+        enforce_static_ip=False,
+    )
+
+    single_req = DhanOrderRequest(
+        transactionType=TransactionType.BUY,
+        exchangeSegment=ExchangeSegment.NSE_EQ,
+        securityId="1333",
+        quantity=500,
+        price=2500.0,
+        correlationId="NX-SINGLE-ORDER",
+    )
+
+    responses = broker.place_order_with_slicing(single_req, freeze_limit=None)
+    assert len(responses) == 1
+    assert responses[0].order_id == "ORD-SINGLE"
+    assert len(placed_requests) == 1
+    assert placed_requests[0].quantity == 500
+    assert placed_requests[0].correlation_id == "NX-SINGLE-ORDER"

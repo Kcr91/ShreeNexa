@@ -24,6 +24,8 @@ from app.dhan.orders import (
     DhanOrderResponse,
     DhanSliceOrderRequest,
     OrderStatus,
+    calculate_order_slices,
+    generate_correlation_id,
 )
 
 if TYPE_CHECKING:
@@ -111,8 +113,17 @@ class DhanBroker:
             )
 
     def place_sliced_order(self, request: DhanSliceOrderRequest) -> list[DhanOrderResponse]:
-        """Place sliced order chunks across exchange freeze limits."""
+        """Place sliced order chunks across exchange freeze limits via Dhan slicing endpoint."""
         self._verify_preflight_safety()
+
+        planned_slices = calculate_order_slices(request.quantity)
+        logger.info(
+            "Submitting Dhan sliced order for security_id=%s qty=%d (planned %d slices: %s)",
+            request.security_id,
+            request.quantity,
+            len(planned_slices),
+            planned_slices,
+        )
 
         try:
             return self.client.place_sliced_order(request)
@@ -130,6 +141,50 @@ class DhanBroker:
                     orderStatus=OrderStatus.PENDING_BROKER_CONFIRMATION,
                 )
             ]
+
+    def place_order_with_slicing(
+        self,
+        request: DhanOrderRequest,
+        freeze_limit: int | None = None,
+        lot_size: int = 1,
+        strategy_id: str | None = None,
+    ) -> list[DhanOrderResponse]:
+        """Partition orders exceeding exchange freeze limits into sequential slices
+
+        with unique correlation IDs (F12.1 §3).
+        """
+        self._verify_preflight_safety()
+
+        slices = calculate_order_slices(
+            total_quantity=request.quantity,
+            freeze_limit=freeze_limit,
+            lot_size=lot_size,
+        )
+
+        if len(slices) <= 1:
+            return [self.place_order(request)]
+
+        base_cid = request.correlation_id or generate_correlation_id(
+            prefix="NX", strategy_id=strategy_id
+        )
+        # Suffix is e.g. -S1, -S10. Determine base capacity ensuring total len <= 25 per ADR-0007
+        max_suffix_len = len(f"-S{len(slices)}")
+        base_capacity = 25 - max_suffix_len
+        trimmed_base = base_cid[:base_capacity]
+
+        responses: list[DhanOrderResponse] = []
+        for i, slice_qty in enumerate(slices):
+            slice_cid = f"{trimmed_base}-S{i + 1}"
+            slice_req = request.model_copy(
+                update={
+                    "quantity": slice_qty,
+                    "correlation_id": slice_cid,
+                }
+            )
+            resp = self.place_order(slice_req)
+            responses.append(resp)
+
+        return responses
 
     def modify_order(self, modification: DhanOrderModifyRequest) -> DhanOrderResponse:
         """Modify an existing open order with safety validation."""

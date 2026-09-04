@@ -395,3 +395,68 @@ def test_ticket_order_status_reporting(client: TestClient) -> None:
         assert data_unc["status"] == "PENDING_BROKER_CONFIRMATION"
     finally:
         _uncertain_orders.pop("CORR-TEST", None)
+
+
+def test_ticket_place_order_generates_valid_correlation_id_with_strategy(
+    client: TestClient,
+) -> None:
+    import re
+
+    payload = {
+        "mode": "PAPER",
+        "strategy_id": "momentum",
+        "symbol": "RELIANCE",
+        "security_id": "2885",
+        "exchange_segment": "NSE_EQ",
+        "transaction_type": "BUY",
+        "order_type": "LIMIT",
+        "product_type": "INTRADAY",
+        "quantity": 10,
+        "price": 2900.0,
+    }
+    resp = client.post("/api/v1/orders/ticket/place", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    cid = data["correlation_id"]
+    assert cid is not None
+    assert len(cid) <= 25, f"Correlation ID exceeds 25 characters: {cid}"
+    assert re.match(r"^[a-zA-Z0-9_-]+$", cid), f"Correlation ID has invalid characters: {cid}"
+    assert "moment" in cid
+
+
+def test_ticket_place_live_order_sliced_execution(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.dhan.orders import DhanOrderResponse, OrderStatus
+    from app.engine.gateway import AuditedRiskFilteredBroker
+
+    mock_slices: list[DhanOrderResponse] = [
+        DhanOrderResponse(orderId="ORD-SLICE-1", orderStatus=OrderStatus.PENDING),
+        DhanOrderResponse(orderId="ORD-SLICE-2", orderStatus=OrderStatus.PENDING),
+    ]
+
+    def _mock_place_sliced(*args: object, **kwargs: object) -> list[DhanOrderResponse]:
+        return mock_slices
+
+    monkeypatch.setattr(AuditedRiskFilteredBroker, "place_order_with_slicing", _mock_place_sliced)
+
+    payload = {
+        "mode": "LIVE",
+        "confirmation_acknowledged": True,
+        "symbol": "NIFTY26SEP24500CE",
+        "security_id": "45231",
+        "exchange_segment": "NSE_FNO",
+        "transaction_type": "BUY",
+        "order_type": "LIMIT",
+        "product_type": "MARGIN",
+        "quantity": 3600,  # Exceeds NIFTY freeze limit (1800)
+        "price": 120.0,
+        "strategy_id": "straddle",
+    }
+    resp = client.post("/api/v1/orders/ticket/place", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert data["order_id"] == "ORD-SLICE-1"
+    assert "across 2 slices" in data["message"]
+    assert len(data["correlation_id"]) <= 25
