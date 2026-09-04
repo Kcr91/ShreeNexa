@@ -3076,3 +3076,25 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Complete frontend test suite passes (190 tests across 59 test files).
   - Frontend `tsc --noEmit` and production Vite build pass cleanly with code splitting.
   - Fast-forward merged to `main` at `fcf5258`.
+
+### 2026-09-04 — Eliminate fabricated random data in watchlist and chart widgets (QA-06)
+
+- Resolved **QA-06** (Critical): Eliminated fabricated `Math.random()` data, random `securityId` generation, and unvalidated symbols across frontend widgets:
+  - `frontend/src/watchlist/storage.ts`:
+    - Defined and exported `KNOWN_EQUITY_INSTRUMENTS` dictionary with genuine DhanHQ security IDs and trading symbols (e.g. RELIANCE: `2885`, TCS: `11536`, INFY: `1594`, HDFCBANK: `1333`, NIFTY: `13`, BANKNIFTY: `25`).
+    - Added data sanitizer in `loadWatchlists` to resolve and populate missing security IDs for stored instruments.
+    - Replaced `Math.random()` in `createWatchlist` ID generator with deterministic indexing.
+  - `frontend/src/widgets/builtin/WatchlistWidget.tsx`:
+    - Synchronously resolves symbols against `KNOWN_EQUITY_INSTRUMENTS` and asynchronously against `/api/v1/instruments/search`.
+    - Surfaces a user-visible `role="alert"` banner for unknown instruments (`Unknown instrument '<symbol>'. Please enter a recognized listed symbol.`) instead of fabricating pseudo-random `securityId`, `ltp`, or `volume`.
+  - `frontend/src/widgets/builtin/ChartWidget.tsx`:
+    - Replaced `Math.random()` random-walk candles with deterministic, session-aligned historical seed bars.
+    - Added an explicit "Sample Historical Data" badge in the chart toolbar to clearly inform traders that historical mock data is displayed when disconnected from live feeds.
+  - `frontend/src/widgets/builtin/WatchlistWidget.test.tsx`:
+    - Added regression test asserting unknown symbols display the error alert banner and prevent fabricating records.
+- Quality gates verified:
+  - Complete frontend test suite passes (191 tests across 59 test files, 0 failures).
+  - TypeScript `tsc --noEmit` clean.
+  - Production Vite build passes cleanly (26 lazy-loaded chunks, 0 errors).
+  - Fast-forward merged to `main` at `6569651`.
+
