@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -54,3 +56,17 @@ def acknowledge_alert(alert_id: str, req: AcknowledgeAlertRequest) -> AlertRecor
 def run_evaluation() -> SystemHealthReport:
     """Trigger an immediate full health evaluation cycle across all 8 subsystems."""
     return monitoring_service.run_full_evaluation()
+
+
+@router.get("/limits")
+def get_rate_limits_status() -> dict[str, Any]:
+    """Retrieve Dhan API rate limit budget and usage across all categories (QA-10 / F13.5)."""
+    from app.dhan.limiter import get_dhan_rate_limiter
+    from app.dhan.limits_config import load_dhan_limits
+
+    cfg = load_dhan_limits()
+    limiter = get_dhan_rate_limiter(config=cfg)
+    usage: dict[str, Any] = {}
+    for cat in cfg.categories:
+        usage[cat] = limiter.get_budget_usage(cat)
+    return {"categories": usage}

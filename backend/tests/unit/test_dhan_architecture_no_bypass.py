@@ -35,7 +35,8 @@ def test_dhan_rest_client_calls_limiter_acquire() -> None:
 
 def test_no_bypassing_http_calls_in_dhan_package() -> None:
     """AST check: only HTTPTransport in transport.py and DhanRestClient may call HTTP."""
-    allowed_http_modules = {"transport.py"}
+    # transport.py executes Dhan REST calls; ip.py queries external IP discovery echo services
+    allowed_http_modules = {"transport.py", "ip.py"}
 
     dhan_dir = APP_DIR / "dhan"
     for py_file in dhan_dir.glob("*.py"):

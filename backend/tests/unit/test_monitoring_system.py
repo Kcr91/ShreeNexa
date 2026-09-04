@@ -164,3 +164,19 @@ def test_monitoring_rest_api() -> None:
     ack_data = res_ack.json()
     assert ack_data["state"] == AlertState.ACKNOWLEDGED
     assert ack_data["acknowledged_by"] == "trader_lead"
+
+
+def test_monitoring_rate_limits_endpoint() -> None:
+    """Test GET /api/v1/monitoring/limits exposes categories and daily budget usage."""
+    res = client.get("/api/v1/monitoring/limits")
+    assert res.status_code == 200
+    data = res.json()
+    assert "categories" in data
+    assert "orders" in data["categories"]
+    orders_cat = data["categories"]["orders"]
+    assert orders_cat["category"] == "orders"
+    assert orders_cat["limit_per_day"] == 7000
+    assert orders_cat["limit_per_minute"] == 250
+    assert orders_cat["limit_per_hour"] == 1000
+    assert "alert_80_pct" in orders_cat
+    assert "remaining_today" in orders_cat

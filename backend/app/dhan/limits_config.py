@@ -19,6 +19,9 @@ class RateLimitSpec(BaseModel):
     rate: float = Field(..., gt=0, description="Replenishment rate in tokens per second")
     burst: int = Field(..., ge=1, description="Maximum bucket capacity")
     description: str = Field(default="", description="Description of the endpoint or category")
+    per_minute: int | None = Field(default=None, ge=1, description="Maximum requests per minute")
+    per_hour: int | None = Field(default=None, ge=1, description="Maximum requests per hour")
+    per_day: int | None = Field(default=None, ge=1, description="Maximum requests per day")
 
 
 class BackoffSpec(BaseModel):
@@ -43,8 +46,12 @@ class DhanLimitsConfig(BaseModel):
     categories: dict[str, RateLimitSpec] = Field(default_factory=dict)
 
     def get_rate_limit(self, category: str) -> RateLimitSpec:
-        """Retrieve rate limit for category, falling back to default limit."""
-        return self.categories.get(category, self.default_limit)
+        """Retrieve rate limit for category, falling back to base category or default limit."""
+        if category in self.categories:
+            return self.categories[category]
+        if category.startswith("option_chain:"):
+            return self.categories.get("option_chain", self.default_limit)
+        return self.default_limit
 
 
 def get_default_dhan_limits() -> DhanLimitsConfig:
@@ -63,17 +70,27 @@ def get_default_dhan_limits() -> DhanLimitsConfig:
                 burst=1,
                 description="Option chain (1 req/3s per underlying)",
             ),
-            "historical_daily": RateLimitSpec(rate=5.0, burst=5, description="Daily historical"),
+            "historical_daily": RateLimitSpec(
+                rate=5.0, burst=5, per_day=7000, description="Daily historical"
+            ),
             "historical_intraday": RateLimitSpec(
-                rate=5.0, burst=5, description="Intraday historical"
+                rate=5.0, burst=5, per_day=7000, description="Intraday historical"
             ),
             "quotes": RateLimitSpec(rate=1.0, burst=1, description="Quotes (1 req/s)"),
-            "orders": RateLimitSpec(rate=10.0, burst=10, description="Orders (10 req/s)"),
+            "orders": RateLimitSpec(
+                rate=10.0,
+                burst=10,
+                per_minute=250,
+                per_hour=1000,
+                per_day=7000,
+                description="Orders (10 req/s, 250/min, 1000/hr, 7000/day)",
+            ),
             "account_funds_holdings": RateLimitSpec(
                 rate=10.0, burst=10, description="Account & Holdings"
             ),
         },
     )
+
 
 
 @lru_cache(maxsize=4)

@@ -12,6 +12,11 @@ from app.dhan.exceptions import (
     DhanRateLimitError,
     DhanServerError,
 )
+from app.dhan.orders import (
+    DhanOrderModifyRequest,
+    OrderType,
+    OrderValidity,
+)
 from app.dhan.transport import MockTransport
 from pydantic import SecretStr
 
@@ -323,3 +328,65 @@ def test_static_ip_preflight_validation(sample_creds: DhanCredentials) -> None:
     )
     assert ok_mismatch is False
     assert "blocked" in msg_mismatch
+
+
+def test_order_modification_cap_at_25(sample_creds: DhanCredentials) -> None:
+    mock_transport = MockTransport()
+    mock_transport.register(
+        "orders/ORD12345",
+        status_code=200,
+        body={"orderId": "ORD12345", "orderStatus": "MODIFIED"},
+    )
+    client = DhanRestClient(credentials=sample_creds, transport=mock_transport)
+
+    mod_req = DhanOrderModifyRequest(
+        orderId="ORD12345",
+        orderType=OrderType.LIMIT,
+        quantity=25,
+        price=1500.0,
+        validity=OrderValidity.DAY,
+    )
+
+    # 25 modifications succeed
+    for i in range(25):
+        resp = client.modify_order(mod_req)
+        assert resp.order_id == "ORD12345"
+        assert client._order_modification_counts["ORD12345"] == i + 1
+
+    # 26th modification must raise DhanRateLimitError before transport call
+    with pytest.raises(DhanRateLimitError, match="exceeded maximum allowed modifications"):
+        client.modify_order(mod_req)
+
+
+def test_option_chain_rate_limit_per_underlying(sample_creds: DhanCredentials) -> None:
+    from app.dhan.limiter import InMemoryTokenBucket
+    from app.dhan.limits_config import DhanLimitsConfig, RateLimitSpec
+
+    config = DhanLimitsConfig(
+        schema_version=1,
+        as_of="2026-09-01",
+        default_limit=RateLimitSpec(rate=10.0, burst=10, description="Default"),
+        categories={
+            "option_chain": RateLimitSpec(
+                rate=0.333, burst=1, description="1 req every 3s per underlying"
+            ),
+        },
+    )
+    limiter = InMemoryTokenBucket(config)
+    mock_transport = MockTransport()
+    mock_transport.register(
+        "optionchain",
+        status_code=200,
+        body={"status": "success", "data": {"chain": []}},
+    )
+    client = DhanRestClient(credentials=sample_creds, transport=mock_transport, limiter=limiter)
+
+    # Request for NIFTY
+    client._request(
+        "POST", "optionchain", json_data={"underlying": "NIFTY", "expiry": "2026-09-10"}
+    )
+    # Immediate second request for NIFTY should be rejected by limiter (burst=1 exhausted)
+    assert limiter.try_acquire("option_chain:NIFTY:2026-09-10") is False
+
+    # But request for BANKNIFTY has its own bucket and should be allowed immediately!
+    assert limiter.try_acquire("option_chain:BANKNIFTY:2026-09-10") is True

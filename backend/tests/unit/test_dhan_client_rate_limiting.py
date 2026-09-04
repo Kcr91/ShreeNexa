@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from app.dhan.client import DhanRestClient
@@ -28,6 +29,9 @@ class RecordingLimiter:
 
     def try_acquire(self, category: str, cost: float = 1.0) -> bool:
         return True
+
+    def get_budget_usage(self, category: str) -> dict[str, Any]:
+        return {"category": category, "alert_80_pct": False}
 
 
 @pytest.fixture

@@ -32,11 +32,13 @@ categories:
   historical_daily:
     rate: 5.0
     burst: 5
+    per_day: 7000
     description: "Daily historical chart data requests (5 req/s, 7,000 requests daily limit)"
 
   historical_intraday:
     rate: 5.0
     burst: 5
+    per_day: 7000
     description: "Intraday minute historical chart data requests (5 req/s, 7,000 requests daily limit)"
 
   quotes:
@@ -47,7 +49,10 @@ categories:
   orders:
     rate: 10.0
     burst: 10
-    description: "Order placement, modification, slicing, and cancellation requests (10 req/s, 100,000 daily limit)"
+    per_minute: 250
+    per_hour: 1000
+    per_day: 7000
+    description: "Order placement, modification, slicing, and cancellation requests (10 req/s, 250/min, 1000/hr, 7000/day)"
 
   account_funds_holdings:
     rate: 10.0

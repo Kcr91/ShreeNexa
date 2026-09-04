@@ -100,6 +100,9 @@ class FakeRedisForLua:
     def ping(self) -> bool:
         return True
 
+    def get(self, key: str) -> str | None:
+        return self.store.get(key)
+
 
 class FakeLuaScript:
     """Emulates Redis Lua script execution in Python for unit testing."""
@@ -113,10 +116,32 @@ class FakeLuaScript:
         capacity = float(args[1])
         rate = float(args[2])
         _ttl = int(args[3])
+        per_min = int(args[4]) if len(args) > 4 else 0
+        per_hr = int(args[5]) if len(args) > 5 else 0
+        per_day = int(args[6]) if len(args) > 6 else 0
 
         k_tokens = keys[0]
         k_last = keys[1]
+        k_min = keys[2] if len(keys) > 2 else ""
+        k_hr = keys[3] if len(keys) > 3 else ""
+        k_day = keys[4] if len(keys) > 4 else ""
         now = time.time()
+
+        # Check multi-window caps
+        if per_min > 0 and k_min:
+            cur_min = int(self.redis.store.get(k_min, "0"))
+            if cur_min + cost > per_min:
+                return [0, 60.0, 0]
+
+        if per_hr > 0 and k_hr:
+            cur_hr = int(self.redis.store.get(k_hr, "0"))
+            if cur_hr + cost > per_hr:
+                return [0, 3600.0, 0]
+
+        if per_day > 0 and k_day:
+            cur_day = int(self.redis.store.get(k_day, "0"))
+            if cur_day + cost > per_day:
+                return [0, 86400.0, 0]
 
         raw_tokens = self.redis.store.get(k_tokens)
         raw_last = self.redis.store.get(k_last)
@@ -133,6 +158,12 @@ class FakeLuaScript:
             current_tokens -= cost
             self.redis.store[k_tokens] = str(current_tokens)
             self.redis.store[k_last] = str(last_time)
+            if per_min > 0 and k_min:
+                self.redis.store[k_min] = str(int(self.redis.store.get(k_min, "0")) + int(cost))
+            if per_hr > 0 and k_hr:
+                self.redis.store[k_hr] = str(int(self.redis.store.get(k_hr, "0")) + int(cost))
+            if per_day > 0 and k_day:
+                self.redis.store[k_day] = str(int(self.redis.store.get(k_day, "0")) + int(cost))
             return [1, 0, current_tokens]
         else:
             deficit = cost - current_tokens
@@ -173,6 +204,107 @@ def test_get_dhan_rate_limiter_fallback() -> None:
     limiter = get_dhan_rate_limiter(redis_client=None)
     assert hasattr(limiter, "acquire")
     assert hasattr(limiter, "try_acquire")
+
+
+def test_in_memory_token_bucket_per_minute_window() -> None:
+    config = DhanLimitsConfig(
+        schema_version=1,
+        as_of="2026-09-01",
+        default_limit=RateLimitSpec(rate=100.0, burst=100, description="Default"),
+        categories={
+            "min_test": RateLimitSpec(
+                rate=100.0, burst=100, per_minute=3, description="3 per min"
+            ),
+        },
+    )
+    limiter = InMemoryTokenBucket(config)
+    now = 1000.0
+
+    assert limiter.try_acquire("min_test", now=now) is True
+    assert limiter.try_acquire("min_test", now=now + 0.1) is True
+    assert limiter.try_acquire("min_test", now=now + 0.2) is True
+    # 4th request inside 60s must fail despite high per-second capacity
+    assert limiter.try_acquire("min_test", now=now + 0.3) is False
+
+    # After 61s from the first request, one slot opens
+    assert limiter.try_acquire("min_test", now=now + 60.05) is True
+    # But another immediate request within the same 60s block fails
+    assert limiter.try_acquire("min_test", now=now + 60.06) is False
+
+
+def test_in_memory_token_bucket_per_day_window() -> None:
+    config = DhanLimitsConfig(
+        schema_version=1,
+        as_of="2026-09-01",
+        default_limit=RateLimitSpec(rate=100.0, burst=100, description="Default"),
+        categories={
+            "day_test": RateLimitSpec(rate=100.0, burst=100, per_day=2, description="2 per day"),
+        },
+    )
+    limiter = InMemoryTokenBucket(config)
+    now = 50000.0
+
+    assert limiter.try_acquire("day_test", now=now) is True
+    assert limiter.try_acquire("day_test", now=now + 10.0) is True
+    assert limiter.try_acquire("day_test", now=now + 20.0) is False
+
+    # After 86401s, first request rolls out
+    assert limiter.try_acquire("day_test", now=now + 86400.5) is True
+
+
+def test_in_memory_token_bucket_budget_usage_and_80_pct_alert() -> None:
+    config = DhanLimitsConfig(
+        schema_version=1,
+        as_of="2026-09-01",
+        default_limit=RateLimitSpec(rate=100.0, burst=100, description="Default"),
+        categories={
+            "orders": RateLimitSpec(
+                rate=10.0, burst=10, per_minute=250, per_hour=1000, per_day=10, description="Orders"
+            ),
+        },
+    )
+    limiter = InMemoryTokenBucket(config)
+    usage_init = limiter.get_budget_usage("orders")
+    assert usage_init["requests_today"] == 0
+    assert usage_init["remaining_today"] == 10
+    assert usage_init["used_pct_today"] == 0.0
+    assert usage_init["alert_80_pct"] is False
+
+    # Perform 8 requests (8 / 10 = 80%)
+    for _ in range(8):
+        assert limiter.try_acquire("orders") is True
+
+    usage_80 = limiter.get_budget_usage("orders")
+    assert usage_80["requests_today"] == 8
+    assert usage_80["remaining_today"] == 2
+    assert usage_80["used_pct_today"] == 80.0
+    assert usage_80["alert_80_pct"] is True
+
+
+def test_redis_token_bucket_multi_window_with_fake() -> None:
+    fake_redis = FakeRedisForLua()
+    config = DhanLimitsConfig(
+        schema_version=1,
+        as_of="2026-09-01",
+        default_limit=RateLimitSpec(rate=100.0, burst=100, description="Default"),
+        categories={
+            "redis_test": RateLimitSpec(
+                rate=100.0, burst=100, per_minute=2, per_day=5, description="Redis multi-window"
+            ),
+        },
+    )
+    limiter = RedisTokenBucket(fake_redis, config)  # type: ignore[arg-type]
+
+    assert limiter.try_acquire("redis_test") is True
+    assert limiter.try_acquire("redis_test") is True
+    # 3rd request blocked by per_minute cap
+    assert limiter.try_acquire("redis_test") is False
+
+    budget = limiter.get_budget_usage("redis_test")
+    assert budget["requests_today"] == 2
+    assert budget["limit_per_day"] == 5
+    assert budget["remaining_today"] == 3
+    assert budget["alert_80_pct"] is False
 
 
 @given(

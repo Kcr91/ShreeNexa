@@ -11,6 +11,7 @@ from app.dhan.credentials import DhanCredentials, resolve_dhan_credentials
 from app.dhan.exceptions import (
     DhanAuthenticationError,
     DhanMalformedResponseError,
+    DhanRateLimitError,
 )
 from app.dhan.limiter import TokenBucket, get_dhan_rate_limiter
 from app.dhan.limits_config import get_category_for_endpoint
@@ -58,6 +59,7 @@ class DhanRestClient:
         self.transport: DhanTransport = transport or HTTPTransport()
         self.limiter: TokenBucket = limiter or get_dhan_rate_limiter()
         self.timeout = timeout
+        self._order_modification_counts: dict[str, int] = {}
 
     def _get_headers(self) -> dict[str, str]:
         """Generate authenticated headers without leaking tokens in memory."""
@@ -80,6 +82,35 @@ class DhanRestClient:
     ) -> Any:
         """Execute request, validate status code, and parse response JSON."""
         category = get_category_for_endpoint(method, path)
+        if category == "option_chain":
+            underlying = None
+            expiry = None
+            if json_data:
+                underlying = (
+                    json_data.get("UnderlyingScrip")
+                    or json_data.get("underlying")
+                    or json_data.get("securityId")
+                )
+                expiry = (
+                    json_data.get("Expiry")
+                    or json_data.get("expiry")
+                    or json_data.get("expiryDate")
+                )
+            elif params:
+                underlying = (
+                    params.get("UnderlyingScrip")
+                    or params.get("underlying")
+                    or params.get("securityId")
+                )
+                expiry = (
+                    params.get("Expiry")
+                    or params.get("expiry")
+                    or params.get("expiryDate")
+                )
+            if underlying:
+                suffix = f"{underlying}:{expiry}" if expiry else str(underlying)
+                category = f"option_chain:{suffix}"
+
         self.limiter.acquire(category, timeout=self.timeout)
 
         headers = self._get_headers()
@@ -284,12 +315,21 @@ class DhanRestClient:
 
     def modify_order(self, modification: DhanOrderModifyRequest) -> DhanOrderResponse:
         """Modify a pending order via PUT /v2/orders/{orderId} (requires Static IP)."""
+        current_mods = self._order_modification_counts.get(modification.order_id, 0)
+        if current_mods >= 25:
+            raise DhanRateLimitError(
+                f"Order {modification.order_id} has exceeded maximum allowed "
+                "modifications (25 cap)",
+                details={"order_id": modification.order_id, "modification_count": current_mods},
+            )
+
         cid = self.credentials.client_id if self.credentials else ""
         payload = modification.to_api_payload(client_id=cid)
         endpoint = f"orders/{modification.order_id}"
         data = self._request("PUT", endpoint, json_data=payload)
         if not isinstance(data, dict):
             raise DhanMalformedResponseError(f"Expected dictionary payload for {endpoint}")
+        self._order_modification_counts[modification.order_id] = current_mods + 1
         return DhanOrderResponse.model_validate(data)
 
     def cancel_order(self, order_id: str) -> DhanOrderCancelResponse:
