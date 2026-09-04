@@ -20,14 +20,13 @@ from app.dhan.orders import (
     TransactionType,
 )
 from app.engine.broker import (
-    DhanBroker,
     LiveTradingDisabledError,
     StaticIPMismatchError,
 )
+from app.engine.gateway import get_risk_filtered_broker
 from app.engine.risk import (
     KillSwitchActiveError,
     RiskCheckFailedError,
-    RiskFilteredBroker,
 )
 from app.paper.broker import paper_broker
 from app.paper.models import (
@@ -200,8 +199,7 @@ def place_ticket_order(req: TicketPlaceOrderRequest) -> TicketPlaceOrderResponse
             )
 
         # Route through pre-trade risk-filtered broker gateway
-        broker = DhanBroker()
-        risk_filtered = RiskFilteredBroker(broker)
+        risk_filtered = get_risk_filtered_broker()
         dhan_req = DhanOrderRequest(
             securityId=req.security_id,
             exchangeSegment=req.exchange_segment,
