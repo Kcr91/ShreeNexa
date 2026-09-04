@@ -198,3 +198,52 @@ def test_dhan_broker_timeout_triggers_pending_confirmation(
     resp = broker.place_order(sample_order_request)
     assert resp.order_id is None
     assert resp.order_status == OrderStatus.PENDING_BROKER_CONFIRMATION
+
+
+def test_dhan_broker_read_only_methods_are_sole_unguarded_endpoints() -> None:
+    """QA-13 Invariant: Assert that get_order_by_id, get_order_by_correlation_id,
+
+    and reconcile_pending_order are the ONLY public methods on DhanBroker that access
+    self.client without calling _verify_preflight_safety.
+    Mutating methods (place_order, modify_order, cancel_order, place_sliced_order)
+    strictly call _verify_preflight_safety.
+    """
+    import ast
+    import inspect
+
+    source = inspect.getsource(DhanBroker)
+    tree = ast.parse(source)
+    broker_class = tree.body[0]
+    assert isinstance(broker_class, ast.ClassDef)
+
+    methods_with_client: dict[str, bool] = {}
+
+    for node in broker_class.body:
+        if isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+            calls_preflight = False
+            calls_client = False
+            for subnode in ast.walk(node):
+                if isinstance(subnode, ast.Call):
+                    func = subnode.func
+                    if isinstance(func, ast.Attribute) and func.attr == "_verify_preflight_safety":
+                        calls_preflight = True
+                    if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Attribute):
+                        if func.value.attr == "client":
+                            calls_client = True
+
+            if calls_client:
+                methods_with_client[node.name] = calls_preflight
+
+    # Mutating methods MUST invoke _verify_preflight_safety
+    mutating_methods = {"place_order", "modify_order", "cancel_order", "place_sliced_order"}
+    for method in mutating_methods:
+        assert method in methods_with_client, f"Expected {method} to access client"
+        assert methods_with_client[method] is True, f"{method} must call _verify_preflight_safety"
+
+    # Only read-only query/reconciliation methods are exempt from preflight gate
+    unguarded = [m for m, preflight in methods_with_client.items() if not preflight]
+    assert sorted(unguarded) == [
+        "get_order_by_correlation_id",
+        "get_order_by_id",
+        "reconcile_pending_order",
+    ], f"Unexpected unguarded broker methods: {unguarded}"
