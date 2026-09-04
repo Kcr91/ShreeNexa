@@ -14,9 +14,11 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -123,23 +125,43 @@ class AuditEvent(BaseModel):
 class AuditLedger:
     """Append-only, tamper-evident audit ledger with chain verification and reconstruction."""
 
-    def __init__(self) -> None:
+    def __init__(self, log_path: Path | str | None = None) -> None:
         self._events: list[AuditEvent] = []
+        self._log_path = Path(log_path) if log_path else None
+        if self._log_path and self._log_path.exists():
+            self._load_from_disk()
 
     @property
     def total_events(self) -> int:
         return len(self._events)
 
+    def _load_from_disk(self) -> None:
+        if not self._log_path or not self._log_path.exists():
+            return
+        try:
+            with open(self._log_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    data = json.loads(line)
+                    event = AuditEvent.model_validate(data)
+                    self._events.append(event)
+            logger.info("Hydrated %d audit events from %s", len(self._events), self._log_path)
+        except Exception as exc:
+            logger.error("Failed to load audit events from %s: %s", self._log_path, exc)
+
     def record_event(
         self,
         event_type: AuditEventType,
-        correlation_id: str,
-        payload: dict[str, Any],
+        correlation_id: str | None = None,
+        payload: dict[str, Any] | None = None,
         order_id: str | None = None,
         timestamp: str | None = None,
     ) -> AuditEvent:
         """Record an event with redacted payload into the tamper-evident hash chain."""
-        clean_payload = redact_sensitive_data(payload)
+        cid = correlation_id or f"SYS-{uuid.uuid4().hex[:8]}"
+        clean_payload = redact_sensitive_data(payload or {})
         seq = len(self._events)
         prev_hash = self._events[-1].hash if self._events else GENESIS_HASH
         ts = timestamp or datetime.now(UTC).isoformat()
@@ -149,7 +171,7 @@ class AuditLedger:
             event_seq=seq,
             event_type=event_type.value,
             timestamp=ts,
-            correlation_id=correlation_id,
+            correlation_id=cid,
             order_id=order_id,
             payload=clean_payload,
         )
@@ -158,13 +180,27 @@ class AuditLedger:
             event_seq=seq,
             event_type=event_type,
             timestamp=ts,
-            correlation_id=correlation_id,
+            correlation_id=cid,
             order_id=order_id,
             payload=clean_payload,
             prev_hash=prev_hash,
             hash=event_hash,
         )
         self._events.append(event)
+
+        if self._log_path:
+            try:
+                self._log_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(self._log_path, "a", encoding="utf-8") as f:
+                    f.write(event.model_dump_json() + "\n")
+                    f.flush()
+                    try:
+                        os.fsync(f.fileno())
+                    except OSError:
+                        pass
+            except Exception as exc:
+                logger.error("Failed to persist audit event %d to disk: %s", seq, exc)
+
         logger.debug("Recorded audit event %d: %s [%s]", seq, event_type, correlation_id)
         return event
 
@@ -201,3 +237,22 @@ class AuditLedger:
         if 0 <= seq < len(self._events):
             return self._events[seq]
         return None
+
+
+_process_ledger: AuditLedger | None = None
+
+
+def get_audit_ledger(log_path: Path | str | None = None) -> AuditLedger:
+    """Return process-scoped AuditLedger instance with durable persistence."""
+    global _process_ledger
+    if _process_ledger is None:
+        default_path = Path("data") / "audit_ledger.jsonl"
+        _process_ledger = AuditLedger(log_path=log_path or default_path)
+    return _process_ledger
+
+
+def reset_audit_ledger(log_path: Path | str | None = None) -> AuditLedger:
+    """Reset the process-scoped AuditLedger (primarily for test isolation)."""
+    global _process_ledger
+    _process_ledger = AuditLedger(log_path=log_path)
+    return _process_ledger

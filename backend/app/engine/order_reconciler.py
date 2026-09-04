@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from app.dhan.orders import OrderStatus
+from app.engine.audit import AuditEventType, AuditLedger, get_audit_ledger
 
 if TYPE_CHECKING:
     from app.dhan.client import DhanRestClient
@@ -54,8 +55,13 @@ class ReconciledOrderState:
 class OrderReconciler:
     """Coordinates deduplication, incremental fill calculations, and broker state reconciliation."""
 
-    def __init__(self, client: DhanRestClient | None = None) -> None:
+    def __init__(
+        self,
+        client: DhanRestClient | None = None,
+        audit_ledger: AuditLedger | None = None,
+    ) -> None:
         self.client = client
+        self.audit_ledger = audit_ledger or get_audit_ledger()
         self._orders: dict[str, ReconciledOrderState] = {}
         self._processed_global_fingerprints: set[str] = set()
 
@@ -109,6 +115,16 @@ class OrderReconciler:
                 state.cumulative_traded_qty,
                 new_traded_qty,
             )
+            self.audit_ledger.record_event(
+                AuditEventType.RECONCILIATION_EVENT,
+                correlation_id=state.correlation_id or update.correlation_id,
+                order_id=order_id,
+                payload={
+                    "event": "SEQUENCE_GAP",
+                    "current_qty": state.cumulative_traded_qty,
+                    "received_qty": new_traded_qty,
+                },
+            )
             self.reconcile_with_broker(order_id)
             return False, None
 
@@ -133,6 +149,18 @@ class OrderReconciler:
         state.avg_traded_price = update.avg_traded_price or state.avg_traded_price
         state.last_updated_time = update.last_updated_time
         state.processed_fingerprints.add(fingerprint)
+
+        self.audit_ledger.record_event(
+            AuditEventType.ORDER_UPDATE,
+            correlation_id=state.correlation_id or update.correlation_id,
+            order_id=order_id,
+            payload={
+                "status": state.status,
+                "traded_qty": state.cumulative_traded_qty,
+                "incremental_qty": incremental_qty,
+                "avg_traded_price": state.avg_traded_price,
+            },
+        )
 
         return False, fill_event
 
@@ -165,5 +193,16 @@ class OrderReconciler:
             state.status,
             state.cumulative_traded_qty,
             state.total_qty,
+        )
+        self.audit_ledger.record_event(
+            AuditEventType.RECONCILIATION_EVENT,
+            correlation_id=state.correlation_id,
+            order_id=order_id,
+            payload={
+                "event": "BROKER_TRUTH_CONVERGENCE",
+                "status": state.status,
+                "traded_qty": state.cumulative_traded_qty,
+                "total_qty": state.total_qty,
+            },
         )
         return True

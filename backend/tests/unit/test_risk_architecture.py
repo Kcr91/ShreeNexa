@@ -84,6 +84,7 @@ def test_ast_prohibits_raw_place_order_outside_risk_layer() -> None:
     allowed_place_order_callers = {
         app_dir / "engine" / "broker.py",
         app_dir / "engine" / "risk.py",
+        app_dir / "engine" / "gateway.py",  # invokes broker.place_order under audited risk
         app_dir / "api" / "orders.py",  # invokes risk_filtered.place_order
     }
 

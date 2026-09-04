@@ -19,6 +19,7 @@ from app.dhan.orders import (
     ProductType,
     TransactionType,
 )
+from app.engine.audit import AuditEventType, get_audit_ledger
 from app.engine.broker import (
     LiveTradingDisabledError,
     StaticIPMismatchError,
@@ -276,9 +277,28 @@ def place_ticket_order(req: TicketPlaceOrderRequest) -> TicketPlaceOrderResponse
         price=req.price,
         trigger_price=req.trigger_price,
     )
+    audit = get_audit_ledger()
+    audit.record_event(
+        AuditEventType.ORDER_SUBMITTED,
+        correlation_id=correlation_id,
+        order_id=paper_order.order_id,
+        payload={
+            "mode": "PAPER",
+            "security_id": req.security_id,
+            "quantity": req.quantity,
+            "side": side.value,
+        },
+    )
+
     _ = paper_broker.submit_orders([paper_order])
 
     if paper_order.status == PaperOrderStatus.REJECTED:
+        audit.record_event(
+            AuditEventType.ORDER_RESPONSE,
+            correlation_id=correlation_id,
+            order_id=paper_order.order_id,
+            payload={"status": "REJECTED", "reject_reason": paper_order.reject_reason},
+        )
         return TicketPlaceOrderResponse(
             success=False,
             mode=req.mode,
@@ -288,6 +308,12 @@ def place_ticket_order(req: TicketPlaceOrderRequest) -> TicketPlaceOrderResponse
             message=paper_order.reject_reason or "Order rejected by paper broker.",
         )
 
+    audit.record_event(
+        AuditEventType.ORDER_RESPONSE,
+        correlation_id=correlation_id,
+        order_id=paper_order.order_id,
+        payload={"status": "PENDING"},
+    )
     return TicketPlaceOrderResponse(
         success=True,
         mode=req.mode,

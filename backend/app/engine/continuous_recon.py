@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from app.engine.audit import AuditEventType, AuditLedger, get_audit_ledger
+
 if TYPE_CHECKING:
     from app.dhan.client import DhanRestClient
     from app.dhan.models import DhanPosition
@@ -57,8 +59,13 @@ class MismatchIncident:
 class ContinuousReconciler:
     """Orchestrates periodic state comparison and freeze-on-mismatch enforcement."""
 
-    def __init__(self, client: DhanRestClient | None = None) -> None:
+    def __init__(
+        self,
+        client: DhanRestClient | None = None,
+        audit_ledger: AuditLedger | None = None,
+    ) -> None:
         self.client = client
+        self.audit_ledger = audit_ledger or get_audit_ledger()
         self._incidents: dict[str, MismatchIncident] = {}
         self._frozen_symbols: set[str] = set()
         self._is_account_frozen: bool = False
@@ -110,6 +117,18 @@ class ContinuousReconciler:
                 self._incidents[incident_id] = incident
                 self._frozen_symbols.add(sec_id)
                 new_incidents.append(incident)
+
+                self.audit_ledger.record_event(
+                    AuditEventType.RECONCILIATION_EVENT,
+                    payload={
+                        "incident_id": incident_id,
+                        "dimension": str(MismatchDimension.POSITION),
+                        "security_id": sec_id,
+                        "local_value": local_qty,
+                        "broker_value": broker_qty,
+                        "status": str(IncidentStatus.ACTIVE_FROZEN),
+                    },
+                )
 
                 logger.critical(
                     "FREEZE-ON-MISMATCH: Position mismatch for %s. Local=%d, Broker=%d. "
@@ -167,6 +186,19 @@ class ContinuousReconciler:
                 self._frozen_symbols.add(sec_id)
                 new_incidents.append(incident)
 
+                self.audit_ledger.record_event(
+                    AuditEventType.RECONCILIATION_EVENT,
+                    order_id=order_id,
+                    payload={
+                        "incident_id": incident_id,
+                        "dimension": str(MismatchDimension.ORDER),
+                        "security_id": sec_id,
+                        "local_value": incident.local_value,
+                        "broker_value": incident.broker_value,
+                        "status": str(IncidentStatus.ACTIVE_FROZEN),
+                    },
+                )
+
                 logger.critical(
                     "FREEZE-ON-MISMATCH: Order mismatch for %s (%s). "
                     "Trading FROZEN (Incident %s). Zero silent auto-correction.",
@@ -207,5 +239,15 @@ class ContinuousReconciler:
         # Check if account can be unfrozen
         if not self.get_active_incidents():
             self._is_account_frozen = False
+
+        self.audit_ledger.record_event(
+            AuditEventType.OPERATOR_OVERRIDE,
+            payload={
+                "incident_id": incident_id,
+                "action": resolution_action,
+                "operator_notes": operator_notes,
+                "status": str(IncidentStatus.RESOLVED),
+            },
+        )
 
         return True
