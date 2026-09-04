@@ -3235,3 +3235,30 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Full frontend suite: typecheck clean, 197 tests passing (60 test files), production build clean (11.99s).
   - Fast-forward merged to `main` at `a5c6873`.
 
+### 2026-09-04 — Resolve actual outbound egress IP and enforce fail-closed static IP preflight (QA-09)
+
+- Resolved **QA-09** (High): Replaced self-declared environment variable trust with real outbound egress IP discovery, fail-closed enforcement, and operator documentation:
+  - `backend/app/dhan/ip.py`:
+    - Refactored `get_current_outbound_ip` to resolve the host's actual public IPv4 egress address via hardened external discovery endpoints (`https://api.ipify.org`, `https://ifconfig.me/ip`, `https://checkip.amazonaws.com`, `https://icanhazip.com`) with a 2.0s timeout.
+    - Added in-process caching for process lifetime to prevent network latency on repeated preflight checks.
+    - Implemented `SHREENEXA_STATIC_IP_OVERRIDE` strictly for offline/development test environments; strictly rejects and logs a warning if attempted in production (`ENVIRONMENT=production` or `APP_ENV=production`).
+    - Enforced **fail-closed** behavior: if external resolution fails or network is offline, returns `None`, which causes `validate_static_ip_preflight` to abort order execution with "Could not determine host outbound public IP address."
+    - Added `reset_outbound_ip_cache()` for hermetic test isolation.
+  - `backend/tests/unit/test_static_ip.py`:
+    - Added comprehensive unit tests:
+      - `test_test_override_honored_in_development`
+      - `test_test_override_ignored_in_production`
+      - `test_fail_closed_when_egress_discovery_fails`
+      - `test_preflight_blocks_when_ip_undetermined`
+      - `test_preflight_matches_and_mismatches` (verifying Primary Lightsail match, Secondary workstation match, and mismatch blocking)
+  - Documentation & Operator Runbooks:
+    - `.env.example`: Documented `SHREENEXA_ENABLE_LIVE_TRADING=false` and `SHREENEXA_STATIC_IP_OVERRIDE=`.
+    - `docs/runbooks/live-activation.md`: Created comprehensive live trading activation checklist, SEBI compliance rules, and emergency cutoff procedures.
+- Quality gates verified:
+  - 20/20 tests passing in `test_static_ip.py` and `test_dhan_client.py`.
+  - `ruff check .` clean (0 errors).
+  - `mypy backend --strict` clean across 333 source files.
+  - `git diff --check` clean.
+  - Fast-forward merged to `main` at `8867d1b`.
+
+
