@@ -1,11 +1,23 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { OrderTicketWidget, orderTicketDefinition } from "./OrderTicketWidget";
 import { widgetRegistry } from "../registry";
 import "./index";
 
 describe("OrderTicketWidget Component", () => {
-  it("renders stock ticket, displays margin preview, and places paper order", () => {
+  it("renders stock ticket, displays margin preview, and places paper order", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        mode: "PAPER",
+        order_id: "ORD-PAPER-TEST-001",
+        order_status: "PENDING",
+        message: "Paper order ORD-PAPER-TEST-001 submitted successfully to SimBroker engine.",
+      }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
     render(
       <OrderTicketWidget
         instanceId="ticket-1"
@@ -25,7 +37,9 @@ describe("OrderTicketWidget Component", () => {
     fireEvent.click(submitBtn);
 
     // Displays success message
-    expect(screen.getByRole("alert")).toHaveTextContent(/submitted successfully/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/submitted successfully/i);
+
+    vi.unstubAllGlobals();
   });
 
   it("switches to multi-leg option builder, adds legs, and displays hedging margin", () => {
@@ -54,7 +68,7 @@ describe("OrderTicketWidget Component", () => {
     expect(screen.getByText("Option Legs (3)")).toBeInTheDocument();
   });
 
-  it("blocks live order placement with safety gate alert", () => {
+  it("blocks live order placement with safety gate alert", async () => {
     render(
       <OrderTicketWidget
         instanceId="ticket-1"
@@ -75,7 +89,7 @@ describe("OrderTicketWidget Component", () => {
     fireEvent.click(submitBtn);
 
     // Displays safety block message
-    expect(screen.getByRole("alert")).toHaveTextContent(/Live execution locked/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Live execution locked/i);
   });
 
   it("is registered in widget registry under order category", () => {

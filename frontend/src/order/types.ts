@@ -1,12 +1,13 @@
 export type AssetClass = "EQUITY" | "OPTION" | "FUTURE";
 export type OrderSide = "BUY" | "SELL";
 export type OrderType = "MARKET" | "LIMIT" | "STOP_LOSS";
-export type ProductType = "CNC" | "MIS" | "NRML";
+export type ProductType = "CNC" | "MIS" | "NRML" | "INTRADAY" | "MARGIN" | "MTF";
 export type OptionType = "CE" | "PE";
 export type ExecutionMode = "PAPER" | "LIVE";
 
 export interface StockOrder {
   symbol: string;
+  securityId?: string;
   side: OrderSide;
   orderType: OrderType;
   productType: ProductType;

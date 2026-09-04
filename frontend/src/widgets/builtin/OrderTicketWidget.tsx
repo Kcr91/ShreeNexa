@@ -95,7 +95,7 @@ export const OrderTicketWidget: React.FC<WidgetComponentProps<OrderTicketSetting
     setLegs(legs.filter((l) => l.id !== id));
   };
 
-  const handleStockSubmit = () => {
+  const handleStockSubmit = async () => {
     const order: StockOrder = {
       symbol: stockSymbol,
       side: stockSide,
@@ -104,17 +104,17 @@ export const OrderTicketWidget: React.FC<WidgetComponentProps<OrderTicketSetting
       quantity: stockQuantity,
       price: stockPrice,
     };
-    const res = placeOrder(order, availableFunds, executionMode, false);
+    const res = await placeOrder(order, availableFunds, executionMode, false);
     setSubmissionStatus(res);
   };
 
-  const handleOptionSubmit = () => {
+  const handleOptionSubmit = async () => {
     const order: MultiLegOptionOrder = {
       strategyName: `${optionUnderlying} Custom Multi-Leg`,
       productType: "NRML",
       legs,
     };
-    const res = placeOrder(order, availableFunds, executionMode, false);
+    const res = await placeOrder(order, availableFunds, executionMode, false);
     setSubmissionStatus(res);
   };
 

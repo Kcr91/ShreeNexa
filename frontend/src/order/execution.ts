@@ -103,13 +103,24 @@ export function validateOptionOrder(
   };
 }
 
-export function placeOrder(
+const KNOWN_SECURITIES: Record<string, string> = {
+  RELIANCE: "2885",
+  TCS: "11536",
+  INFY: "1594",
+  HDFCBANK: "1333",
+  ICICIBANK: "4963",
+  SBIN: "3045",
+  NIFTY: "13",
+  BANKNIFTY: "25",
+};
+
+export async function placeOrder(
   order: StockOrder | MultiLegOptionOrder,
   availableFunds: number = 500000,
   executionMode: ExecutionMode = "PAPER",
   isLiveApproved: boolean = false,
   uncertainOrders?: Set<string>
-): OrderPlacementResult {
+): Promise<OrderPlacementResult> {
   if (order.correlationId && uncertainOrders?.has(order.correlationId)) {
     return {
       success: false,
@@ -132,12 +143,62 @@ export function placeOrder(
     };
   }
 
-  const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  const symbol = isStock ? (order as StockOrder).symbol : (order as MultiLegOptionOrder).strategyName;
+  const securityId = (isStock && (order as StockOrder).securityId) || KNOWN_SECURITIES[symbol] || symbol;
+  const transactionType = isStock ? (order as StockOrder).side : "BUY";
+  const orderType = isStock ? (order as StockOrder).orderType : "LIMIT";
+  const rawProduct = order.productType;
+  const productType = rawProduct === "MIS" ? "INTRADAY" : rawProduct === "NRML" ? "MARGIN" : rawProduct;
+  const quantity = isStock ? (order as StockOrder).quantity : 1;
+  const price = isStock ? (order as StockOrder).price : 0;
 
-  return {
-    success: true,
-    orderId,
-    executionMode,
-    message: `${executionMode} order ${orderId} submitted successfully to SimBroker engine.`,
+  const payload = {
+    mode: executionMode,
+    confirmation_acknowledged: Boolean(order.confirmationAcknowledged),
+    symbol,
+    security_id: String(securityId),
+    exchange_segment: "NSE_EQ",
+    transaction_type: transactionType,
+    order_type: orderType,
+    product_type: productType,
+    quantity,
+    price,
+    trigger_price: null,
+    correlation_id: order.correlationId || null,
   };
+
+  try {
+    const res = await fetch("/api/v1/orders/ticket/place", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const detail = errorData.detail || `Order placement failed with HTTP ${res.status}`;
+      const isUncertain = res.status === 504 || (typeof detail === "string" && detail.includes("PENDING_BROKER_CONFIRMATION"));
+      return {
+        success: false,
+        executionMode,
+        isUncertain,
+        message: detail,
+      };
+    }
+
+    const data = await res.json();
+    return {
+      success: data.success ?? true,
+      orderId: data.order_id,
+      executionMode,
+      message: data.message || `${executionMode} order ${data.order_id} placed successfully.`,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "connection failed";
+    return {
+      success: false,
+      executionMode,
+      message: `Network error placing order: ${msg}`,
+    };
+  }
 }
