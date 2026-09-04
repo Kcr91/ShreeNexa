@@ -3358,3 +3358,31 @@ a live branch indicator; run `git status --short --branch` for current state.
     - All 62 test suites passed (208 tests passed in Vitest, 0 failed).
     - TypeScript clean (`tsc --noEmit`), production bundling clean (`vite build`).
     - Fast-forward merged to `main` at `b37a0c3`.
+
+### 2026-09-04 — DhanHQ Live Order Update WebSocket Client Transport and Engine Integration (QA-19)
+
+- Resolved **QA-19** (High): Implemented async WebSocket client transport `DhanOrderStreamClient` for DhanHQ v2.5 live order updates, connecting the previously synchronous parser to real broker streams, exponential backoff reconnection, and `OrderReconciler`:
+  - `backend/app/dhan/order_stream.py`:
+    - Implemented `DhanOrderStreamClient` async client class:
+      - Connects to `wss://api-order-update.dhan.co` (configurable URL for offline tests).
+      - Executes MsgCode 42 handshake (`build_order_stream_auth_message`) using credentials from `resolve_dhan_credentials()` with secret token redaction in all logging.
+      - Maintains ping/pong heartbeat keepalive (`ping_interval=20.0`, `ping_timeout=10.0`).
+      - Runs asynchronous frame reception loop with `handle_raw_frame` and dispatches `order_alert` packets to `OrderReconciler.process_update()`.
+      - Handles connection loss, server closes, and network errors with exponential backoff (`initial_reconnect_delay=0.5`, `max_reconnect_delay=30.0`, `backoff_multiplier=1.5`).
+      - Provides clean lifecycle controls (`start()`, `stop()`, `is_connected`, `is_running`, `reconnect_count`, `processed_frames`).
+  - `backend/app/engine/core.py` & `backend/app/engine/__init__.py`:
+    - Added `create_engine_order_stream` factory wiring `DhanOrderStreamClient` directly to `OrderReconciler` and `AuditLedger`.
+    - Exported `OrderReconciler`, `ContinuousReconciler`, `AuditLedger`, and `create_engine_order_stream` in `app.engine`.
+  - Testing & Quality Gates:
+    - Added unit and offline mock WebSocket integration tests in `backend/tests/unit/test_dhan_order_stream.py`:
+      - Missing credentials validation (`ValueError`).
+      - MsgCode 42 handshake verification (`MsgCode: 42`, `ClientId`, `Token`, `UserType: "SELF"`) against local mock server.
+      - End-to-end frame dispatch into `OrderReconciler`, tracking fills and order state.
+      - Reconnection resilience: verified client automatically reconnects upon server disconnect, resumes streaming, and tracks reconnect attempts.
+      - Engine order stream factory verification.
+    - All 636 backend tests passed, 30 skipped, 0 failed (`pytest backend/tests`).
+    - Strict static typing clean across 335 source files (`mypy backend --strict`).
+    - Ruff linting and formatting clean (`ruff check .`).
+    - All 208 frontend tests passed (`vitest run`), `tsc --noEmit` clean, production bundle built cleanly (`vite build`).
+    - Pre-commit hooks passed 100% (`pre-commit run --all-files`).
+    - Fast-forward merged to `main` at `f88d50b`.
