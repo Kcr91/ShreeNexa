@@ -5,10 +5,10 @@ import "./builtin";
 
 describe("WidgetFrame Component", () => {
   it("renders widget title and lazy-loaded content", async () => {
-    render(<WidgetFrame instanceId="inst-1" widgetId="market-clock" />);
+    render(<WidgetFrame instanceId="inst-1" widgetId="watchlist" />);
 
-    expect(screen.getByText("Market Clock")).toBeInTheDocument();
-    expect(await screen.findByText(/Market Session Clock/i)).toBeInTheDocument();
+    expect(screen.getByText("Market Watchlist")).toBeInTheDocument();
+    expect(await screen.findByText("NIFTY 50")).toBeInTheDocument();
   });
 
   it("handles settings editor toggle and validation error display", async () => {

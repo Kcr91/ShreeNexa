@@ -12,13 +12,14 @@ describe("WidgetPalette Component", () => {
 
     expect(screen.getByRole("dialog", { name: "Widget Palette" })).toBeInTheDocument();
     expect(screen.getByText("Market Watchlist")).toBeInTheDocument();
-    expect(screen.getByText("Market Clock")).toBeInTheDocument();
+    expect(screen.getByText("Positions & Orders Blotter")).toBeInTheDocument();
+    expect(screen.queryByText("Market Clock")).not.toBeInTheDocument();
 
     // Search filter
     const searchInput = screen.getByLabelText("Search widgets");
-    fireEvent.change(searchInput, { target: { value: "clock" } });
+    fireEvent.change(searchInput, { target: { value: "blotter" } });
 
-    expect(screen.getByText("Market Clock")).toBeInTheDocument();
+    expect(screen.getByText("Positions & Orders Blotter")).toBeInTheDocument();
     expect(screen.queryByText("Market Watchlist")).not.toBeInTheDocument();
   });
 

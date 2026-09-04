@@ -7,18 +7,6 @@ import { builtinSchemas } from "./schemas";
 
 export const builtinManifests: LazyWidgetManifest[] = [
   {
-    id: "market-clock",
-    title: "Market Clock",
-    description: "Live session clock with timezone selection.",
-    category: "system",
-    icon: "⏰",
-    defaultWidth: 300,
-    defaultHeight: 180,
-    schema: builtinSchemas["market-clock"],
-    load: () =>
-      import("./MarketClockWidget").then((module) => module.marketClockDefinition),
-  },
-  {
     id: "watchlist",
     title: "Market Watchlist",
     description:

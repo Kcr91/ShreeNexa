@@ -20,7 +20,7 @@ describe("LayoutManager Component and Tab Switching", () => {
     expect(screen.getByRole("tab", { name: /Strategy Lab/i })).toBeInTheDocument();
 
     // Default overview widgets
-    expect(screen.getByText("Market Clock")).toBeInTheDocument();
+    expect(screen.getByText("Backtest Performance Summary")).toBeInTheDocument();
     expect(screen.getByText("Market Watchlist")).toBeInTheDocument();
   });
 

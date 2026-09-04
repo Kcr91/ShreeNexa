@@ -1,4 +1,5 @@
 import React from "react";
+import { FooterClock } from "./FooterClock";
 
 export const StatusFooter: React.FC = () => {
   return (
@@ -36,9 +37,10 @@ export const StatusFooter: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-4)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-3)" }}>
         <span>Workspace: F:\ShreeNexa</span>
         <span>Environment: Paper / Dev Mode</span>
+        <FooterClock />
         <span style={{ color: "var(--text-secondary)" }}>v1.1</span>
       </div>
     </footer>

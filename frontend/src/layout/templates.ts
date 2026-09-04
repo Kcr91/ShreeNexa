@@ -109,14 +109,8 @@ export const PREBUILT_TEMPLATES: WorkspaceTemplate[] = [
             {
               instanceId: "inst-summary-1",
               widgetId: "backtest-summary",
-              position: { x: 8, y: 0, w: 4, h: 4 },
+              position: { x: 8, y: 0, w: 4, h: 7 },
               settings: { strategyName: "NIFTY Intraday Momentum", showBenchmark: true },
-            },
-            {
-              instanceId: "inst-clock-1",
-              widgetId: "market-clock",
-              position: { x: 8, y: 4, w: 4, h: 3 },
-              settings: { timezone: "Asia/Kolkata", showCountdown: true },
             },
           ],
         },

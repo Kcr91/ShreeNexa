@@ -1,26 +1,6 @@
 import type { WidgetSettingsSchema } from "../types";
 
 export const builtinSchemas = {
-  "market-clock": {
-    fields: [
-      {
-        name: "showSeconds",
-        label: "Show Seconds",
-        type: "boolean",
-        default: true,
-      },
-      {
-        name: "timeZone",
-        label: "Time Zone",
-        type: "select",
-        default: "Asia/Kolkata",
-        options: [
-          { label: "India Standard Time (IST)", value: "Asia/Kolkata" },
-          { label: "Coordinated Universal Time (UTC)", value: "UTC" },
-        ],
-      },
-    ],
-  },
   watchlist: {
     fields: [
       {

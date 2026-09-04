@@ -6,25 +6,8 @@ export const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const [tokenHealth, setTokenHealth] = useState<TokenHealthResponse | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState<string>("");
 
   useEffect(() => {
-    // Clock update
-    const updateClock = () => {
-      const now = new Date();
-      const istString = now.toLocaleTimeString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-      setCurrentTime(`${istString} IST`);
-    };
-
-    updateClock();
-    const clockTimer = setInterval(updateClock, 1000);
-
     // Fetch Token Health
     apiClient
       .getTokenHealth()
@@ -36,8 +19,6 @@ export const Header: React.FC = () => {
         setTokenHealth(null);
         setFetchError(err instanceof Error ? err.message : "API Unreachable");
       });
-
-    return () => clearInterval(clockTimer);
   }, []);
 
   const getStatusDisplay = () => {
@@ -195,17 +176,6 @@ export const Header: React.FC = () => {
           {statusInfo.detail && (
             <span style={{ opacity: 0.85, fontWeight: 500 }}>({statusInfo.detail})</span>
           )}
-        </div>
-
-        {/* Live Clock */}
-        <div
-          style={{
-            fontFamily: "var(--font-family-mono)",
-            fontSize: "var(--font-size-sm)",
-            color: "var(--text-secondary)",
-          }}
-        >
-          {currentTime || "--:--:-- IST"}
         </div>
 
         {/* User Pill & Sign Out */}

@@ -28,9 +28,10 @@ describe("App Shell and Layout", () => {
     expect(screen.getByText(/Connected Intelligence. Prosperous Decisions./i)).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Terminal primary navigation" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Main Overview/i })).toBeInTheDocument();
-    expect(screen.getByText("Market Clock")).toBeInTheDocument();
+    expect(screen.getByText("Market Watchlist")).toBeInTheDocument();
     expect(screen.getByText("Backtest Performance Summary")).toBeInTheDocument();
-    expect(await screen.findByText(/Market Session Clock/i)).toBeInTheDocument();
+    expect(await screen.findByText("NIFTY 50")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Current clock:/i })).toBeInTheDocument();
     expect(screen.queryByText(/Widget not found:/i)).not.toBeInTheDocument();
   });
 });

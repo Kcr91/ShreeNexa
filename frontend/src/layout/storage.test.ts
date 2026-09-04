@@ -33,9 +33,9 @@ describe("Workspace Layout Storage and Persistence", () => {
           widgets: [
             {
               instanceId: "w1",
-              widgetId: "market-clock",
+              widgetId: "watchlist",
               position: { x: 0, y: 0, w: 6, h: 4 },
-              settings: { showSeconds: false },
+              settings: { universeName: "NIFTY 50", showSeconds: false },
             },
           ],
         },

@@ -12,21 +12,15 @@ export const DEFAULT_LAYOUT: WorkspaceLayout = {
       icon: "📊",
       widgets: [
         {
-          instanceId: "inst-market-clock",
-          widgetId: "market-clock",
-          position: { x: 0, y: 0, w: 4, h: 2 },
-          settings: { showSeconds: true, timeZone: "Asia/Kolkata" },
-        },
-        {
           instanceId: "inst-watchlist",
           widgetId: "watchlist",
-          position: { x: 4, y: 0, w: 4, h: 4 },
+          position: { x: 0, y: 0, w: 7, h: 5 },
           settings: { universeName: "NIFTY 50", refreshIntervalSec: 1 },
         },
         {
           instanceId: "inst-backtest-summary",
           widgetId: "backtest-summary",
-          position: { x: 8, y: 0, w: 4, h: 3 },
+          position: { x: 7, y: 0, w: 5, h: 5 },
           settings: { strategyName: "NIFTY Alpha Trend", displayMode: "detailed" },
         },
       ],
