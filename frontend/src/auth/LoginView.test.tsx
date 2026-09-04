@@ -194,4 +194,16 @@ describe("LoginView Component and 2FA Flow (QA-03)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Back to Password/i }));
     expect(screen.getByLabelText(/Master Trader Password/i)).toBeInTheDocument();
   });
+
+  it("renders Launch Dry Run / Demo Mode button and activates demo mode", () => {
+    render(
+      <AuthProvider autoCheck={false}>
+        <LoginView />
+      </AuthProvider>
+    );
+
+    const demoBtn = screen.getByRole("button", { name: /Launch Dry Run \/ Demo Mode/i });
+    expect(demoBtn).toBeInTheDocument();
+    fireEvent.click(demoBtn);
+  });
 });

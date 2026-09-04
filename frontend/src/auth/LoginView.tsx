@@ -2,7 +2,8 @@ import React, { useState, FormEvent } from "react";
 import { useAuth } from "./AuthContext";
 
 export const LoginView: React.FC = () => {
-  const { initiateLogin, completeTotp, completeRecovery, error, setError } = useAuth();
+  const { initiateLogin, completeTotp, completeRecovery, loginDemoMode, error, setError } =
+    useAuth();
 
   const [step, setStep] = useState<"password" | "totp" | "recovery">("password");
   const [password, setPassword] = useState("");
@@ -479,6 +480,49 @@ export const LoginView: React.FC = () => {
             </div>
           </form>
         )}
+
+        {/* Dry Run / Demo Mode Section */}
+        <div
+          style={{
+            marginTop: "var(--spacing-6, 1.5rem)",
+            paddingTop: "var(--spacing-4, 1rem)",
+            borderTop: "1px solid var(--border-default, #30363d)",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "var(--font-size-xs, 0.75rem)",
+              color: "var(--text-muted, #8b949e)",
+              marginBottom: "var(--spacing-2, 0.5rem)",
+            }}
+          >
+            Previewing without a live backend connection?
+          </div>
+          <button
+            type="button"
+            onClick={loginDemoMode}
+            style={{
+              width: "100%",
+              padding: "9px 16px",
+              backgroundColor: "rgba(56, 139, 253, 0.12)",
+              color: "var(--color-primary, #58a6ff)",
+              fontWeight: 600,
+              fontSize: "var(--font-size-sm, 0.8125rem)",
+              border: "1px solid rgba(56, 139, 253, 0.35)",
+              borderRadius: "var(--radius-md, 6px)",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            <span>⚡</span>
+            <span>Launch Dry Run / Demo Mode</span>
+          </button>
+        </div>
       </div>
     </div>
   );

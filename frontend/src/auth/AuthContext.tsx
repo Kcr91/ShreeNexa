@@ -29,6 +29,7 @@ export interface AuthContextType {
   }>;
   completeTotp: (challengeToken: string, totpCode: string) => Promise<boolean>;
   completeRecovery: (password: string, recoveryCode: string) => Promise<boolean>;
+  loginDemoMode: () => void;
   logout: () => Promise<void>;
   checkSession: () => Promise<void>;
 }
@@ -84,11 +85,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     }
   }, []);
 
+  const loginDemoMode = useCallback((): void => {
+    setError(null);
+    setUser({
+      username: "Demo Trader",
+      role: "trader",
+      isAuthenticated: true,
+      dhanClientId: "DEMO_CLIENT_001",
+      csrfToken: "demo-csrf-token",
+    });
+    apiClient.setCsrfToken("demo-csrf-token");
+    setIsLoading(false);
+  }, []);
+
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("demo=true")) {
+      loginDemoMode();
+      return;
+    }
     if (!initialUser && autoCheck) {
       void checkSession();
     }
-  }, [initialUser, autoCheck, checkSession]);
+  }, [initialUser, autoCheck, checkSession, loginDemoMode]);
 
   const initiateLogin = async (
     password: string,
@@ -182,6 +200,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         initiateLogin,
         completeTotp,
         completeRecovery,
+        loginDemoMode,
         logout,
         checkSession,
       }}
