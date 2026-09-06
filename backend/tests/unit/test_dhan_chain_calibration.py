@@ -236,13 +236,15 @@ def test_calibration_api_endpoints() -> None:
     assert len(data["strike_comparisons"]) >= 20
 
     # 2. POST custom calibration
-    quotes = _build_test_quotes(spot=25000.0, strikes_count=12)
+    curr_time = datetime(2026, 9, 3, 10, 0, tzinfo=IST)
+    quotes = _build_test_quotes(spot=25000.0, strikes_count=15)
     payload = {
         "underlying": "NIFTY",
         "spot_price": 25000.0,
         "expiry_date": "2026-09-17",
         "quotes": [q.model_dump() for q in quotes],
         "futures_price": 25080.0,
+        "current_time": curr_time.isoformat(),
     }
     resp_post = client.post("/api/v1/options/calibration/calibrate", json=payload)
     assert resp_post.status_code == 200

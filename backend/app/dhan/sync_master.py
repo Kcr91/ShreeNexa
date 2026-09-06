@@ -6,11 +6,11 @@ import argparse
 import io
 import logging
 import sys
-import urllib.request
 from pathlib import Path
 
 from app.contracts import heartbeat as hb
 from app.dhan.instruments import IngestSummary, ingest_instruments
+from app.dhan.transport import download_remote_file
 
 logger = logging.getLogger("app.dhan.sync_master")
 
@@ -25,12 +25,7 @@ DHAN_COMPACT_SCRIP_MASTER_URL = (
 def download_scrip_master(url: str = DHAN_DETAILED_SCRIP_MASTER_URL, timeout: int = 60) -> bytes:
     """Download Dhan scrip master CSV data over HTTP/HTTPS."""
     logger.info("Downloading Dhan scrip master from %s ...", url)
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "ShreeNexa-Terminal/1.0 (Market Data Master Ingestion)"},
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        content: bytes = response.read()
+    content = download_remote_file(url, timeout=float(timeout))
     logger.info("Downloaded %d bytes from %s", len(content), url)
     return content
 

@@ -34,6 +34,7 @@ class CalibrateRequest(BaseModel):
     expiry_date: date = Field(..., description="Option expiry date")
     quotes: list[DhanOptionQuote] = Field(..., min_length=1)
     futures_price: float | None = Field(default=None)
+    current_time: datetime | None = Field(default=None, description="Optional snapshot timestamp")
     tolerance_policy: TolerancePolicy = Field(default_factory=TolerancePolicy)
 
 
@@ -145,6 +146,7 @@ def run_calibration(req: CalibrateRequest) -> CalibrationReport:
         expiry_date=req.expiry_date,
         quotes=req.quotes,
         futures_price=req.futures_price,
+        current_time=req.current_time or datetime.now(tz=IST),
         tolerance_policy=req.tolerance_policy,
     )
     store = get_calibration_store()

@@ -269,3 +269,19 @@ def raise_for_status(status_code: int, raw_body: bytes) -> None:
         error_code=error_code,
         error_type=error_type,
     )
+
+
+def download_remote_file(
+    url: str,
+    timeout: float = 60.0,
+    user_agent: str = "ShreeNexa-Terminal/1.0 (Market Data Master Ingestion)",
+) -> bytes:
+    """Download a remote file over HTTP/HTTPS safely."""
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": user_agent},
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        content: bytes = response.read()
+    return content
+

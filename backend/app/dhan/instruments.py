@@ -180,7 +180,10 @@ def _parse_date(val: Any) -> date | None:
     date_part = s.split()[0]
     for fmt in ("%Y-%m-%d", "%d-%b-%Y", "%d-%m-%Y", "%Y/%m/%d"):
         try:
-            return datetime.strptime(date_part, fmt).date()
+            d = datetime.strptime(date_part, fmt).date()
+            if d.year < 1970:
+                return None
+            return d
         except ValueError:
             continue
     return None
@@ -220,16 +223,31 @@ COLUMN_ALIASES: dict[str, list[str]] = {
     "segment": ["SEM_SEGMENT", "SEGMENT", "segment"],
     "instrument_type": [
         "SEM_INSTRUMENT_NAME",
+        "INSTRUMENT",
         "INSTRUMENT_TYPE",
         "instrument_type",
         "INSTRUMENT_NAME",
     ],
-    "symbol": ["SEM_CUSTOM_SYMBOL", "SYMBOL", "symbol", "SEM_SYMBOL"],
-    "trading_symbol": ["SEM_TRADING_SYMBOL", "TRADING_SYMBOL", "trading_symbol"],
+    "symbol": [
+        "SEM_CUSTOM_SYMBOL",
+        "UNDERLYING_SYMBOL",
+        "SYMBOL",
+        "SYMBOL_NAME",
+        "symbol",
+        "SEM_SYMBOL",
+    ],
+    "trading_symbol": [
+        "SEM_TRADING_SYMBOL",
+        "DISPLAY_NAME",
+        "TRADING_SYMBOL",
+        "SYMBOL_NAME",
+        "UNDERLYING_SYMBOL",
+        "trading_symbol",
+    ],
     "isin": ["SEM_ISIN", "ISIN", "isin"],
     "lot_size": ["SEM_LOT_UNITS", "LOT_SIZE", "lot_size", "SEM_LOT_SIZE"],
     "tick_size": ["SEM_TICK_SIZE", "TICK_SIZE", "tick_size"],
-    "expiry_date": ["SEM_EXPIRY_DATE", "EXPIRY_DATE", "expiry_date"],
+    "expiry_date": ["SEM_EXPIRY_DATE", "SM_EXPIRY_DATE", "EXPIRY_DATE", "expiry_date"],
     "strike_price": ["SEM_STRIKE_PRICE", "STRIKE_PRICE", "strike_price"],
     "option_type": ["SEM_OPTION_TYPE", "OPTION_TYPE", "option_type"],
     "underlying_id": [
@@ -301,9 +319,17 @@ def parse_scrip_master_csv(
 
             sym_col = header_map.get("symbol")
             symbol = _clean_str(row.get(sym_col)) if sym_col else None
+            if not symbol:
+                symbol = _clean_str(row.get("SYMBOL_NAME")) or _clean_str(
+                    row.get("UNDERLYING_SYMBOL")
+                )
 
             tsym_col = header_map.get("trading_symbol")
             trading_symbol = _clean_str(row.get(tsym_col)) if tsym_col else None
+            if not trading_symbol:
+                trading_symbol = _clean_str(row.get("DISPLAY_NAME")) or _clean_str(
+                    row.get("SYMBOL_NAME")
+                )
 
             symbol = symbol or trading_symbol or security_id
             trading_symbol = trading_symbol or symbol
@@ -389,10 +415,14 @@ def ingest_instruments(
     unique_records = list(deduped.values())
     distinct_segments = sorted({r["exchange_segment"] for r in unique_records})
 
+    # PostgreSQL wire protocol supports max 65535 bind parameters.
+    # With 15 columns per record, cap batch size at 2000 (30,000 parameters).
+    effective_batch_size = max(1, min(batch_size, 2000))
+
     total_upserted = 0
     with engine.begin() as conn:
-        for i in range(0, len(unique_records), batch_size):
-            batch = unique_records[i : i + batch_size]
+        for i in range(0, len(unique_records), effective_batch_size):
+            batch = unique_records[i : i + effective_batch_size]
             stmt = pg_insert(instrument_table).values(batch)
             upsert_stmt = stmt.on_conflict_do_update(
                 index_elements=["exchange_segment", "security_id"],
