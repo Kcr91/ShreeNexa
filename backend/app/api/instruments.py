@@ -7,10 +7,12 @@ from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
 from app.contracts import heartbeat as hb
 from app.dhan.instruments import (
+    IngestSummary,
     InstrumentRecord,
     InstrumentSearchQuery,
     get_distinct_segments,
@@ -29,6 +31,36 @@ def get_db_engine() -> Engine:
 
 
 DbEngineDep = Annotated[Engine, Depends(get_db_engine)]
+
+
+class SyncMasterRequest(BaseModel):
+    """Request model for syncing Dhan scrip master."""
+
+    source_url: str | None = Field(
+        default=None,
+        description="Optional custom URL to fetch CSV from",
+    )
+    csv_content: str | None = Field(
+        default=None,
+        description="Optional raw CSV string content",
+    )
+
+
+@router.post("/sync", response_model=IngestSummary)
+def sync_master_instruments(
+    engine: DbEngineDep,
+    request: SyncMasterRequest | None = None,
+) -> IngestSummary:
+    """Trigger synchronization of the Dhan scrip master into PostgreSQL."""
+    from app.dhan.sync_master import DHAN_DETAILED_SCRIP_MASTER_URL, sync_scrip_master
+
+    if request and request.csv_content:
+        return sync_scrip_master(csv_source=request.csv_content)
+    target_url = (
+        request.source_url if request and request.source_url else None
+    ) or DHAN_DETAILED_SCRIP_MASTER_URL
+    return sync_scrip_master(source_url=target_url)
+
 
 
 @router.get("/search", response_model=list[InstrumentRecord])

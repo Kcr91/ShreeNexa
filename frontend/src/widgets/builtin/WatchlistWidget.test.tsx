@@ -130,8 +130,8 @@ describe("WatchlistWidget Component", () => {
     expect(screen.getByRole("button", { name: "Commodities" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Forex" })).toBeInTheDocument();
 
-    // Matching index options should appear with INDEX badge
-    expect(screen.getAllByText("INDEX").length).toBeGreaterThan(0);
+    // Matching index options should appear with INDICES badge
+    expect(screen.getAllByText("INDICES").length).toBeGreaterThan(0);
     expect(screen.getByText("NIFTY 50 INDEX")).toBeInTheDocument();
   });
 
@@ -160,54 +160,76 @@ describe("WatchlistWidget Component", () => {
     expect(screen.getByText("USDINR CURRENCY FUTURES")).toBeInTheDocument();
   });
 
-  it("handles Option B: hover + Add button directly adds instrument to watchlist", () => {
+  it("handles Zerodha hover actions in suggestion dropdown (Image 1 & 2)", () => {
     render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
 
     // Create a new watchlist
     const newBtn = screen.getByText("+ New");
     fireEvent.click(newBtn);
     const nameInput = screen.getByPlaceholderText(/Watchlist Name/i);
-    fireEvent.change(nameInput, { target: { value: "Option B Test" } });
+    fireEvent.change(nameInput, { target: { value: "Zerodha Hover Test" } });
     fireEvent.click(screen.getByText("Create"));
 
     const symInput = screen.getByPlaceholderText(/Add symbol/i);
     fireEvent.change(symInput, { target: { value: "crude" } });
 
-    // Hover + Add button
-    const addBtns = screen.getAllByText("+ Add");
+    // In suggestion dropdown, click the Add to Watchlist (+) button
+    const addBtns = screen.getAllByRole("button", { name: /Add to Watchlist/i });
     expect(addBtns.length).toBeGreaterThan(0);
     fireEvent.click(addBtns[0]);
 
     // CRUDEOIL is added to active watchlist
     expect(screen.getByText("CRUDEOIL")).toBeInTheDocument();
     expect(screen.getByText("MCX")).toBeInTheDocument();
+
+    // Search for an index (e.g. "nifty") -> Image 2: NO Buy/Sell buttons for indices!
+    fireEvent.change(symInput, { target: { value: "nifty 50" } });
+    const niftyOption = screen.getByText("NIFTY 50 INDEX").closest("li")!;
+    fireEvent.mouseEnter(niftyOption);
+
+    // Indices must strictly NOT have Buy or Sell buttons
+    expect(screen.queryByRole("button", { name: "Buy" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Sell" })).toBeNull();
+    // But must have Market Depth, Chart, and Add to Watchlist buttons
+    expect(screen.getByRole("button", { name: "Market Depth" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Chart" })).toBeInTheDocument();
   });
 
-  it("handles Option B: clicking row opens mini-action menu and Market Depth", () => {
+  it("handles Zerodha row hover actions, index safety, and Market Depth in watchlist table (Image 3)", () => {
     render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
 
-    const symInput = screen.getByPlaceholderText(/Add symbol/i);
-    fireEvent.change(symInput, { target: { value: "reliance" } });
+    // In default NIFTY 50 watchlist, find RELIANCE row
+    const relianceSymbol = screen.getByText("RELIANCE");
+    const relianceRow = relianceSymbol.closest("tr")!;
+    fireEvent.mouseEnter(relianceRow);
 
-    // Click on the row (not the + Add button)
-    const relianceRow = screen.getByText("Reliance Industries Ltd");
-    fireEvent.click(relianceRow);
+    // Equities row has Buy (B), Sell (S), Market Depth (≡), Chart (📈), Remove (🗑️), and More (•••)
+    expect(screen.getByRole("button", { name: "Buy RELIANCE" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sell RELIANCE" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Market Depth" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Chart" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove Symbol" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More options" })).toBeInTheDocument();
 
-    // Option B Mini-action menu buttons appear
-    expect(screen.getByText(/📊 Chart/i)).toBeInTheDocument();
-    expect(screen.getByText(/B Buy/i)).toBeInTheDocument();
-    expect(screen.getByText(/S Sell/i)).toBeInTheDocument();
-    expect(screen.getByText(/\+ Watchlist/i)).toBeInTheDocument();
-    expect(screen.getByText(/📋 Market Depth/i)).toBeInTheDocument();
-
-    // Click Market Depth
-    const depthBtn = screen.getByText(/📋 Market Depth/i);
+    // Click Market Depth button on RELIANCE row
+    const depthBtn = screen.getByRole("button", { name: "Market Depth" });
     fireEvent.click(depthBtn);
 
-    // Market depth book should appear with bids & asks and 20-Level Full Depth capability for NSE
+    // Market depth book modal should appear with bids & asks and 20-Level Full Depth capability for NSE
+    expect(screen.getByRole("dialog", { name: "Market Depth Modal" })).toBeInTheDocument();
     expect(screen.getByText(/20-Level Full Depth \(NSE\)/i)).toBeInTheDocument();
     expect(screen.getByText("Total Bid")).toBeInTheDocument();
     expect(screen.getByText("Total Ask")).toBeInTheDocument();
+
+    // Close modal
+    const closeBtn = screen.getByRole("button", { name: "Close modal" });
+    fireEvent.click(closeBtn);
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // Click Delete / Remove Symbol -> RELIANCE removed from active watchlist
+    const removeBtn = screen.getByRole("button", { name: "Remove Symbol" });
+    fireEvent.click(removeBtn);
+    expect(screen.queryByText("RELIANCE")).toBeNull();
   });
 
   it("focuses search input when Ctrl+K is pressed", () => {

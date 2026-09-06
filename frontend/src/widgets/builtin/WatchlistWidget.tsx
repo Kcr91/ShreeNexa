@@ -4,7 +4,16 @@ import {
   Watchlist,
   WatchlistColumn,
   ALL_COLUMNS,
+  WatchlistItem,
 } from "../../watchlist/types";
+import {
+  DepthLevelType,
+  MarketDepthBook,
+} from "../../depth/types";
+import {
+  generateMockDepthBook,
+  resolveSegmentDepthCapability,
+} from "../../depth/engine";
 import {
   loadWatchlists,
   createWatchlist,
@@ -41,6 +50,66 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
   const [isConfiguringColumns, setIsConfiguringColumns] = useState(false);
   const [symbolSearchQuery, setSymbolSearchQuery] = useState("");
   const [addSymbolError, setAddSymbolError] = useState<string | null>(null);
+
+  // Zerodha-style row hover, selection, depth modal, and more actions
+  const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const [depthItem, setDepthItem] = useState<WatchlistItem | null>(null);
+  const [depthLevelType, setDepthLevelType] = useState<DepthLevelType>("LEVEL_20");
+  const [moreMenuSymbol, setMoreMenuSymbol] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+
+  // Auto-dismiss notice toast
+  useEffect(() => {
+    if (actionNotice) {
+      const timer = setTimeout(() => setActionNotice(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionNotice]);
+
+  // Market Depth capability & mock book
+  const depthCapability = useMemo(() => {
+    if (!depthItem) return null;
+    return resolveSegmentDepthCapability(depthItem.segment, depthLevelType);
+  }, [depthItem, depthLevelType]);
+
+  const depthBook: MarketDepthBook | null = useMemo(() => {
+    if (!depthItem || !depthCapability) return null;
+    const baseLtp = (depthItem.ltp ?? 0) > 0 ? (depthItem.ltp as number) : 1000.0;
+    return generateMockDepthBook(
+      depthItem.symbol,
+      depthItem.segment,
+      depthLevelType,
+      baseLtp,
+      Number(depthItem.securityId) || 1000
+    );
+  }, [depthItem, depthCapability, depthLevelType]);
+
+  // Helper for instrument segment badge
+  const getSegmentBadge = (item: WatchlistItem) => {
+    const seg = item.segment || "NSE_EQ";
+    const instType = item.instrumentType || "EQUITY";
+
+    if (instType === "INDEX" || seg === "IDX_I") {
+      return { label: "INDICES", bg: "rgba(163, 113, 247, 0.15)", color: "#a371f7", border: "rgba(163, 113, 247, 0.3)" };
+    }
+    if (instType === "ETF") {
+      return { label: "ETF", bg: "rgba(46, 160, 67, 0.15)", color: "#3fb950", border: "rgba(46, 160, 67, 0.3)" };
+    }
+    if (seg.startsWith("MCX") || instType === "FUTCOM") {
+      return { label: "MCX", bg: "rgba(240, 136, 62, 0.15)", color: "#f0883e", border: "rgba(240, 136, 62, 0.3)" };
+    }
+    if (seg.includes("CURRENCY") || instType === "FUTCUR") {
+      return { label: "FOREX", bg: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", border: "rgba(56, 189, 248, 0.3)" };
+    }
+    if (seg === "NSE_FNO") {
+      return { label: "NFO", bg: "rgba(88, 166, 255, 0.15)", color: "#58a6ff", border: "rgba(88, 166, 255, 0.3)" };
+    }
+    if (seg === "BSE_EQ") {
+      return { label: "BSE", bg: "rgba(210, 153, 34, 0.15)", color: "#d29922", border: "rgba(210, 153, 34, 0.3)" };
+    }
+    return { label: "NSE", bg: "rgba(56, 139, 253, 0.15)", color: "#58a6ff", border: "rgba(56, 139, 253, 0.3)" };
+  };
 
   // Reload watchlists from storage
   const refreshWatchlists = () => {
@@ -441,6 +510,39 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
         </div>
       )}
 
+      {/* 3.2 Action Notice Toast Banner */}
+      {actionNotice && (
+        <div
+          role="status"
+          style={{
+            padding: "var(--spacing-1) var(--spacing-2)",
+            backgroundColor: "rgba(88, 166, 255, 0.15)",
+            color: "var(--color-brand, #58a6ff)",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontSize: "var(--font-size-xs)",
+          }}
+        >
+          <span>✓ {actionNotice}</span>
+          <button
+            type="button"
+            onClick={() => setActionNotice(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              padding: "0 4px",
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* 4. Column Configuration Panel */}
       {isConfiguringColumns && (
         <div
@@ -527,7 +629,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                     {col.label}
                   </th>
                 ))}
-                <th style={{ padding: "6px 8px", width: "70px", textAlign: "center" }}>Actions</th>
+                <th style={{ padding: "6px 8px", width: "190px", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -535,13 +637,27 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                 const changePct = item.changePct ?? 0;
                 const isUp = changePct >= 0;
                 const ltp = item.ltp ?? 0;
+                const isIndex = item.instrumentType === "INDEX" || item.segment === "IDX_I";
+                const isRowHovered = hoveredSymbol === item.symbol;
+                const isRowSelected = selectedSymbol === item.symbol;
 
                 return (
                   <tr
                     key={item.symbol}
+                    onMouseEnter={() => setHoveredSymbol(item.symbol)}
+                    onMouseLeave={() => {
+                      if (hoveredSymbol === item.symbol) setHoveredSymbol(null);
+                    }}
+                    onClick={() => setSelectedSymbol(item.symbol)}
                     style={{
                       borderBottom: "1px solid var(--border-subtle)",
-                      backgroundColor: "transparent",
+                      backgroundColor: isRowSelected
+                        ? "var(--color-primary-bg, rgba(88, 166, 255, 0.08))"
+                        : isRowHovered
+                        ? "var(--bg-elevated, rgba(255, 255, 255, 0.03))"
+                        : "transparent",
+                      transition: "background-color 0.15s ease",
+                      cursor: "pointer",
                     }}
                   >
                     <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>
@@ -553,6 +669,22 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                         return (
                           <td key={col.id} style={{ padding: "6px 8px", fontWeight: 600 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span
+                                style={{
+                                  cursor: "grab",
+                                  color:
+                                    isRowHovered || isRowSelected
+                                      ? "var(--color-brand, #58a6ff)"
+                                      : "var(--text-muted, #484f58)",
+                                  fontSize: "13px",
+                                  letterSpacing: "-1px",
+                                  lineHeight: 1,
+                                  userSelect: "none",
+                                }}
+                                title="Drag to reorder"
+                              >
+                                ⠿
+                              </span>
                               <span>{item.symbol}</span>
                               {item.segment === "NSE_FNO" && (
                                 <span
@@ -803,59 +935,309 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                       return <td key={col.id}>—</td>;
                     })}
 
-                    <td style={{ padding: "6px 8px", textAlign: "center" }}>
-                      <div style={{ display: "flex", justifyContent: "center", gap: "2px" }}>
-                        <button
-                          type="button"
-                          onClick={() => handleMove(item.symbol, "up")}
-                          disabled={idx === 0}
+                    <td style={{ padding: "4px 8px", textAlign: "right" }}>
+                      {isRowHovered || isRowSelected ? (
+                        <div
                           style={{
-                            padding: "2px 4px",
-                            backgroundColor: "transparent",
-                            border: "none",
-                            color: idx === 0 ? "var(--border-subtle)" : "var(--text-muted)",
-                            cursor: idx === 0 ? "default" : "pointer",
-                            fontSize: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            gap: "4px",
                           }}
-                          title="Move Up"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleMove(item.symbol, "down")}
-                          disabled={idx === activeWatchlist.items.length - 1}
-                          style={{
-                            padding: "2px 4px",
-                            backgroundColor: "transparent",
-                            border: "none",
-                            color:
-                              idx === activeWatchlist.items.length - 1
-                                ? "var(--border-subtle)"
-                                : "var(--text-muted)",
-                            cursor: idx === activeWatchlist.items.length - 1 ? "default" : "pointer",
-                            fontSize: "10px",
-                          }}
-                          title="Move Down"
-                        >
-                          ▼
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSymbol(item.symbol)}
-                          style={{
-                            padding: "2px 4px",
-                            backgroundColor: "transparent",
-                            border: "none",
-                            color: "var(--color-down)",
-                            cursor: "pointer",
-                            fontSize: "10px",
-                          }}
-                          title="Remove Symbol"
-                        >
-                          ✕
-                        </button>
-                      </div>
+                          {/* Buy & Sell Buttons: Strictly omitted for INDICES */}
+                          {!isIndex && (
+                            <>
+                              <button
+                                type="button"
+                                aria-label={`Buy ${item.symbol}`}
+                                onClick={() => setActionNotice(`BUY order prepared for ${item.symbol}`)}
+                                style={{
+                                  width: "26px",
+                                  height: "24px",
+                                  borderRadius: "3px",
+                                  backgroundColor: "#1976d2",
+                                  color: "#fff",
+                                  border: "none",
+                                  fontWeight: 700,
+                                  fontSize: "11px",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  lineHeight: 1,
+                                }}
+                                title={`Buy ${item.symbol}`}
+                              >
+                                B
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Sell ${item.symbol}`}
+                                onClick={() => setActionNotice(`SELL order prepared for ${item.symbol}`)}
+                                style={{
+                                  width: "26px",
+                                  height: "24px",
+                                  borderRadius: "3px",
+                                  backgroundColor: "#ff5722",
+                                  color: "#fff",
+                                  border: "none",
+                                  fontWeight: 700,
+                                  fontSize: "11px",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  lineHeight: 1,
+                                }}
+                                title={`Sell ${item.symbol}`}
+                              >
+                                S
+                              </button>
+                            </>
+                          )}
+
+                          {/* Market Depth Button */}
+                          <button
+                            type="button"
+                            aria-label="Market Depth"
+                            onClick={() => setDepthItem(item)}
+                            style={{
+                              width: "26px",
+                              height: "24px",
+                              borderRadius: "3px",
+                              backgroundColor: "var(--bg-elevated, #21262d)",
+                              border: "1px solid var(--border-subtle, #30363d)",
+                              color: "var(--text-primary, #c9d1d9)",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "12px",
+                            }}
+                            title="Market Depth"
+                          >
+                            ≡
+                          </button>
+
+                          {/* Open Chart Button */}
+                          <button
+                            type="button"
+                            aria-label="Chart"
+                            onClick={() => setActionNotice(`Chart switched to ${item.symbol}`)}
+                            style={{
+                              width: "26px",
+                              height: "24px",
+                              borderRadius: "3px",
+                              backgroundColor: "var(--bg-elevated, #21262d)",
+                              border: "1px solid var(--border-subtle, #30363d)",
+                              color: "var(--text-primary, #c9d1d9)",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "11px",
+                            }}
+                            title="Chart"
+                          >
+                            📈
+                          </button>
+
+                          {/* Delete Symbol Button */}
+                          <button
+                            type="button"
+                            aria-label="Remove Symbol"
+                            onClick={() => handleRemoveSymbol(item.symbol)}
+                            style={{
+                              width: "26px",
+                              height: "24px",
+                              borderRadius: "3px",
+                              backgroundColor: "var(--bg-elevated, #21262d)",
+                              border: "1px solid var(--border-subtle, #30363d)",
+                              color: "var(--color-down, #f85149)",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "12px",
+                            }}
+                            title="Remove Symbol"
+                          >
+                            🗑️
+                          </button>
+
+                          {/* More Options Button */}
+                          <div style={{ position: "relative" }}>
+                            <button
+                              type="button"
+                              aria-label="More options"
+                              onClick={() =>
+                                setMoreMenuSymbol(moreMenuSymbol === item.symbol ? null : item.symbol)
+                              }
+                              style={{
+                                width: "26px",
+                                height: "24px",
+                                borderRadius: "3px",
+                                backgroundColor: "var(--bg-elevated, #21262d)",
+                                border: "1px solid var(--border-subtle, #30363d)",
+                                color: "var(--text-primary, #c9d1d9)",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "11px",
+                                letterSpacing: "1px",
+                              }}
+                              title="More options"
+                            >
+                              •••
+                            </button>
+
+                            {moreMenuSymbol === item.symbol && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "100%",
+                                  right: 0,
+                                  marginTop: "4px",
+                                  width: "140px",
+                                  backgroundColor: "var(--bg-surface, #161b22)",
+                                  border: "1px solid var(--border-default, #30363d)",
+                                  borderRadius: "6px",
+                                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+                                  zIndex: 100,
+                                  padding: "4px 0",
+                                  textAlign: "left",
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActionNotice(`Alert created for ${item.symbol}`);
+                                    setMoreMenuSymbol(null);
+                                  }}
+                                  style={{
+                                    display: "block",
+                                    width: "100%",
+                                    textAlign: "left",
+                                    padding: "6px 12px",
+                                    background: "none",
+                                    border: "none",
+                                    color: "var(--text-primary, #c9d1d9)",
+                                    fontSize: "11px",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  🔔 Create Alert
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActionNotice(`GTT Order created for ${item.symbol}`);
+                                    setMoreMenuSymbol(null);
+                                  }}
+                                  style={{
+                                    display: "block",
+                                    width: "100%",
+                                    textAlign: "left",
+                                    padding: "6px 12px",
+                                    background: "none",
+                                    border: "none",
+                                    color: "var(--text-primary, #c9d1d9)",
+                                    fontSize: "11px",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  🎯 Create GTT
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActionNotice(`Technicals opened for ${item.symbol}`);
+                                    setMoreMenuSymbol(null);
+                                  }}
+                                  style={{
+                                    display: "block",
+                                    width: "100%",
+                                    textAlign: "left",
+                                    padding: "6px 12px",
+                                    background: "none",
+                                    border: "none",
+                                    color: "var(--text-primary, #c9d1d9)",
+                                    fontSize: "11px",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  📊 Technicals
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "2px" }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMove(item.symbol, "up");
+                            }}
+                            disabled={idx === 0}
+                            style={{
+                              padding: "2px 4px",
+                              backgroundColor: "transparent",
+                              border: "none",
+                              color: idx === 0 ? "transparent" : "var(--text-muted)",
+                              cursor: idx === 0 ? "default" : "pointer",
+                              fontSize: "10px",
+                            }}
+                            title="Move Up"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMove(item.symbol, "down");
+                            }}
+                            disabled={idx === activeWatchlist.items.length - 1}
+                            style={{
+                              padding: "2px 4px",
+                              backgroundColor: "transparent",
+                              border: "none",
+                              color:
+                                idx === activeWatchlist.items.length - 1
+                                  ? "transparent"
+                                  : "var(--text-muted)",
+                              cursor: idx === activeWatchlist.items.length - 1 ? "default" : "pointer",
+                              fontSize: "10px",
+                            }}
+                            title="Move Down"
+                          >
+                            ▼
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveSymbol(item.symbol);
+                            }}
+                            style={{
+                              padding: "2px 4px",
+                              backgroundColor: "transparent",
+                              border: "none",
+                              color: "var(--text-muted)",
+                              cursor: "pointer",
+                              fontSize: "10px",
+                            }}
+                            title="Remove Symbol"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -864,6 +1246,263 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
           </table>
         )}
       </div>
+
+      {/* 6. Market Depth Modal */}
+      {depthItem && depthBook && (
+        <div
+          role="dialog"
+          aria-label="Market Depth Modal"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 3000,
+          }}
+          onClick={() => setDepthItem(null)}
+        >
+          <div
+            style={{
+              width: "520px",
+              maxWidth: "95vw",
+              backgroundColor: "var(--bg-surface, #161b22)",
+              borderRadius: "8px",
+              border: "1px solid var(--border-default, #30363d)",
+              padding: "16px",
+              boxShadow: "0 12px 36px rgba(0, 0, 0, 0.8)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontWeight: 700, color: "#fff", fontSize: "15px" }}>
+                  {depthItem.tradingSymbol || depthItem.symbol}
+                </span>
+                <span
+                  style={{
+                    fontSize: "10px",
+                    padding: "1px 6px",
+                    borderRadius: "3px",
+                    backgroundColor: getSegmentBadge(depthItem).bg,
+                    color: getSegmentBadge(depthItem).color,
+                    border: `1px solid ${getSegmentBadge(depthItem).border}`,
+                    fontWeight: 700,
+                  }}
+                >
+                  {getSegmentBadge(depthItem).label}
+                </span>
+                <span style={{ fontSize: "12px", color: "var(--text-muted, #8b949e)" }}>
+                  {depthItem.name}
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                {(depthItem.ltp ?? 0) > 0 && (
+                  <span style={{ fontFamily: "var(--font-family-mono)", fontWeight: 700, fontSize: "14px", color: "#fff" }}>
+                    ₹{(depthItem.ltp ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  aria-label="Close modal"
+                  onClick={() => setDepthItem(null)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--text-muted, #8b949e)",
+                    cursor: "pointer",
+                    fontSize: "16px",
+                    padding: "2px 6px",
+                  }}
+                  title="Close modal"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Capability & Spread Info */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "10px",
+                color: "var(--text-muted, #8b949e)",
+                fontSize: "11px",
+                backgroundColor: "var(--bg-elevated, #0d1117)",
+                padding: "6px 10px",
+                borderRadius: "4px",
+                border: "1px solid var(--border-subtle, #30363d)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>
+                  Capability:{" "}
+                  <strong style={{ color: "#58a6ff" }}>
+                    {depthCapability?.actualLevel === "LEVEL_20"
+                      ? "20-Level Full Depth (NSE)"
+                      : "5-Level Depth Feed (MCX/Forex/BSE)"}
+                  </strong>
+                </span>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setDepthLevelType("LEVEL_5")}
+                    style={{
+                      padding: "1px 6px",
+                      fontSize: "10px",
+                      borderRadius: "3px",
+                      border: "1px solid var(--border-subtle, #30363d)",
+                      backgroundColor: depthLevelType === "LEVEL_5" ? "var(--color-brand, #58a6ff)" : "transparent",
+                      color: depthLevelType === "LEVEL_5" ? "#fff" : "var(--text-muted, #8b949e)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    5
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDepthLevelType("LEVEL_20")}
+                    style={{
+                      padding: "1px 6px",
+                      fontSize: "10px",
+                      borderRadius: "3px",
+                      border: "1px solid var(--border-subtle, #30363d)",
+                      backgroundColor: depthLevelType === "LEVEL_20" ? "var(--color-brand, #58a6ff)" : "transparent",
+                      color: depthLevelType === "LEVEL_20" ? "#fff" : "var(--text-muted, #8b949e)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    20
+                  </button>
+                </div>
+              </div>
+              <span>
+                Spread: ₹{depthBook.spread.toFixed(2)} ({depthBook.spreadPct}%)
+              </span>
+            </div>
+
+            {/* Bids & Asks Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              {/* Bids */}
+              <div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "40px 1fr 1fr",
+                    fontWeight: 600,
+                    color: "#3fb950",
+                    borderBottom: "1px solid rgba(63, 185, 80, 0.3)",
+                    paddingBottom: "4px",
+                    marginBottom: "4px",
+                    fontSize: "11px",
+                  }}
+                >
+                  <span>Orders</span>
+                  <span style={{ textAlign: "right" }}>Qty</span>
+                  <span style={{ textAlign: "right" }}>Bid Price</span>
+                </div>
+                {depthBook.bids.slice(0, depthCapability?.actualLevel === "LEVEL_20" ? 20 : 5).map((bid, i) => (
+                  <div
+                    key={`bid-${i}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "40px 1fr 1fr",
+                      padding: "2px 0",
+                      fontFamily: "var(--font-family-mono)",
+                      fontSize: "11px",
+                    }}
+                  >
+                    <span style={{ color: "var(--text-muted, #8b949e)" }}>{bid.orders}</span>
+                    <span style={{ textAlign: "right", color: "var(--text-primary, #f0f6fc)" }}>
+                      {bid.quantity.toLocaleString("en-IN")}
+                    </span>
+                    <span style={{ textAlign: "right", color: "#3fb950", fontWeight: 600 }}>
+                      {bid.price.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    borderTop: "1px solid var(--border-subtle, #30363d)",
+                    marginTop: "6px",
+                    paddingTop: "4px",
+                    fontWeight: 600,
+                    fontSize: "11px",
+                  }}
+                >
+                  <span>Total Bid</span>
+                  <span style={{ fontFamily: "var(--font-family-mono)", color: "#3fb950" }}>
+                    {depthBook.totalBidQty.toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Asks */}
+              <div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 40px",
+                    fontWeight: 600,
+                    color: "#f85149",
+                    borderBottom: "1px solid rgba(248, 81, 73, 0.3)",
+                    paddingBottom: "4px",
+                    marginBottom: "4px",
+                    fontSize: "11px",
+                  }}
+                >
+                  <span>Ask Price</span>
+                  <span style={{ textAlign: "right" }}>Qty</span>
+                  <span style={{ textAlign: "right" }}>Orders</span>
+                </div>
+                {depthBook.asks.slice(0, depthCapability?.actualLevel === "LEVEL_20" ? 20 : 5).map((ask, i) => (
+                  <div
+                    key={`ask-${i}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 40px",
+                      padding: "2px 0",
+                      fontFamily: "var(--font-family-mono)",
+                      fontSize: "11px",
+                    }}
+                  >
+                    <span style={{ color: "#f85149", fontWeight: 600 }}>{ask.price.toFixed(2)}</span>
+                    <span style={{ textAlign: "right", color: "var(--text-primary, #f0f6fc)" }}>
+                      {ask.quantity.toLocaleString("en-IN")}
+                    </span>
+                    <span style={{ textAlign: "right", color: "var(--text-muted, #8b949e)" }}>{ask.orders}</span>
+                  </div>
+                ))}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    borderTop: "1px solid var(--border-subtle, #30363d)",
+                    marginTop: "6px",
+                    paddingTop: "4px",
+                    fontWeight: 600,
+                    fontSize: "11px",
+                  }}
+                >
+                  <span>Total Ask</span>
+                  <span style={{ fontFamily: "var(--font-family-mono)", color: "#f85149" }}>
+                    {depthBook.totalAskQty.toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

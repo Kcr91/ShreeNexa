@@ -60,9 +60,8 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [apiResults, setApiResults] = useState<CatalogInstrument[]>([]);
 
-  // Option B: Active instrument for mini-action menu or market depth view
-  const [actionMenuInstrument, setActionMenuInstrument] = useState<CatalogInstrument | null>(null);
-  const [showMarketDepth, setShowMarketDepth] = useState(false);
+  // Market Depth modal instrument
+  const [depthModalInstrument, setDepthModalInstrument] = useState<CatalogInstrument | null>(null);
 
   // Hover state for suggestion rows
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -92,8 +91,6 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
-        setActionMenuInstrument(null);
-        setShowMarketDepth(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -103,7 +100,7 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
   // Debounced API search when query changes
   useEffect(() => {
     const cleanQ = activeQuery.trim();
-    if (!cleanQ || cleanQ.length < 2) {
+    if (!cleanQ || cleanQ.length < 1) {
       setApiResults([]);
       setIsLoading(false);
       return;
@@ -121,7 +118,7 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
         else if (category === "FOREX") queryParams = "&exchange_segment=NSE_CURRENCY";
 
         const res = await fetch(
-          `/api/v1/instruments/search?query=${encodeURIComponent(cleanQ)}&is_active_only=true${queryParams}&limit=20`
+          `/api/v1/instruments/search?query=${encodeURIComponent(cleanQ)}&is_active_only=true${queryParams}&limit=100`
         );
         if (res.ok) {
           const data = await res.json();
@@ -191,7 +188,7 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
       }
     }
 
-    return merged.slice(0, 30);
+    return merged.slice(0, 100);
   }, [activeQuery, category, apiResults]);
 
   // Reset highlight index when results change
@@ -234,10 +231,8 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
-      if (showMarketDepth) {
-        setShowMarketDepth(false);
-      } else if (actionMenuInstrument) {
-        setActionMenuInstrument(null);
+      if (depthModalInstrument) {
+        setDepthModalInstrument(null);
       } else {
         setIsOpen(false);
         inputRef.current?.blur();
@@ -250,20 +245,12 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
     onSelectInstrument(item);
     setQueryValue("");
     setIsOpen(false);
-    setActionMenuInstrument(null);
-    setShowMarketDepth(false);
-  };
-
-  // Clicking row opens Option B Mini-Action Menu
-  const handleRowClick = (item: CatalogInstrument) => {
-    setActionMenuInstrument(item);
-    setShowMarketDepth(false);
   };
 
   // Segment badges
   const getSegmentBadge = (inst: CatalogInstrument) => {
     if (inst.instrumentType === "INDEX" || inst.segment === "IDX_I") {
-      return { label: "INDEX", bg: "rgba(163, 113, 247, 0.2)", color: "#a371f7", border: "rgba(163, 113, 247, 0.4)" };
+      return { label: "INDICES", bg: "rgba(163, 113, 247, 0.2)", color: "#a371f7", border: "rgba(163, 113, 247, 0.4)" };
     }
     if (inst.instrumentType === "ETF") {
       return { label: "ETF", bg: "rgba(46, 160, 67, 0.2)", color: "#3fb950", border: "rgba(46, 160, 67, 0.4)" };
@@ -277,28 +264,28 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
     if (["OPTIDX", "FUTIDX", "OPTSTK", "FUTSTK"].includes(inst.instrumentType) || inst.segment === "NSE_FNO") {
       return { label: "NFO", bg: "rgba(240, 136, 62, 0.2)", color: "#f0883e", border: "rgba(240, 136, 62, 0.4)" };
     }
-    if (inst.segment === "BSE_EQ") {
+    if (inst.segment === "BSE_EQ" || inst.segment === "BSE") {
       return { label: "BSE", bg: "rgba(210, 153, 34, 0.2)", color: "#d29922", border: "rgba(210, 153, 34, 0.4)" };
     }
     return { label: "NSE", bg: "rgba(88, 166, 255, 0.2)", color: "#58a6ff", border: "rgba(88, 166, 255, 0.4)" };
   };
 
-  // Generate Market Depth Book for Option B Depth View
+  // Generate Market Depth Book for Depth Modal
   const depthBook: MarketDepthBook | null = useMemo(() => {
-    if (!actionMenuInstrument || !showMarketDepth) return null;
+    if (!depthModalInstrument) return null;
     return generateMockDepthBook(
-      actionMenuInstrument.symbol,
-      actionMenuInstrument.segment,
+      depthModalInstrument.symbol,
+      depthModalInstrument.segment,
       "LEVEL_20",
-      actionMenuInstrument.ltp || 1000,
-      Number(actionMenuInstrument.securityId) || 1333
+      depthModalInstrument.ltp || 1000,
+      Number(depthModalInstrument.securityId) || 1333
     );
-  }, [actionMenuInstrument, showMarketDepth]);
+  }, [depthModalInstrument]);
 
   const depthCapability = useMemo(() => {
-    if (!actionMenuInstrument) return null;
-    return resolveSegmentDepthCapability(actionMenuInstrument.segment, "LEVEL_20");
-  }, [actionMenuInstrument]);
+    if (!depthModalInstrument) return null;
+    return resolveSegmentDepthCapability(depthModalInstrument.segment, "LEVEL_20");
+  }, [depthModalInstrument]);
 
   return (
     <div
@@ -344,8 +331,6 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
           onChange={(e) => {
             setQueryValue(e.target.value);
             setIsOpen(true);
-            setActionMenuInstrument(null);
-            setShowMarketDepth(false);
           }}
           onFocus={() => {
             setIsOpen(true);
@@ -388,8 +373,6 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
             onClick={() => {
               setQueryValue("");
               setApiResults([]);
-              setActionMenuInstrument(null);
-              setShowMarketDepth(false);
               inputRef.current?.focus();
             }}
             aria-label="Clear search"
@@ -512,340 +495,224 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
             </span>
           </div>
 
-          {/* Option B: Active Mini-Action Menu & Market Depth Flyout */}
-          {actionMenuInstrument && (
+          {/* Market Depth Floating Modal */}
+          {depthModalInstrument && depthBook && (
             <div
+              role="dialog"
+              aria-label="Market Depth Modal"
               style={{
-                padding: "8px 12px",
-                backgroundColor: "var(--bg-elevated, #1c2128)",
-                borderBottom: "1px solid var(--border-subtle, #30363d)",
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.75)",
                 display: "flex",
-                flexDirection: "column",
-                gap: "8px",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 3000,
               }}
+              onClick={() => setDepthModalInstrument(null)}
             >
-              {/* Instrument Details Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontWeight: 700, color: "#fff", fontSize: "13px" }}>
-                    {actionMenuInstrument.tradingSymbol}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      padding: "1px 6px",
-                      borderRadius: "3px",
-                      backgroundColor: getSegmentBadge(actionMenuInstrument).bg,
-                      color: getSegmentBadge(actionMenuInstrument).color,
-                      border: `1px solid ${getSegmentBadge(actionMenuInstrument).border}`,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {getSegmentBadge(actionMenuInstrument).label}
-                  </span>
-                  <span style={{ fontSize: "11px", color: "var(--text-muted, #8b949e)" }}>
-                    {actionMenuInstrument.name}
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  {actionMenuInstrument.ltp > 0 && (
-                    <span style={{ fontFamily: "var(--font-family-mono)", fontWeight: 600, fontSize: "12px", color: "#fff" }}>
-                      ₹{actionMenuInstrument.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              <div
+                style={{
+                  width: "500px",
+                  maxWidth: "95vw",
+                  backgroundColor: "var(--bg-surface, #161b22)",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-default, #30363d)",
+                  padding: "16px",
+                  boxShadow: "0 12px 36px rgba(0, 0, 0, 0.8)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontWeight: 700, color: "#fff", fontSize: "15px" }}>
+                      {depthModalInstrument.tradingSymbol}
                     </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActionMenuInstrument(null);
-                      setShowMarketDepth(false);
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "var(--text-muted, #8b949e)",
-                      cursor: "pointer",
-                      fontSize: "13px",
-                      padding: "0 4px",
-                    }}
-                    title="Close menu"
-                  >
-                    ✕
-                  </button>
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        padding: "1px 6px",
+                        borderRadius: "3px",
+                        backgroundColor: getSegmentBadge(depthModalInstrument).bg,
+                        color: getSegmentBadge(depthModalInstrument).color,
+                        border: `1px solid ${getSegmentBadge(depthModalInstrument).border}`,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {getSegmentBadge(depthModalInstrument).label}
+                    </span>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted, #8b949e)" }}>
+                      {depthModalInstrument.name}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    {depthModalInstrument.ltp > 0 && (
+                      <span style={{ fontFamily: "var(--font-family-mono)", fontWeight: 700, fontSize: "14px", color: "#fff" }}>
+                        ₹{depthModalInstrument.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDepthModalInstrument(null)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--text-muted, #8b949e)",
+                        cursor: "pointer",
+                        fontSize: "16px",
+                        padding: "2px 6px",
+                      }}
+                      title="Close modal"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Option B Action Buttons */}
-              <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
-                {/* 1. Chart */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenChart?.(actionMenuInstrument);
-                    setActionMenuInstrument(null);
-                    setIsOpen(false);
-                  }}
-                  style={{
-                    padding: "3px 10px",
-                    borderRadius: "4px",
-                    border: "1px solid var(--border-subtle, #30363d)",
-                    backgroundColor: "transparent",
-                    color: "var(--text-primary, #f0f6fc)",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  📊 Chart
-                </button>
-
-                {/* 2. Buy (B) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onBuy?.(actionMenuInstrument);
-                    setActionMenuInstrument(null);
-                    setIsOpen(false);
-                  }}
-                  style={{
-                    padding: "3px 10px",
-                    borderRadius: "4px",
-                    border: "1px solid #238636",
-                    backgroundColor: "rgba(35, 134, 54, 0.2)",
-                    color: "#3fb950",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  B Buy
-                </button>
-
-                {/* 3. Sell (S) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSell?.(actionMenuInstrument);
-                    setActionMenuInstrument(null);
-                    setIsOpen(false);
-                  }}
-                  style={{
-                    padding: "3px 10px",
-                    borderRadius: "4px",
-                    border: "1px solid #da3633",
-                    backgroundColor: "rgba(218, 54, 51, 0.2)",
-                    color: "#f85149",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  S Sell
-                </button>
-
-                {/* 4. Add to Watchlist */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSelectAddDirectly(actionMenuInstrument);
-                  }}
-                  style={{
-                    padding: "3px 10px",
-                    borderRadius: "4px",
-                    border: "1px solid var(--color-brand, #58a6ff)",
-                    backgroundColor: "rgba(88, 166, 255, 0.15)",
-                    color: "var(--color-brand, #58a6ff)",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  + Watchlist
-                </button>
-
-                {/* 5. Market Depth (5 or 20) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenDepth?.(actionMenuInstrument);
-                    setShowMarketDepth((prev) => !prev);
-                  }}
-                  style={{
-                    padding: "3px 10px",
-                    borderRadius: "4px",
-                    border: showMarketDepth
-                      ? "1px solid var(--color-brand, #58a6ff)"
-                      : "1px solid var(--border-subtle, #30363d)",
-                    backgroundColor: showMarketDepth
-                      ? "var(--color-primary-bg, rgba(88, 166, 255, 0.2))"
-                      : "transparent",
-                    color: showMarketDepth ? "var(--color-brand, #58a6ff)" : "var(--text-primary, #f0f6fc)",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  📋 Market Depth ({depthCapability?.actualLevel === "LEVEL_20" ? "20" : "5"})
-                </button>
-              </div>
-
-              {/* Interactive Market Depth Table (Option B) */}
-              {showMarketDepth && depthBook && (
+                {/* Capability & Spread Info */}
                 <div
                   style={{
-                    marginTop: "6px",
-                    padding: "8px",
-                    backgroundColor: "var(--bg-surface, #0d1117)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "10px",
+                    color: "var(--text-muted, #8b949e)",
+                    fontSize: "11px",
+                    backgroundColor: "var(--bg-elevated, #0d1117)",
+                    padding: "6px 10px",
                     borderRadius: "4px",
                     border: "1px solid var(--border-subtle, #30363d)",
-                    fontSize: "11px",
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "6px",
-                      color: "var(--text-muted, #8b949e)",
-                      fontSize: "10px",
-                    }}
-                  >
-                    <span>
-                      Dhan Depth Capability:{" "}
-                      <strong style={{ color: "#fff" }}>
-                        {depthCapability?.actualLevel === "LEVEL_20"
-                          ? "20-Level Full Depth (NSE)"
-                          : "5-Level Depth Feed (MCX/Forex/BSE)"}
-                      </strong>
-                    </span>
-                    <span>
-                      Spread: ₹{depthBook.spread.toFixed(2)} ({depthBook.spreadPct}%)
-                    </span>
+                  <span>
+                    Capability:{" "}
+                    <strong style={{ color: "#58a6ff" }}>
+                      {depthCapability?.actualLevel === "LEVEL_20"
+                        ? "20-Level Full Depth (NSE)"
+                        : "5-Level Depth Feed (MCX/Forex/BSE)"}
+                    </strong>
+                  </span>
+                  <span>
+                    Spread: ₹{depthBook.spread.toFixed(2)} ({depthBook.spreadPct}%)
+                  </span>
+                </div>
+
+                {/* Bids & Asks Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  {/* Bids */}
+                  <div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "40px 1fr 1fr",
+                        fontWeight: 600,
+                        color: "#3fb950",
+                        borderBottom: "1px solid rgba(63, 185, 80, 0.3)",
+                        paddingBottom: "4px",
+                        marginBottom: "4px",
+                        fontSize: "11px",
+                      }}
+                    >
+                      <span>Orders</span>
+                      <span style={{ textAlign: "right" }}>Qty</span>
+                      <span style={{ textAlign: "right" }}>Bid Price</span>
+                    </div>
+                    {depthBook.bids.slice(0, depthCapability?.actualLevel === "LEVEL_20" ? 20 : 5).map((bid, i) => (
+                      <div
+                        key={`bid-${i}`}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "40px 1fr 1fr",
+                          padding: "2px 0",
+                          fontFamily: "var(--font-family-mono)",
+                          fontSize: "11px",
+                        }}
+                      >
+                        <span style={{ color: "var(--text-muted, #8b949e)" }}>{bid.orders}</span>
+                        <span style={{ textAlign: "right", color: "var(--text-primary, #f0f6fc)" }}>
+                          {bid.quantity.toLocaleString("en-IN")}
+                        </span>
+                        <span style={{ textAlign: "right", color: "#3fb950", fontWeight: 600 }}>
+                          {bid.price.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        borderTop: "1px solid var(--border-subtle, #30363d)",
+                        marginTop: "6px",
+                        paddingTop: "4px",
+                        fontWeight: 600,
+                        fontSize: "11px",
+                      }}
+                    >
+                      <span>Total Bid</span>
+                      <span style={{ fontFamily: "var(--font-family-mono)", color: "#3fb950" }}>
+                        {depthBook.totalBidQty.toLocaleString("en-IN")}
+                      </span>
+                    </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                    {/* Bids Column */}
-                    <div>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "35px 1fr 1fr",
-                          fontWeight: 600,
-                          color: "#3fb950",
-                          borderBottom: "1px solid rgba(63, 185, 80, 0.3)",
-                          paddingBottom: "2px",
-                          marginBottom: "2px",
-                        }}
-                      >
-                        <span>Orders</span>
-                        <span style={{ textAlign: "right" }}>Qty</span>
-                        <span style={{ textAlign: "right" }}>Bid Price</span>
-                      </div>
-                      {depthBook.bids.slice(0, depthCapability?.actualLevel === "LEVEL_20" ? 20 : 5).map((bid, i) => (
-                        <div
-                          key={`bid-${i}`}
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "35px 1fr 1fr",
-                            padding: "1px 0",
-                            fontFamily: "var(--font-family-mono)",
-                            fontSize: "10px",
-                          }}
-                        >
-                          <span style={{ color: "var(--text-muted, #8b949e)" }}>{bid.orders}</span>
-                          <span style={{ textAlign: "right", color: "var(--text-primary, #f0f6fc)" }}>
-                            {bid.quantity.toLocaleString("en-IN")}
-                          </span>
-                          <span style={{ textAlign: "right", color: "#3fb950", fontWeight: 600 }}>
-                            {bid.price.toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          borderTop: "1px solid var(--border-subtle, #30363d)",
-                          marginTop: "4px",
-                          paddingTop: "2px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        <span>Total Bid</span>
-                        <span style={{ fontFamily: "var(--font-family-mono)", color: "#3fb950" }}>
-                          {depthBook.totalBidQty.toLocaleString("en-IN")}
-                        </span>
-                      </div>
+                  {/* Asks */}
+                  <div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 40px",
+                        fontWeight: 600,
+                        color: "#f85149",
+                        borderBottom: "1px solid rgba(248, 81, 73, 0.3)",
+                        paddingBottom: "4px",
+                        marginBottom: "4px",
+                        fontSize: "11px",
+                      }}
+                    >
+                      <span>Ask Price</span>
+                      <span style={{ textAlign: "right" }}>Qty</span>
+                      <span style={{ textAlign: "right" }}>Orders</span>
                     </div>
-
-                    {/* Asks Column */}
-                    <div>
+                    {depthBook.asks.slice(0, depthCapability?.actualLevel === "LEVEL_20" ? 20 : 5).map((ask, i) => (
                       <div
+                        key={`ask-${i}`}
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "1fr 1fr 35px",
-                          fontWeight: 600,
-                          color: "#f85149",
-                          borderBottom: "1px solid rgba(248, 81, 73, 0.3)",
-                          paddingBottom: "2px",
-                          marginBottom: "2px",
+                          gridTemplateColumns: "1fr 1fr 40px",
+                          padding: "2px 0",
+                          fontFamily: "var(--font-family-mono)",
+                          fontSize: "11px",
                         }}
                       >
-                        <span>Ask Price</span>
-                        <span style={{ textAlign: "right" }}>Qty</span>
-                        <span style={{ textAlign: "right" }}>Orders</span>
-                      </div>
-                      {depthBook.asks.slice(0, depthCapability?.actualLevel === "LEVEL_20" ? 20 : 5).map((ask, i) => (
-                        <div
-                          key={`ask-${i}`}
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr 35px",
-                            padding: "1px 0",
-                            fontFamily: "var(--font-family-mono)",
-                            fontSize: "10px",
-                          }}
-                        >
-                          <span style={{ color: "#f85149", fontWeight: 600 }}>{ask.price.toFixed(2)}</span>
-                          <span style={{ textAlign: "right", color: "var(--text-primary, #f0f6fc)" }}>
-                            {ask.quantity.toLocaleString("en-IN")}
-                          </span>
-                          <span style={{ textAlign: "right", color: "var(--text-muted, #8b949e)" }}>{ask.orders}</span>
-                        </div>
-                      ))}
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          borderTop: "1px solid var(--border-subtle, #30363d)",
-                          marginTop: "4px",
-                          paddingTop: "2px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        <span>Total Ask</span>
-                        <span style={{ fontFamily: "var(--font-family-mono)", color: "#f85149" }}>
-                          {depthBook.totalAskQty.toLocaleString("en-IN")}
+                        <span style={{ color: "#f85149", fontWeight: 600 }}>{ask.price.toFixed(2)}</span>
+                        <span style={{ textAlign: "right", color: "var(--text-primary, #f0f6fc)" }}>
+                          {ask.quantity.toLocaleString("en-IN")}
                         </span>
+                        <span style={{ textAlign: "right", color: "var(--text-muted, #8b949e)" }}>{ask.orders}</span>
                       </div>
+                    ))}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        borderTop: "1px solid var(--border-subtle, #30363d)",
+                        marginTop: "6px",
+                        paddingTop: "4px",
+                        fontWeight: 600,
+                        fontSize: "11px",
+                      }}
+                    >
+                      <span>Total Ask</span>
+                      <span style={{ fontFamily: "var(--font-family-mono)", color: "#f85149" }}>
+                        {depthBook.totalAskQty.toLocaleString("en-IN")}
+                      </span>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -858,7 +725,7 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
               listStyle: "none",
               margin: 0,
               padding: 0,
-              maxHeight: "320px",
+              maxHeight: "360px",
               overflowY: "auto",
             }}
           >
@@ -885,6 +752,7 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
                   existingSymbols.has(inst.symbol) ||
                   existingSymbols.has(inst.tradingSymbol);
                 const badge = getSegmentBadge(inst);
+                const isIndex = inst.instrumentType === "INDEX" || inst.segment === "IDX_I";
 
                 return (
                   <li
@@ -898,7 +766,7 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
                     onMouseLeave={() => {
                       setHoveredIndex(null);
                     }}
-                    onClick={() => handleRowClick(inst)}
+                    onClick={() => handleSelectAddDirectly(inst)}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -907,122 +775,247 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
                       cursor: "pointer",
                       borderBottom: "1px solid var(--border-subtle, #1e242c)",
                       backgroundColor:
-                        actionMenuInstrument?.securityId === inst.securityId &&
-                        actionMenuInstrument?.segment === inst.segment
-                          ? "rgba(88, 166, 255, 0.15)"
-                          : isHighlighted
+                        isHovered || isHighlighted
                           ? "var(--bg-hover, #21262d)"
                           : "transparent",
                       transition: "background-color 0.1s ease",
+                      minHeight: "42px",
                     }}
                   >
-                    {/* Left: Symbol, Segment Badge, & Description */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span
-                          style={{
-                            fontWeight: 600,
-                            color: "var(--text-primary, #f0f6fc)",
-                            fontSize: "var(--font-size-sm, 13px)",
-                          }}
-                        >
-                          {inst.tradingSymbol}
-                        </span>
-                        {/* Segment Badge */}
-                        <span
-                          style={{
-                            padding: "1px 5px",
-                            borderRadius: "3px",
-                            fontSize: "9px",
-                            fontWeight: 700,
-                            letterSpacing: "0.5px",
-                            backgroundColor: badge.bg,
-                            color: badge.color,
-                            border: `1px solid ${badge.border}`,
-                          }}
-                        >
-                          {badge.label}
-                        </span>
-                      </div>
+                    {/* Left: Symbol & Segment Badge & Description */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
                       <span
                         style={{
-                          fontSize: "11px",
-                          color: "var(--text-muted, #8b949e)",
+                          fontWeight: 600,
+                          color: "var(--text-primary, #f0f6fc)",
+                          fontSize: "var(--font-size-sm, 13px)",
                           whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          maxWidth: "300px",
                         }}
                       >
-                        {inst.name}
+                        {inst.tradingSymbol}
+                      </span>
+
+                      {/* Description */}
+                      {inst.name && (
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--text-muted, #8b949e)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: isHovered || isHighlighted ? "140px" : "240px",
+                          }}
+                        >
+                          {inst.name}
+                        </span>
+                      )}
+
+                      {/* Segment Badge */}
+                      <span
+                        style={{
+                          padding: "1px 5px",
+                          borderRadius: "3px",
+                          fontSize: "9px",
+                          fontWeight: 700,
+                          letterSpacing: "0.5px",
+                          backgroundColor: badge.bg,
+                          color: badge.color,
+                          border: `1px solid ${badge.border}`,
+                          marginLeft: (!isHovered && !isHighlighted) ? "auto" : undefined,
+                        }}
+                      >
+                        {badge.label}
                       </span>
                     </div>
 
-                    {/* Right: LTP & Hover Option B + Add Button */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      {inst.ltp !== undefined && inst.ltp > 0 && (
-                        <div style={{ textAlign: "right" }}>
-                          <div
-                            style={{
-                              fontSize: "12px",
-                              fontFamily: "var(--font-family-mono)",
-                              fontWeight: 500,
-                              color: "var(--text-primary, #f0f6fc)",
-                            }}
-                          >
-                            ₹{inst.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                          </div>
-                          {inst.changePct !== undefined && (
-                            <div
-                              style={{
-                                fontSize: "10px",
-                                fontFamily: "var(--font-family-mono)",
-                                color:
-                                  inst.changePct >= 0
-                                    ? "var(--color-up, #3fb950)"
-                                    : "var(--color-down, #f85149)",
-                              }}
-                            >
-                              {inst.changePct >= 0 ? "+" : ""}
-                              {inst.changePct.toFixed(2)}%
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Option B: Hover reveals + Add button directly */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectAddDirectly(inst);
-                        }}
+                    {/* Right: Zerodha Kite Hover Action Buttons (Images 1 & 2) */}
+                    {isHovered || isHighlighted ? (
+                      <div
                         style={{
-                          padding: "3px 8px",
-                          borderRadius: "var(--radius-sm, 4px)",
-                          border: isAlreadyAdded
-                            ? "1px solid var(--border-subtle, #30363d)"
-                            : "1px solid var(--color-brand, #58a6ff)",
-                          backgroundColor: isAlreadyAdded
-                            ? "transparent"
-                            : "var(--color-primary-bg, rgba(88, 166, 255, 0.15))",
-                          color: isAlreadyAdded
-                            ? "var(--text-muted, #8b949e)"
-                            : "var(--color-brand, #58a6ff)",
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
-                          gap: "2px",
-                          opacity: isHovered || isHighlighted || isAlreadyAdded ? 1 : 0.85,
-                          transition: "all 0.15s ease",
+                          gap: "4px",
+                          marginLeft: "8px",
                         }}
-                        title={isAlreadyAdded ? "Already in Watchlist" : "Add to active Watchlist"}
                       >
-                        {isAlreadyAdded ? "✓ Added" : "+ Add"}
-                      </button>
-                    </div>
+                        {/* Buy & Sell Buttons: Only for non-indices (Image 1) */}
+                        {!isIndex && (
+                          <>
+                            <button
+                              type="button"
+                              aria-label="Buy"
+                              title="Buy (B)"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onBuy?.(inst);
+                              }}
+                              style={{
+                                width: "26px",
+                                height: "24px",
+                                borderRadius: "3px",
+                                border: "none",
+                                backgroundColor: "#1976d2",
+                                color: "#ffffff",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: 0,
+                                transition: "transform 0.1s ease",
+                              }}
+                            >
+                              B
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Sell"
+                              title="Sell (S)"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSell?.(inst);
+                              }}
+                              style={{
+                                width: "26px",
+                                height: "24px",
+                                borderRadius: "3px",
+                                border: "none",
+                                backgroundColor: "#ff5722",
+                                color: "#ffffff",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: 0,
+                                transition: "transform 0.1s ease",
+                              }}
+                            >
+                              S
+                            </button>
+                          </>
+                        )}
+
+                        {/* Market Depth Button (≡) */}
+                        <button
+                          type="button"
+                          aria-label="Market Depth"
+                          title="Market Depth"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenDepth?.(inst);
+                            setDepthModalInstrument(inst);
+                          }}
+                          style={{
+                            width: "26px",
+                            height: "24px",
+                            borderRadius: "3px",
+                            border: "1px solid var(--border-subtle, #30363d)",
+                            backgroundColor: "var(--bg-elevated, #21262d)",
+                            color: "var(--text-primary, #f0f6fc)",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: 0,
+                          }}
+                        >
+                          ≡
+                        </button>
+
+                        {/* Chart Button (📈) */}
+                        <button
+                          type="button"
+                          aria-label="Chart"
+                          title="Chart"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenChart?.(inst);
+                          }}
+                          style={{
+                            width: "26px",
+                            height: "24px",
+                            borderRadius: "3px",
+                            border: "1px solid var(--border-subtle, #30363d)",
+                            backgroundColor: "var(--bg-elevated, #21262d)",
+                            color: "var(--text-primary, #f0f6fc)",
+                            fontSize: "12px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: 0,
+                          }}
+                        >
+                          📈
+                        </button>
+
+                        {/* Add to Watchlist Button (+) */}
+                        <button
+                          type="button"
+                          aria-label={isAlreadyAdded ? "Already in Watchlist" : "Add to Watchlist"}
+                          title={isAlreadyAdded ? "Already in Watchlist" : "Add to Watchlist"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectAddDirectly(inst);
+                          }}
+                          style={{
+                            width: "28px",
+                            height: "24px",
+                            borderRadius: "3px",
+                            border: "none",
+                            backgroundColor: isAlreadyAdded ? "rgba(46, 160, 67, 0.2)" : "#2e7d32",
+                            color: isAlreadyAdded ? "#3fb950" : "#ffffff",
+                            fontSize: "14px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: 0,
+                          }}
+                        >
+                          {isAlreadyAdded ? "✓" : "+"}
+                        </button>
+                      </div>
+                    ) : (
+                      /* Not Hovered: LTP & Change */
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        {inst.ltp !== undefined && inst.ltp > 0 && (
+                          <div style={{ textAlign: "right" }}>
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                fontFamily: "var(--font-family-mono)",
+                                fontWeight: 500,
+                                color: "var(--text-primary, #f0f6fc)",
+                              }}
+                            >
+                              ₹{inst.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </div>
+                            {inst.changePct !== undefined && (
+                              <div
+                                style={{
+                                  fontSize: "10px",
+                                  fontFamily: "var(--font-family-mono)",
+                                  color:
+                                    inst.changePct >= 0
+                                      ? "var(--color-up, #3fb950)"
+                                      : "var(--color-down, #f85149)",
+                                }}
+                              >
+                                {inst.changePct >= 0 ? "+" : ""}
+                                {inst.changePct.toFixed(2)}%
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </li>
                 );
               })
@@ -1046,7 +1039,7 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
               <kbd style={{ padding: "0 3px", backgroundColor: "#21262d", borderRadius: "2px" }}>↑</kbd>{" "}
               <kbd style={{ padding: "0 3px", backgroundColor: "#21262d", borderRadius: "2px" }}>↓</kbd> navigate
             </span>
-            <span>Click row for <strong>Option B Actions / Depth</strong></span>
+            <span>Hover row for <strong>Buy, Sell, Depth & Chart</strong></span>
             <span>
               <kbd style={{ padding: "0 3px", backgroundColor: "#21262d", borderRadius: "2px" }}>Esc</kbd> dismiss
             </span>
