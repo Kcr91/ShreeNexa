@@ -3486,3 +3486,33 @@ a live branch indicator; run `git status --short --branch` for current state.
   - All 63 frontend test suites passed (220 tests passed in Vitest, 0 failed).
   - TypeScript clean (`tsc --noEmit`), Vite production build succeeded (`vite build`).
   - Pre-commit hooks passed 100% (`pre-commit run --all-files`).
+  - Fast-forward merged to `main` at `1c84d6c`.
+
+### 2026-09-06 — Zerodha Kite-Grade Search, Hover Actions, Dhan Master Sync & Market Depth (Options 1, 2, 3)
+
+- **Feature / UX Alignment**:
+  - **Option 1 (Removed Search Limits)**:
+    - Reduced input threshold to `cleanQ.length >= 1` so single characters (`s`, `n`, `t`) trigger suggestions instantly.
+    - Updated backend search limit to `limit=100` and removed frontend slice cap (`slice(0, 100)`).
+  - **Option 2 (100+ Built-in Catalog Expansion)**:
+    - Added all indices from Zerodha screenshot (`NIFTY 50`, `SENSEX`, `NIFTY BANK`, `NIFTY IT`, `NIFTY MIDCAP 100`, etc.).
+    - Added all stocks from watchlist (`HEROMOTOCO`, `MPHASIS`, `CIPLA`, `COALINDIA`, `GODFRYPHLP`, `TECHNOE`, `LT`, `LTTS`).
+    - Added all portfolio holdings (`MANAPPURAM`, `BODALCHEM`, `BLSE`, `MOREPENLAB`, `MON100`, `TMCV`, `CAMS`, `DELTACORP`, `HDFCAMC`, `AARTIIND`, `IGL`).
+    - Added ETFs & scrips (`SILVERCASF`, `SILCASINAV`, `SML100INAV`, `SML100CASE`, `SBIETFPB`, `SBIETFIT`, `SHIVATEX`, etc.).
+  - **Option 3 (Dhan Scrip Master Daily Sync)**:
+    - Added standalone streaming CLI sync utility (`backend/app/dhan/sync_master.py`) downloading official Dhan daily CSV and bulk upserting ~100k instruments into PostgreSQL.
+    - Added `POST /api/v1/instruments/sync` REST API endpoint with `SyncMasterRequest`.
+  - **Search Suggestion Dropdown Hover Actions (Images 1 & 2)**:
+    - Replaced click popover with Zerodha hover action buttons (`[ B ] [ S ] [ ≡ ] [ 📈 ] [ + ]`).
+    - **Strict Index Safety Invariant**: For indices (e.g. `NIFTY 50`, `SENSEX`), `[ B ]` and `[ S ]` buttons are strictly omitted; only `[ ≡ ]` (Depth), `[ 📈 ]` (Chart), and `[ + ]` (Add) are shown.
+  - **Watchlist Added Script Actions (Image 3)**:
+    - Added drag handle `⠿` and row action buttons on hover/select: `[ B ] [ S ] [ ≡ ] [ 📈 ] [ 🗑️ ] [ ••• ]` (omitting B/S for indices).
+    - Connected `[ 🗑️ ]` to immediately delete symbol from active watchlist.
+    - Added interactive 5/20-level Market Depth dialog modal when `[ ≡ ]` is clicked, rendering bids, asks, spread, imbalance, and 5/20 toggle.
+- **Testing & Quality Gates**:
+  - Added 12 unit tests in `WatchlistWidget.test.tsx` verifying suggestion hover actions, index B/S omission, watchlist row actions, delete action, and depth modal.
+  - All 63 frontend test suites passed (229 tests in Vitest, 0 failures).
+  - TypeScript typecheck passed (`tsc --noEmit`, 0 errors).
+  - Vite production build succeeded (`vite build` in 10.64s).
+  - Python tests, Ruff linting, and Mypy strict passed (`uv run pytest`, `uv run ruff check`, `uv run mypy --strict`).
+  - Merged to `main` at `e3b1049` and pushed to remote `origin/main`.
