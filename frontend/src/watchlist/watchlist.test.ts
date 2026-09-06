@@ -9,6 +9,8 @@ import {
   reorderWatchlistSymbols,
   moveItem,
   reconcileWithInstrumentMaster,
+  searchCatalogInstruments,
+  resolveCatalogInstrument,
 } from "./storage";
 
 describe("Watchlist Storage and Manipulation", () => {
@@ -119,5 +121,61 @@ describe("Watchlist Storage and Manipulation", () => {
 
     const reliance = reconciledNifty.items.find((i) => i.symbol === "RELIANCE")!;
     expect(reliance.isStale).toBe(false);
+  });
+
+  it("searches catalog instruments with category filtering and fuzzy matches", () => {
+    // Search "nifty" across ALL categories
+    const allNifty = searchCatalogInstruments("nifty", "ALL");
+    expect(allNifty.length).toBeGreaterThan(0);
+    expect(allNifty.some((i) => i.symbol === "NIFTY")).toBe(true);
+    expect(allNifty.some((i) => i.symbol === "BANKNIFTY")).toBe(true);
+
+    // Filter by INDICES only
+    const indicesOnly = searchCatalogInstruments("nifty", "INDICES");
+    expect(indicesOnly.every((i) => i.instrumentType === "INDEX")).toBe(true);
+
+    // Filter by STOCKS only
+    const stocksOnly = searchCatalogInstruments("rel", "STOCKS");
+    expect(stocksOnly.every((i) => i.instrumentType === "EQUITY")).toBe(true);
+    expect(stocksOnly.some((i) => i.symbol === "RELIANCE")).toBe(true);
+
+    // Filter by ETF only
+    const etfOnly = searchCatalogInstruments("bees", "ETF");
+    expect(etfOnly.every((i) => i.instrumentType === "ETF")).toBe(true);
+    expect(etfOnly.some((i) => i.symbol === "NIFTYBEES")).toBe(true);
+    expect(etfOnly.some((i) => i.symbol === "GOLDBEES")).toBe(true);
+
+    // Filter by COMMODITY (MCX)
+    const comOnly = searchCatalogInstruments("crude", "COMMODITY");
+    expect(comOnly.some((i) => i.symbol === "CRUDEOIL")).toBe(true);
+    expect(comOnly.every((i) => i.segment.startsWith("MCX"))).toBe(true);
+
+    // Filter by FOREX (Currency)
+    const forexOnly = searchCatalogInstruments("usdinr", "FOREX");
+    expect(forexOnly.some((i) => i.symbol === "USDINR")).toBe(true);
+    expect(forexOnly.every((i) => i.segment.includes("CURRENCY"))).toBe(true);
+  });
+
+  it("resolves indices by alias (Nifty50, NIFTY 50, BANK NIFTY, SENSEX)", () => {
+    const nifty50 = resolveCatalogInstrument("Nifty50");
+    expect(nifty50).not.toBeNull();
+    expect(nifty50?.symbol).toBe("NIFTY");
+    expect(nifty50?.tradingSymbol).toBe("NIFTY 50");
+    expect(nifty50?.segment).toBe("IDX_I");
+    expect(nifty50?.instrumentType).toBe("INDEX");
+
+    const bankNifty = resolveCatalogInstrument("BANK NIFTY");
+    expect(bankNifty).not.toBeNull();
+    expect(bankNifty?.symbol).toBe("BANKNIFTY");
+    expect(bankNifty?.segment).toBe("IDX_I");
+
+    const sensex = resolveCatalogInstrument("SENSEX");
+    expect(sensex).not.toBeNull();
+    expect(sensex?.symbol).toBe("SENSEX");
+    expect(sensex?.securityId).toBe("51");
+
+    // Unknown instrument returns null
+    const unknown = resolveCatalogInstrument("TOTALLY_UNKNOWN_XYZ");
+    expect(unknown).toBeNull();
   });
 });

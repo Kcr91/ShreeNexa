@@ -33,6 +33,8 @@ export interface WatchlistItem {
   segment: string;
   securityId: string;
   tradingSymbol: string;
+  name?: string;
+  instrumentType?: string;
   order: number;
   expiry?: string;
   strike?: number;

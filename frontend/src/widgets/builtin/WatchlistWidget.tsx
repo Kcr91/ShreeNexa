@@ -14,7 +14,10 @@ import {
   moveItem,
   updateWatchlist,
   KNOWN_EQUITY_INSTRUMENTS,
+  resolveCatalogInstrument,
+  CatalogInstrument,
 } from "../../watchlist/storage";
+import { SymbolSearchDropdown } from "./SymbolSearchDropdown";
 
 export interface WatchlistSettings {
   defaultWatchlistId?: string;
@@ -37,7 +40,6 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
   const [newWatchlistName, setNewWatchlistName] = useState("");
   const [isConfiguringColumns, setIsConfiguringColumns] = useState(false);
   const [symbolSearchQuery, setSymbolSearchQuery] = useState("");
-  const [searchSegment, setSearchSegment] = useState<"NSE_EQ" | "NSE_FNO">("NSE_EQ");
   const [addSymbolError, setAddSymbolError] = useState<string | null>(null);
 
   // Reload watchlists from storage
@@ -73,32 +75,82 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
     }
   };
 
-  const handleAddSymbol = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!symbolSearchQuery.trim() || !activeWatchlist) return;
-
-    const sym = symbolSearchQuery.trim().toUpperCase();
+  const handleAddResolved = (item: CatalogInstrument) => {
+    if (!activeWatchlist) return;
     setAddSymbolError(null);
 
-    let resolved: { securityId: string; tradingSymbol: string; ltp?: number } | null =
-      KNOWN_EQUITY_INSTRUMENTS[sym] || null;
+    addSymbolToWatchlist(activeWatchlist.id, {
+      symbol: item.symbol,
+      segment: item.segment,
+      securityId: item.securityId,
+      tradingSymbol: item.tradingSymbol,
+      name: item.name,
+      instrumentType: item.instrumentType,
+      ltp: item.ltp ?? 0,
+      changePct: item.changePct ?? 0,
+      changeAbs: 0,
+      volume: 0,
+      expiry: item.expiry,
+      strike: item.strike,
+      optionType: item.optionType,
+    });
 
+    refreshWatchlists();
+    setSymbolSearchQuery("");
+  };
+
+  const handleAddSymbol = async (e?: React.FormEvent, customQuery?: string) => {
+    if (e) e.preventDefault();
+    const raw = (customQuery ?? symbolSearchQuery).trim();
+    if (!raw || !activeWatchlist) return;
+
+    const sym = raw.toUpperCase();
+    setAddSymbolError(null);
+
+    // 1. Check local catalog resolver (handles Nifty50, NIFTY 50, aliases, indices, equities, F&O)
+    let resolved: CatalogInstrument | null = resolveCatalogInstrument(sym);
+
+    // 2. Check KNOWN_EQUITY_INSTRUMENTS directly if not resolved
+    if (!resolved && KNOWN_EQUITY_INSTRUMENTS[sym]) {
+      const meta = KNOWN_EQUITY_INSTRUMENTS[sym];
+      resolved = {
+        symbol: sym,
+        tradingSymbol: meta.tradingSymbol,
+        securityId: meta.securityId,
+        segment: meta.segment || "NSE_EQ",
+        instrumentType: meta.instrumentType || "EQUITY",
+        name: meta.name || meta.tradingSymbol,
+        ltp: meta.ltp,
+      };
+    }
+
+    // 3. Fallback to live backend API search
     if (!resolved) {
       try {
         const res = await fetch(
-          `/api/v1/instruments/search?query=${encodeURIComponent(sym)}&segment=${searchSegment}`
+          `/api/v1/instruments/search?query=${encodeURIComponent(sym)}&is_active_only=true`
         );
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
-            const match = data.find((d: any) => d.symbol === sym) || data[0];
+            const match =
+              data.find(
+                (d: any) =>
+                  d.symbol?.toUpperCase() === sym ||
+                  d.trading_symbol?.toUpperCase() === sym
+              ) || data[0];
             resolved = {
+              symbol: match.symbol || sym,
               securityId: String(match.security_id || match.securityId),
-              tradingSymbol:
-                match.trading_symbol ||
-                match.tradingSymbol ||
-                `${sym}-${searchSegment === "NSE_EQ" ? "EQ" : "FUT"}`,
-              ltp: match.ltp,
+              tradingSymbol: match.trading_symbol || `${sym}-EQ`,
+              segment: match.exchange_segment || "NSE_EQ",
+              instrumentType: match.instrument_type || "EQUITY",
+              name: match.name || match.trading_symbol || sym,
+              ltp: match.ltp ?? 0,
+              changePct: match.change_pct ?? 0,
+              expiry: match.expiry_date,
+              strike: match.strike_price,
+              optionType: match.option_type,
             };
           }
         }
@@ -112,19 +164,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
       return;
     }
 
-    addSymbolToWatchlist(activeWatchlist.id, {
-      symbol: sym,
-      segment: searchSegment,
-      securityId: resolved.securityId,
-      tradingSymbol: resolved.tradingSymbol,
-      ltp: resolved.ltp ?? 0,
-      changePct: 0,
-      changeAbs: 0,
-      volume: 0,
-    });
-
-    refreshWatchlists();
-    setSymbolSearchQuery("");
+    handleAddResolved(resolved);
   };
 
   const handleRemoveSymbol = (symbol: string) => {
@@ -297,48 +337,32 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
           borderBottom: "1px solid var(--border-subtle)",
         }}
       >
-        {/* Add Symbol Input */}
-        <form onSubmit={handleAddSymbol} style={{ display: "flex", gap: "var(--spacing-1)", flex: 1 }}>
-          <select
-            value={searchSegment}
-            onChange={(e) => setSearchSegment(e.target.value as "NSE_EQ" | "NSE_FNO")}
-            style={{
-              padding: "4px 6px",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-subtle)",
-              backgroundColor: "var(--bg-input)",
-              color: "var(--text-primary)",
-              fontSize: "var(--font-size-xs)",
-            }}
-          >
-            <option value="NSE_EQ">EQ</option>
-            <option value="NSE_FNO">F&O</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Add symbol (e.g. INFY, NIFTY26SEPFUT)..."
+        {/* Zerodha-Style Symbol Search & Autocomplete Dropdown */}
+        <form
+          onSubmit={(e) => handleAddSymbol(e)}
+          style={{ display: "flex", gap: "var(--spacing-1)", flex: 1, alignItems: "center" }}
+        >
+          <SymbolSearchDropdown
             value={symbolSearchQuery}
-            onChange={(e) => setSymbolSearchQuery(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "4px 8px",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-subtle)",
-              backgroundColor: "var(--bg-input)",
-              color: "var(--text-primary)",
-              fontSize: "var(--font-size-xs)",
-            }}
+            onChange={setSymbolSearchQuery}
+            onSelectInstrument={handleAddResolved}
+            onSubmitText={(txt) => handleAddSymbol(undefined, txt)}
+            existingSecurityIds={new Set(activeWatchlist.items.map((i) => i.securityId))}
+            existingSymbols={new Set(activeWatchlist.items.map((i) => i.symbol))}
+            placeholder="Add symbol (e.g. NIFTY, TCS, RELIANCE)..."
           />
           <button
             type="submit"
             style={{
-              padding: "4px 10px",
+              padding: "4px 12px",
               backgroundColor: "var(--bg-elevated)",
               color: "var(--text-primary)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "var(--radius-sm)",
               fontSize: "var(--font-size-xs)",
               cursor: "pointer",
+              height: "28px",
+              whiteSpace: "nowrap",
             }}
           >
             Add
@@ -544,7 +568,83 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                                   F&O
                                 </span>
                               )}
+                              {(item.segment === "IDX_I" || item.instrumentType === "INDEX") && (
+                                <span
+                                  style={{
+                                    fontSize: "9px",
+                                    padding: "1px 4px",
+                                    borderRadius: "var(--radius-sm)",
+                                    backgroundColor: "rgba(163, 113, 247, 0.15)",
+                                    color: "#a371f7",
+                                    border: "1px solid rgba(163, 113, 247, 0.3)",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  INDEX
+                                </span>
+                              )}
+                              {item.instrumentType === "ETF" && (
+                                <span
+                                  style={{
+                                    fontSize: "9px",
+                                    padding: "1px 4px",
+                                    borderRadius: "var(--radius-sm)",
+                                    backgroundColor: "rgba(46, 160, 67, 0.15)",
+                                    color: "#3fb950",
+                                    border: "1px solid rgba(46, 160, 67, 0.3)",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  ETF
+                                </span>
+                              )}
+                              {(item.segment?.startsWith("MCX") || item.instrumentType === "FUTCOM") && (
+                                <span
+                                  style={{
+                                    fontSize: "9px",
+                                    padding: "1px 4px",
+                                    borderRadius: "var(--radius-sm)",
+                                    backgroundColor: "rgba(240, 136, 62, 0.15)",
+                                    color: "#f0883e",
+                                    border: "1px solid rgba(240, 136, 62, 0.3)",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  MCX
+                                </span>
+                              )}
+                              {(item.segment?.includes("CURRENCY") || item.instrumentType === "FUTCUR") && (
+                                <span
+                                  style={{
+                                    fontSize: "9px",
+                                    padding: "1px 4px",
+                                    borderRadius: "var(--radius-sm)",
+                                    backgroundColor: "rgba(56, 189, 248, 0.15)",
+                                    color: "#38bdf8",
+                                    border: "1px solid rgba(56, 189, 248, 0.3)",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  FOREX
+                                </span>
+                              )}
                             </div>
+                            {item.name && item.name !== item.symbol && (
+                              <div
+                                style={{
+                                  fontSize: "10px",
+                                  color: "var(--text-muted)",
+                                  fontWeight: 400,
+                                  marginTop: "1px",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  maxWidth: "180px",
+                                }}
+                              >
+                                {item.name}
+                              </div>
+                            )}
                           </td>
                         );
                       }
