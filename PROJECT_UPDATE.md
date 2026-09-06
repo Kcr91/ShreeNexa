@@ -3516,3 +3516,22 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Vite production build succeeded (`vite build` in 10.64s).
   - Python tests, Ruff linting, and Mypy strict passed (`uv run pytest`, `uv run ruff check`, `uv run mypy --strict`).
   - Merged to `main` at `e3b1049` and pushed to remote `origin/main`.
+
+### 2026-09-06 — Full Ingestion of 200,289 Dhan Instruments & Dry-Run Demo Mode Integration
+
+- **PostgreSQL Database & Ingestion**:
+  - Activated local Docker Compose PostgreSQL 17 (`shreenexa-postgres-1`) and Valkey (`shreenexa-valkey-1`).
+  - Successfully ingested all **200,289** live Dhan scrip master instruments across NSE, BSE, MCX, equity, derivatives, and indices into the `instrument` table.
+- **Dry-Run / Demo Mode Authentication & Access**:
+  - Implemented `POST /api/v1/auth/demo` endpoint to provide non-production demo sessions.
+  - Updated backend session resolution (`backend/app/auth/service.py` & `backend/app/api/deps.py`) to authorize demo sessions via Bearer token, session cookie, and `x-csrf-token` header when `APP_ENV != "production"`.
+  - Frontend `AuthContext` now establishes a demo session automatically upon clicking "Demo Mode / Dry Run", enabling full read access to `/api/v1/instruments/search`.
+  - Updated `SymbolSearchDropdown.tsx` and `WatchlistWidget.tsx` to include credentials and authorization headers so the live 200,289-instrument database is seamlessly queried and displayed alongside the local catalog.
+- **Verification & Gates**:
+  - All 63 Vitest frontend test suites passed (229 tests).
+  - Frontend TypeScript typecheck passed cleanly (`tsc --noEmit`).
+  - Backend Mypy strict passed across 336 files.
+  - Backend Ruff checks passed with 0 errors.
+  - All 653 backend unit tests passed.
+  - Committed and pushed to `origin/main`.
+
