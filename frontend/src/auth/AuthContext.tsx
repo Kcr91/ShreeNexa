@@ -95,6 +95,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       csrfToken: "demo-csrf-token",
     });
     apiClient.setCsrfToken("demo-csrf-token");
+    if (typeof document !== "undefined") {
+      document.cookie = "shreenexa_session=demo-session-token; path=/; max-age=86400; SameSite=Lax";
+    }
+    apiClient.demoLogin().catch(() => {});
     setIsLoading(false);
   }, []);
 

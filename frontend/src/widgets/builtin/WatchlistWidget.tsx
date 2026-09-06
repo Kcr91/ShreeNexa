@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { apiClient } from "../../api/client";
 import { WidgetComponentProps, WidgetDefinition } from "../types";
 import {
   Watchlist,
@@ -196,8 +197,17 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
     // 3. Fallback to live backend API search
     if (!resolved) {
       try {
+        const token = apiClient.getCsrfToken() || "demo-csrf-token";
         const res = await fetch(
-          `/api/v1/instruments/search?query=${encodeURIComponent(sym)}&is_active_only=true`
+          `/api/v1/instruments/search?query=${encodeURIComponent(sym)}&is_active_only=true`,
+          {
+            credentials: "include",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+              "x-csrf-token": token,
+            },
+          }
         );
         if (res.ok) {
           const data = await res.json();

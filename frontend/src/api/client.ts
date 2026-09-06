@@ -92,9 +92,14 @@ export class ApiClient {
       ...(options.headers as Record<string, string> | undefined),
     };
 
-    if (this.csrfToken && ["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
-      if (!headers["x-csrf-token"] && !headers["X-CSRF-Token"]) {
-        headers["x-csrf-token"] = this.csrfToken;
+    if (this.csrfToken) {
+      if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
+        if (!headers["x-csrf-token"] && !headers["X-CSRF-Token"]) {
+          headers["x-csrf-token"] = this.csrfToken;
+        }
+      }
+      if (!headers["authorization"] && !headers["Authorization"]) {
+        headers["Authorization"] = `Bearer ${this.csrfToken}`;
       }
     }
 
@@ -167,6 +172,12 @@ export class ApiClient {
 
   public async getTokenHealth(): Promise<TokenHealthResponse> {
     return this.request<TokenHealthResponse>("/api/v1/dhan/token-health");
+  }
+
+  public async demoLogin(): Promise<AuthSuccessResponse> {
+    return this.request<AuthSuccessResponse>("/api/v1/auth/demo", {
+      method: "POST",
+    });
   }
 }
 

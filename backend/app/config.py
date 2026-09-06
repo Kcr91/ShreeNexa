@@ -60,7 +60,9 @@ class Settings(BaseModel):
 
     # Authoritative and cache storage URLs
     database_url: SecretStr = Field(
-        default=SecretStr("postgresql+psycopg://shreenexa:shreenexa_dev@127.0.0.1:5432/shreenexa")
+        default=SecretStr(
+            "postgresql+psycopg://shreenexa:shreenexa_local_dev_only@127.0.0.1:5432/shreenexa"
+        )
     )
     redis_url: SecretStr = Field(default=SecretStr("redis://127.0.0.1:6379/0"))
 

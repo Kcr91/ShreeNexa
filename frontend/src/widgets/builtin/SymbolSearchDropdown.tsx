@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { apiClient } from "../../api/client";
 import {
   CatalogInstrument,
   searchCatalogInstruments,
@@ -117,8 +118,17 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
         else if (category === "COMMODITY") queryParams = "&exchange_segment=MCX_COMM";
         else if (category === "FOREX") queryParams = "&exchange_segment=NSE_CURRENCY";
 
+        const token = apiClient.getCsrfToken() || "demo-csrf-token";
         const res = await fetch(
-          `/api/v1/instruments/search?query=${encodeURIComponent(cleanQ)}&is_active_only=true${queryParams}&limit=100`
+          `/api/v1/instruments/search?query=${encodeURIComponent(cleanQ)}&is_active_only=true${queryParams}&limit=100`,
+          {
+            credentials: "include",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+              "x-csrf-token": token,
+            },
+          }
         );
         if (res.ok) {
           const data = await res.json();

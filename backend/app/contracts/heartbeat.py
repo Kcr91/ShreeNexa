@@ -55,6 +55,15 @@ class HeartbeatRow:
 def database_url() -> str:
     url = os.environ.get("DATABASE_URL")
     if not url:
+        try:
+            from app.config import Settings
+
+            url = Settings.load().database_url.get_secret_value()
+        except Exception:
+            pass
+    if url and "shreenexa_dev@" in url:
+        url = url.replace("shreenexa_dev@", "shreenexa_local_dev_only@")
+    if not url:
         raise RuntimeError(
             "DATABASE_URL is not set. See infra/docker-compose.yml for the local dev value."
         )

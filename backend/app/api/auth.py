@@ -195,6 +195,36 @@ def get_current_user(
     }
 
 
+@router.post("/demo", response_model=AuthSuccessResponse)
+def demo_login(response: Response) -> AuthSuccessResponse:
+    """Issue a development dry-run/demo session cookie (disabled in production)."""
+    if IS_PRODUCTION:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo mode is disabled in production.",
+        )
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value="demo-session-token",
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        path="/",
+        max_age=86400,
+    )
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime.now(tz=UTC)
+    return AuthSuccessResponse(
+        username="Demo Trader",
+        authenticated=True,
+        csrf_token="demo-csrf-token",
+        expires_at=now + timedelta(hours=24),
+        message="Dry-run / demo session established",
+    )
+
+
+
 @router.get("/audit", response_model=list[AuthAuditRecord])
 def get_audit_log(
     shreenexa_session: str | None = Cookie(default=None),
