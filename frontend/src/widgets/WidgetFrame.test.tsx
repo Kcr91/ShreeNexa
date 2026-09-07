@@ -1,15 +1,20 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeAll } from "vitest";
 import { WidgetFrame } from "./WidgetFrame";
 import "./builtin";
 
 describe("WidgetFrame Component", () => {
+  // Pre-load the lazy-loaded watchlist widget to warm up JSDOM transform caches on Windows
+  beforeAll(async () => {
+    await import("./builtin/WatchlistWidget");
+  }, 30000);
+
   it("renders widget title and lazy-loaded content", async () => {
     render(<WidgetFrame instanceId="inst-1" widgetId="watchlist" />);
 
     expect(screen.getByText("Market Watchlist")).toBeInTheDocument();
-    expect(await screen.findByText("NIFTY 50")).toBeInTheDocument();
-  });
+    expect(await screen.findByText("NIFTY 50", {}, { timeout: 20000 })).toBeInTheDocument();
+  }, 30000);
 
   it("handles settings editor toggle and validation error display", async () => {
     const handleUpdate = vi.fn();
@@ -21,7 +26,7 @@ describe("WidgetFrame Component", () => {
       />
     );
 
-    await screen.findByText("NIFTY 50");
+    await screen.findByText("NIFTY 50", {}, { timeout: 20000 });
 
     // Open settings editor
     const settingsBtn = screen.getByLabelText("Widget Settings");
@@ -42,5 +47,5 @@ describe("WidgetFrame Component", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText(/cannot be greater than 60/i)).toBeInTheDocument();
     expect(handleUpdate).not.toHaveBeenCalled();
-  });
+  }, 30000);
 });

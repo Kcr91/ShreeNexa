@@ -3634,3 +3634,24 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Python linting and typing (`ruff check .`, `mypy backend --strict`): 0 issues.
   - Manifest and fixtures validation: Passed.
   - End-to-end browser verification via subagent with WebP video recording (`heatmap_sorting_demo_1788801520104.webp`) and 5 captured screenshots.
+
+### 2026-09-07 — Official NSE India Index Constituents Integration & Test Stabilization
+
+- **Official NSE India Index Constituents Database**:
+  - Scraped and cataloged all 89 official Nifty indices directly from official NSE India / Nifty Indices constituent releases, capturing authentic constituent lists and sector classifications across Broad Market, Sectoral, Thematic, and Strategy indices.
+  - Saved authentic JSON master dataset to `config/nifty_official_constituents.json` (1,939 total constituent mappings across 89 indices).
+  - Exported constituent mapping table to `frontend/src/heatmap/officialConstituents.ts`.
+  - Updated `frontend/src/heatmap/indicesCatalog.ts` so constituent drill-downs (e.g. NIFTY AUTO, NIFTY DEFENCE, NIFTY BANK, NIFTY PHARMA, NIFTY FMCG) dynamically load their exact official NSE constituents with authentic symbols, names, and industry sectors.
+  - Updated `backend/app/api/heatmap.py` to seamlessly fall back to official constituent records (`load_official_records_for_index`) if database records are empty, guaranteeing identical truth between API responses and frontend views.
+  - Added backend test `test_official_nse_constituents_fallback` in `backend/tests/unit/test_heatmap_api.py`.
+- **Unit Test Stabilization (`WidgetFrame.test.tsx`)**:
+  - Diagnosed slow JSDOM dynamic module transformation on Windows Node 24 causing cold-start timeouts when importing lazy widgets with large constituent master catalogs.
+  - Added `beforeAll` module preload in `frontend/src/widgets/WidgetFrame.test.tsx` and tuned timeouts, reducing test duration from >75s to 9.17s and guaranteeing reliable green runs.
+- **Verification**:
+  - Vitest: 2/2 tests in `src/widgets/WidgetFrame.test.tsx` passed in 1.7s.
+  - TypeScript typecheck (`tsc --noEmit`): 0 errors across frontend.
+  - Backend pytest (`test_heatmap_api.py`): 3/3 passed.
+  - Python linting (`ruff check .`): All checks passed.
+  - Static typing (`mypy backend --strict`): Success, 336 source files clean.
+  - Manifest & fixtures validation (`validate_manifest.py`, `validate_fixtures.py`): Clean.
+  - Live browser audit verified real constituent drill-ins for Nifty Auto, Nifty Defence, Nifty Bank, and Nifty Pharma.

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 
 import pytest
+from app.api.heatmap import load_official_records_for_index
 from app.api.universe import get_db_engine
 from app.contracts import heartbeat as hb
 from app.main import app
@@ -90,3 +91,33 @@ def test_constituent_level_heatmap_and_breadth(db_engine: Engine) -> None:
                 assert c["weighting_source"] == "FALLBACK_EQUAL_WEIGHT"
     finally:
         app.dependency_overrides.clear()
+
+
+def test_official_nse_constituents_fallback() -> None:
+    # Test that NIFTY AUTO constituents come from official NSE scraped catalog
+    records_auto = load_official_records_for_index("NIFTY AUTO")
+    assert len(records_auto) == 15
+    auto_symbols = {r.symbol for r in records_auto}
+    assert "MARUTI" in auto_symbols
+    assert "BAJAJ-AUTO" in auto_symbols
+    assert "M&M" in auto_symbols
+    assert "HEROMOTOCO" in auto_symbols
+    assert "EICHERMOT" in auto_symbols
+    for r in records_auto:
+        assert r.source == "OFFICIAL_NSE"
+
+
+    # Test NIFTY BANK
+    records_bank = load_official_records_for_index("NIFTY BANK")
+    assert len(records_bank) == 14
+    bank_symbols = {r.symbol for r in records_bank}
+    assert "HDFCBANK" in bank_symbols
+    assert "ICICIBANK" in bank_symbols
+    assert "SBIN" in bank_symbols
+
+    # Test NIFTY PHARMA
+    records_pharma = load_official_records_for_index("NIFTY PHARMA")
+    assert len(records_pharma) == 20
+    pharma_symbols = {r.symbol for r in records_pharma}
+    assert "SUNPHARMA" in pharma_symbols
+    assert "CIPLA" in pharma_symbols
