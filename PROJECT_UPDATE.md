@@ -3607,3 +3607,30 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Backend tests (`pytest`): Passed.
   - Python checks (`ruff check .`, `mypy backend --strict`): 0 issues.
   - Manifest and fixtures validation: Passed cleanly.
+
+### 2026-09-07 — Market Heatmap Sorting by Weightage (Default) & % Change
+
+- **Heatmap Sorting for Indices & Constituents**:
+  - Added dedicated Sort dropdown (`<select aria-label="Sort order">`) and quick reverse direction toggle button (`⇅` with `aria-label="Reverse sort direction"`) in the Market Heatmap toolbar.
+  - **Constituent Drill-In Sorting**:
+    - Default sort order set to **Weightage: High → Low (`WEIGHT_DESC`)**.
+    - Supports **Weightage: Low → High (`WEIGHT_ASC`)** (vice-versa).
+    - Supports **% Change: High → Low (`CHANGE_DESC`)** (Top Gainers) and **% Change: Low → High (`CHANGE_ASC`)** (Top Losers).
+    - Supports Alphabetical symbol sorting (`NAME_ASC`, `NAME_DESC`).
+    - Added constituent weight percentage badge (`{stock.weight.toFixed(1)}%`) on every stock card to provide instant visual feedback of index weighting.
+  - **Indices Overview Sorting**:
+    - Supports **% Change: High → Low (`CHANGE_DESC`)** and **% Change: Low → High (`CHANGE_ASC`)**.
+    - Supports Default / Catalog order (`DEFAULT`), Weightage (`WEIGHT_DESC`, `WEIGHT_ASC`), and Name (`NAME_ASC`, `NAME_DESC`).
+    - Added index category weight percentage badges to index cards.
+- **Realistic Weight Distribution & Normalization**:
+  - In `frontend/src/heatmap/indicesCatalog.ts`, updated `getConstituentsForIndex` to calculate Pareto/power-law market-cap weight distributions descending from largest to smallest, ensuring every constituent set has graded weights.
+  - In `frontend/src/heatmap/engine.ts` and `backend/app/api/heatmap.py`, updated `handleMissingWeights` to scale constituent weights proportionally when normalizing to 100%, assigning residual rounding to the highest-weight constituent (preventing negative weights caused by naive subtraction).
+- **Quality Gates & Verification**:
+  - Added 4 comprehensive Vitest tests in `frontend/src/widgets/builtin/MarketHeatmapWidget.test.tsx` verifying default weightage sorting, reverse toggle, % change sorting, and indices sorting.
+  - Frontend test suite: 64/64 test files passed, 254/254 tests passed.
+  - TypeScript typecheck (`tsc --noEmit`): 0 errors.
+  - Production build (`vite build`): Succeeded cleanly.
+  - Backend tests (`pytest`): 2/2 heatmap API tests passed.
+  - Python linting and typing (`ruff check .`, `mypy backend --strict`): 0 issues.
+  - Manifest and fixtures validation: Passed.
+  - End-to-end browser verification via subagent with WebP video recording (`heatmap_sorting_demo_1788801520104.webp`) and 5 captured screenshots.

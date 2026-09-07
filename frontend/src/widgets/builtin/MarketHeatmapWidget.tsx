@@ -21,10 +21,29 @@ import {
   getConstituentsForIndex,
 } from "../../heatmap/indicesCatalog";
 
+export type ConstituentSortOption =
+  | "WEIGHT_DESC"
+  | "WEIGHT_ASC"
+  | "CHANGE_DESC"
+  | "CHANGE_ASC"
+  | "NAME_ASC"
+  | "NAME_DESC";
+
+export type IndexSortOption =
+  | "DEFAULT"
+  | "CHANGE_DESC"
+  | "CHANGE_ASC"
+  | "WEIGHT_DESC"
+  | "WEIGHT_ASC"
+  | "NAME_ASC"
+  | "NAME_DESC";
+
 export interface HeatmapSettings {
   defaultMode?: "INDICES" | "CONSTITUENTS";
   defaultCategory?: IndexCategory;
   defaultIndexName?: string;
+  defaultConstituentSort?: ConstituentSortOption;
+  defaultIndexSort?: IndexSortOption;
 }
 
 const CATEGORY_TABS: { key: IndexCategory; label: string; count: number }[] = [
@@ -56,6 +75,12 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
   );
   const [selectedIndex, setSelectedIndex] = useState<string>(
     settings.defaultIndexName || "NIFTY 50"
+  );
+  const [constituentSort, setConstituentSort] = useState<ConstituentSortOption>(
+    settings.defaultConstituentSort || "WEIGHT_DESC"
+  );
+  const [indexSort, setIndexSort] = useState<IndexSortOption>(
+    settings.defaultIndexSort || "DEFAULT"
   );
 
   const [categoryData, setCategoryData] = useState<Record<IndexCategory, IndexHeatmapItem[]>>({
@@ -193,16 +218,74 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
     return () => clearInterval(interval);
   }, [isStreaming, viewMode, activeCategory, selectedIndex]);
 
-  // Current active indices list
-  const currentIndicesList = useMemo(() => {
-    return categoryData[activeCategory] || ALL_INDICES_BY_CATEGORY[activeCategory];
-  }, [categoryData, activeCategory]);
+  // Toggle sort direction helper
+  const toggleSortDirection = useCallback(() => {
+    if (viewMode === "CONSTITUENTS") {
+      setConstituentSort((prev) => {
+        if (prev === "WEIGHT_DESC") return "WEIGHT_ASC";
+        if (prev === "WEIGHT_ASC") return "WEIGHT_DESC";
+        if (prev === "CHANGE_DESC") return "CHANGE_ASC";
+        if (prev === "CHANGE_ASC") return "CHANGE_DESC";
+        if (prev === "NAME_ASC") return "NAME_DESC";
+        return "NAME_ASC";
+      });
+    } else {
+      setIndexSort((prev) => {
+        if (prev === "CHANGE_DESC") return "CHANGE_ASC";
+        if (prev === "CHANGE_ASC") return "CHANGE_DESC";
+        if (prev === "WEIGHT_DESC") return "WEIGHT_ASC";
+        if (prev === "WEIGHT_ASC") return "WEIGHT_DESC";
+        if (prev === "NAME_ASC") return "NAME_DESC";
+        if (prev === "NAME_DESC") return "NAME_ASC";
+        return "CHANGE_DESC";
+      });
+    }
+  }, [viewMode]);
 
-  // Current active constituents list
+  // Current active indices list (sorted as per indexSort)
+  const currentIndicesList = useMemo(() => {
+    const list = [...(categoryData[activeCategory] || ALL_INDICES_BY_CATEGORY[activeCategory])];
+    switch (indexSort) {
+      case "CHANGE_DESC":
+        return list.sort((a, b) => b.changePct - a.changePct || a.indexName.localeCompare(b.indexName));
+      case "CHANGE_ASC":
+        return list.sort((a, b) => a.changePct - b.changePct || a.indexName.localeCompare(b.indexName));
+      case "WEIGHT_DESC":
+        return list.sort((a, b) => b.weight - a.weight || a.indexName.localeCompare(b.indexName));
+      case "WEIGHT_ASC":
+        return list.sort((a, b) => a.weight - b.weight || a.indexName.localeCompare(b.indexName));
+      case "NAME_ASC":
+        return list.sort((a, b) => a.indexName.localeCompare(b.indexName));
+      case "NAME_DESC":
+        return list.sort((a, b) => b.indexName.localeCompare(a.indexName));
+      case "DEFAULT":
+      default:
+        return list;
+    }
+  }, [categoryData, activeCategory, indexSort]);
+
+  // Current active constituents list (sorted as per constituentSort, defaulted to weightage high to low)
   const currentConstituents = useMemo(() => {
     const list = constituentsCache[selectedIndex] || getConstituentsForIndex(selectedIndex);
-    return handleMissingWeights(list).constituents;
-  }, [constituentsCache, selectedIndex]);
+    const resolved = handleMissingWeights(list).constituents;
+    const sorted = [...resolved];
+    switch (constituentSort) {
+      case "WEIGHT_DESC":
+        return sorted.sort((a, b) => b.weight - a.weight || a.symbol.localeCompare(b.symbol));
+      case "WEIGHT_ASC":
+        return sorted.sort((a, b) => a.weight - b.weight || a.symbol.localeCompare(b.symbol));
+      case "CHANGE_DESC":
+        return sorted.sort((a, b) => b.changePct - a.changePct || a.symbol.localeCompare(b.symbol));
+      case "CHANGE_ASC":
+        return sorted.sort((a, b) => a.changePct - b.changePct || a.symbol.localeCompare(b.symbol));
+      case "NAME_ASC":
+        return sorted.sort((a, b) => a.symbol.localeCompare(b.symbol));
+      case "NAME_DESC":
+        return sorted.sort((a, b) => b.symbol.localeCompare(a.symbol));
+      default:
+        return sorted.sort((a, b) => b.weight - a.weight || a.symbol.localeCompare(b.symbol));
+    }
+  }, [constituentsCache, selectedIndex, constituentSort]);
 
   // Compute active market breadth
   const activeBreadth: MarketBreadth = useMemo(() => {
@@ -495,8 +578,84 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
             </div>
           </div>
 
-          {/* Right Controls: Streaming toggle, Breadth Pills, As On Time, Refresh */}
-          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+          {/* Right Controls: Sort selector, Streaming toggle, Legend Badges, Timestamp, Refresh */}
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+            {/* Sort Control */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                fontSize: "11px",
+                backgroundColor: "var(--bg-elevated)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "4px",
+                padding: "2px 6px",
+              }}
+            >
+              <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Sort:</span>
+              <select
+                aria-label="Sort order"
+                value={viewMode === "CONSTITUENTS" ? constituentSort : indexSort}
+                onChange={(e) => {
+                  if (viewMode === "CONSTITUENTS") {
+                    setConstituentSort(e.target.value as ConstituentSortOption);
+                  } else {
+                    setIndexSort(e.target.value as IndexSortOption);
+                  }
+                }}
+                style={{
+                  backgroundColor: "transparent",
+                  color: "var(--text-primary)",
+                  border: "none",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  outline: "none",
+                  paddingRight: "2px",
+                }}
+              >
+                {viewMode === "CONSTITUENTS" ? (
+                  <>
+                    <option value="WEIGHT_DESC">Weightage: High → Low (Default)</option>
+                    <option value="WEIGHT_ASC">Weightage: Low → High</option>
+                    <option value="CHANGE_DESC">% Change: High → Low (Gainers)</option>
+                    <option value="CHANGE_ASC">% Change: Low → High (Losers)</option>
+                    <option value="NAME_ASC">Symbol: A → Z</option>
+                    <option value="NAME_DESC">Symbol: Z → A</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="DEFAULT">Default (NSE List)</option>
+                    <option value="CHANGE_DESC">% Change: High → Low (Gainers)</option>
+                    <option value="CHANGE_ASC">% Change: Low → High (Losers)</option>
+                    <option value="WEIGHT_DESC">Weight: High → Low</option>
+                    <option value="WEIGHT_ASC">Weight: Low → High</option>
+                    <option value="NAME_ASC">Index Name: A → Z</option>
+                    <option value="NAME_DESC">Index Name: Z → A</option>
+                  </>
+                )}
+              </select>
+              <button
+                type="button"
+                onClick={toggleSortDirection}
+                aria-label="Reverse sort direction"
+                title="Reverse sort direction"
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#d85a38",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  padding: "0 2px",
+                  lineHeight: "1",
+                }}
+              >
+                ⇅
+              </button>
+            </div>
+
             {/* Streaming Toggle */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" }}>
               <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Streaming</span>
@@ -671,6 +830,7 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
               return (
                 <div
                   key={item.indexName}
+                  data-testid="index-card"
                   onClick={() => handleIndexClick(item.indexName)}
                   style={{
                     backgroundColor: bgColor,
@@ -689,15 +849,42 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                 >
                   <div
                     style={{
-                      fontWeight: 700,
-                      fontSize: "11px",
-                      lineHeight: "1.25",
-                      letterSpacing: "0.1px",
-                      whiteSpace: "normal",
-                      wordBreak: "break-word",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "4px",
                     }}
                   >
-                    {item.indexName}
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        fontSize: "11px",
+                        lineHeight: "1.25",
+                        letterSpacing: "0.1px",
+                        whiteSpace: "normal",
+                        wordBreak: "break-word",
+                        flex: 1,
+                      }}
+                    >
+                      {item.indexName}
+                    </div>
+                    {item.weight > 0 && (
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          opacity: 0.88,
+                          fontFamily: "var(--font-family-mono)",
+                          fontWeight: 700,
+                          backgroundColor: "rgba(0, 0, 0, 0.22)",
+                          padding: "1px 3px",
+                          borderRadius: "2px",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={`Category weight: ${item.weight.toFixed(1)}%`}
+                      >
+                        {item.weight.toFixed(0)}%
+                      </span>
+                    )}
                   </div>
 
                   <div
@@ -743,6 +930,7 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
               return (
                 <div
                   key={stock.symbol}
+                  data-testid="constituent-card"
                   onClick={() => handleStockClick(stock.symbol)}
                   style={{
                     backgroundColor: bgColor,
@@ -758,7 +946,7 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                     position: "relative",
                     transition: "transform 0.12s ease, box-shadow 0.12s ease",
                   }}
-                  title={`${stock.name || stock.symbol} (${stock.sector}) - Click to select`}
+                  title={`${stock.name || stock.symbol} (${stock.sector}) - Weight: ${stock.weight.toFixed(2)}%`}
                 >
                   <div
                     style={{
@@ -777,22 +965,39 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                     >
                       {stock.symbol}
                     </span>
-                    {stock.isWeightFallback && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                      {stock.isWeightFallback && (
+                        <span
+                          style={{
+                            backgroundColor: "rgba(245, 158, 11, 0.95)",
+                            color: "#000",
+                            padding: "1px 3px",
+                            borderRadius: "2px",
+                            fontSize: "8px",
+                            fontWeight: 700,
+                            lineHeight: "1",
+                          }}
+                          title="Missing Official Weight - Estimated Share Assigned"
+                        >
+                          Est
+                        </span>
+                      )}
                       <span
                         style={{
-                          backgroundColor: "rgba(245, 158, 11, 0.95)",
-                          color: "#000",
-                          padding: "1px 3px",
-                          borderRadius: "2px",
-                          fontSize: "8.5px",
+                          fontSize: "9.5px",
+                          opacity: 0.9,
+                          fontFamily: "var(--font-family-mono)",
                           fontWeight: 700,
-                          lineHeight: "1",
+                          backgroundColor: "rgba(0, 0, 0, 0.22)",
+                          padding: "1px 3.5px",
+                          borderRadius: "2px",
+                          lineHeight: "1.1",
                         }}
-                        title="Missing Weight - Fallback Equal Share Assigned"
+                        title={`Index Weight: ${stock.weight.toFixed(2)}%`}
                       >
-                        Fallback Wt
+                        {stock.weight.toFixed(1)}%
                       </span>
-                    )}
+                    </div>
                   </div>
 
                   <div

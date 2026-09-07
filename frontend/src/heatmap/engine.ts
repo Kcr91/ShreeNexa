@@ -115,9 +115,20 @@ export function handleMissingWeights(
 
   // Ensure total sum strictly equals 100.0%
   const currentTotal = constituents.reduce((acc, c) => acc + c.weight, 0);
-  if (currentTotal > 0 && constituents.length > 0) {
-    const diff = Number((100 - currentTotal).toFixed(2));
-    constituents[0].weight = Number((constituents[0].weight + diff).toFixed(2));
+  if (currentTotal > 0 && Math.abs(currentTotal - 100) > 0.01 && constituents.length > 0) {
+    const scale = 100.0 / currentTotal;
+    constituents.forEach((c) => {
+      c.weight = Number((c.weight * scale).toFixed(2));
+    });
+    const scaledTotal = constituents.reduce((acc, c) => acc + c.weight, 0);
+    const residual = Number((100 - scaledTotal).toFixed(2));
+    let maxIdx = 0;
+    for (let i = 1; i < constituents.length; i++) {
+      if (constituents[i].weight > constituents[maxIdx].weight) {
+        maxIdx = i;
+      }
+    }
+    constituents[maxIdx].weight = Number((constituents[maxIdx].weight + residual).toFixed(2));
   }
 
   const finalCellTotal = Number(

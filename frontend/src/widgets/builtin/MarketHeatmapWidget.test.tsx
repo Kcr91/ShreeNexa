@@ -157,4 +157,105 @@ describe("MarketHeatmapWidget - NSE India Heatmap Component", () => {
     fireEvent.click(screen.getByRole("button", { name: "Off" }));
     expect(screen.getByRole("button", { name: "On" })).toBeInTheDocument();
   });
+
+  it("sorts constituent stocks by weightage high to low by default", () => {
+    render(<MarketHeatmapWidget instanceId="inst-heatmap-test" settings={{}} />);
+
+    // Drill down into NIFTY 50
+    fireEvent.click(screen.getByText("NIFTY 50"));
+    expect(screen.getByText("NIFTY 50(50)")).toBeInTheDocument();
+
+    const sortSelect = screen.getByLabelText("Sort order");
+    expect(sortSelect).toHaveValue("WEIGHT_DESC");
+
+    // Highest weighted constituents in Nifty 50 should appear first
+    const tiles = screen.getAllByTestId("constituent-card");
+    expect(tiles[0]).toHaveTextContent("HDFCBANK");
+    expect(tiles[0]).toHaveTextContent("10.3%");
+    expect(tiles[1]).toHaveTextContent("RELIANCE");
+    expect(tiles[1]).toHaveTextContent("8.9%");
+    expect(tiles[2]).toHaveTextContent("ICICIBANK");
+    expect(tiles[2]).toHaveTextContent("7.2%");
+    expect(tiles[3]).toHaveTextContent("INFY");
+    expect(tiles[3]).toHaveTextContent("5.1%");
+  });
+
+  it("sorts constituent stocks by weightage low to high (vice versa) and toggles via reverse button", () => {
+    render(<MarketHeatmapWidget instanceId="inst-heatmap-test" settings={{}} />);
+
+    // Drill down into NIFTY 50
+    fireEvent.click(screen.getByText("NIFTY 50"));
+
+    const sortSelect = screen.getByLabelText("Sort order");
+    fireEvent.change(sortSelect, { target: { value: "WEIGHT_ASC" } });
+    expect(sortSelect).toHaveValue("WEIGHT_ASC");
+
+    // Lowest weighted constituents in Nifty 50 should appear first
+    const tiles = screen.getAllByTestId("constituent-card");
+    expect(tiles[0]).toHaveTextContent("ETERNAL");
+    expect(tiles[0]).toHaveTextContent("0.6%");
+
+    // Click reverse sort direction button (⇅) to toggle back to WEIGHT_DESC
+    const reverseBtn = screen.getByRole("button", { name: "Reverse sort direction" });
+    fireEvent.click(reverseBtn);
+    expect(sortSelect).toHaveValue("WEIGHT_DESC");
+
+    const tilesReversed = screen.getAllByTestId("constituent-card");
+    expect(tilesReversed[0]).toHaveTextContent("HDFCBANK");
+  });
+
+  it("sorts constituent stocks by % change high to low and low to high", () => {
+    render(<MarketHeatmapWidget instanceId="inst-heatmap-test" settings={{}} />);
+
+    // Drill down into NIFTY 50
+    fireEvent.click(screen.getByText("NIFTY 50"));
+
+    const sortSelect = screen.getByLabelText("Sort order");
+
+    // Sort by % Change: High to Low (Gainers first)
+    fireEvent.change(sortSelect, { target: { value: "CHANGE_DESC" } });
+    expect(sortSelect).toHaveValue("CHANGE_DESC");
+
+    const gainerTiles = screen.getAllByTestId("constituent-card");
+    // APOLLOHOSP has highest change (+1.27%), followed by LT (+0.89%)
+    expect(gainerTiles[0]).toHaveTextContent("APOLLOHOSP");
+    expect(gainerTiles[0]).toHaveTextContent("+1.27%");
+    expect(gainerTiles[1]).toHaveTextContent("LT");
+    expect(gainerTiles[1]).toHaveTextContent("+0.89%");
+
+    // Sort by % Change: Low to High (Losers first)
+    fireEvent.change(sortSelect, { target: { value: "CHANGE_ASC" } });
+    expect(sortSelect).toHaveValue("CHANGE_ASC");
+
+    const loserTiles = screen.getAllByTestId("constituent-card");
+    // INFY has lowest change (-3.78%)
+    expect(loserTiles[0]).toHaveTextContent("INFY");
+    expect(loserTiles[0]).toHaveTextContent("-3.78%");
+  });
+
+  it("sorts indices view by % change high to low and low to high", () => {
+    render(<MarketHeatmapWidget instanceId="inst-heatmap-test" settings={{}} />);
+
+    const sortSelect = screen.getByLabelText("Sort order");
+    expect(sortSelect).toHaveValue("DEFAULT");
+
+    // Sort Broad Market Indices by % Change: High to Low
+    fireEvent.change(sortSelect, { target: { value: "CHANGE_DESC" } });
+    expect(sortSelect).toHaveValue("CHANGE_DESC");
+
+    const indexTiles = screen.getAllByTestId("index-card");
+    // NIFTY MICROCAP 250 has highest change (+0.42%) in Broad Market
+    expect(indexTiles[0]).toHaveTextContent("NIFTY MICROCAP 250");
+    expect(indexTiles[0]).toHaveTextContent("+0.42%");
+
+    // Reverse sort direction to CHANGE_ASC (Losers first)
+    const reverseBtn = screen.getByRole("button", { name: "Reverse sort direction" });
+    fireEvent.click(reverseBtn);
+    expect(sortSelect).toHaveValue("CHANGE_ASC");
+
+    const loserIndexTiles = screen.getAllByTestId("index-card");
+    // NIFTY INDIA FPI 150 has lowest change (-0.55%)
+    expect(loserIndexTiles[0]).toHaveTextContent("NIFTY INDIA FPI 150");
+    expect(loserIndexTiles[0]).toHaveTextContent("-0.55%");
+  });
 });

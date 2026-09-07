@@ -231,7 +231,13 @@ export function getConstituentsForIndex(indexName: string): ConstituentHeatmapIt
   }
 
   const count = matching.length;
-  const equalWeight = Number((100.0 / count).toFixed(2));
+  // Generate realistic power-law / market-cap weights descending from largest to smallest
+  // e.g. top constituents receive higher index weight, tapering down to smaller constituents
+  const rawWeights = matching.map((_, i) => Math.pow(count - i, 1.25));
+  const sumRaw = rawWeights.reduce((acc, w) => acc + w, 0);
+  const calculatedWeights = rawWeights.map((w) => Number(((w / sumRaw) * 100).toFixed(2)));
+  const totalCalc = calculatedWeights.reduce((acc, w) => acc + w, 0);
+  calculatedWeights[0] = Number((calculatedWeights[0] + (100 - totalCalc)).toFixed(2));
 
   return matching.map((stock, idx) => {
     // Add deterministic tick variance based on symbol
@@ -244,7 +250,7 @@ export function getConstituentsForIndex(indexName: string): ConstituentHeatmapIt
       symbol: stock.symbol,
       name: stock.name,
       sector: stock.sector,
-      weight: idx === 0 ? Number((100 - equalWeight * (count - 1)).toFixed(2)) : equalWeight,
+      weight: calculatedWeights[idx],
       isWeightFallback: true,
       weightingSource: "FALLBACK_EQUAL_WEIGHT",
       changePct: finalChange,

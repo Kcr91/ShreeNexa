@@ -293,9 +293,13 @@ def get_constituent_heatmap(
 
     # Normalize total weight to exactly 100.0%
     curr_total = sum(c.weight for c in cells)
-    if curr_total > 0 and len(cells) > 0:
-        diff = round(100.0 - curr_total, 2)
-        cells[0].weight = round(cells[0].weight + diff, 2)
+    if curr_total > 0 and len(cells) > 0 and abs(curr_total - 100.0) > 0.01:
+        scale = 100.0 / curr_total
+        for c in cells:
+            c.weight = round(c.weight * scale, 2)
+        diff = round(100.0 - sum(c.weight for c in cells), 2)
+        max_idx = max(range(len(cells)), key=lambda i: cells[i].weight)
+        cells[max_idx].weight = round(cells[max_idx].weight + diff, 2)
 
     cell_total = round(sum(c.weight for c in cells), 2)
 
