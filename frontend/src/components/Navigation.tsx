@@ -8,7 +8,6 @@ export type ActiveRoute =
   | "settings"
   | "watchlist"
   | "sector-drill-in"
-  | "market-depth"
   | "chart"
   | "option-chain"
   | "option-strategy-builder"
@@ -53,7 +52,6 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: "watchlist", label: "Market Watchlist", icon: "📋" },
       { id: "sector-drill-in", label: "Sector & Index Drill-In", icon: "📊" },
-      { id: "market-depth", label: "Market Depth Ladder", icon: "🪜" },
       { id: "market-heatmap", label: "Market Heatmap & Breadth", icon: "🗺️" },
       { id: "screener", label: "PIT Screener", icon: "🔍" },
     ],

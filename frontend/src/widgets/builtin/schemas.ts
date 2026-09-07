@@ -66,50 +66,6 @@ export const builtinSchemas = {
       },
     ],
   },
-  "market-depth": {
-    fields: [
-      {
-        name: "defaultSymbol",
-        label: "Default Symbol",
-        type: "string",
-        default: "RELIANCE",
-      },
-      {
-        name: "defaultSegment",
-        label: "Default Segment",
-        type: "select",
-        default: "NSE_EQ",
-        options: [
-          { label: "NSE Equity", value: "NSE_EQ" },
-          { label: "NSE Derivatives", value: "NSE_FNO" },
-          { label: "BSE Equity (5-Level)", value: "BSE_EQ" },
-          { label: "MCX Commodities (5-Level)", value: "MCX_COMM" },
-        ],
-      },
-      {
-        name: "defaultLevel",
-        label: "Depth Level",
-        type: "select",
-        default: "LEVEL_20",
-        options: [
-          { label: "5-Level", value: "LEVEL_5" },
-          { label: "20-Level (Standard)", value: "LEVEL_20" },
-          { label: "200-Level (On Demand)", value: "LEVEL_200" },
-        ],
-      },
-      {
-        name: "defaultMode",
-        label: "Default View",
-        type: "select",
-        default: "LADDER",
-        options: [
-          { label: "5-Level Depth Card", value: "CARD" },
-          { label: "Depth Ladder", value: "LADDER" },
-          { label: "Depth Watchlist", value: "WATCHLIST" },
-        ],
-      },
-    ],
-  },
   "backtest-summary": {
     fields: [
       {

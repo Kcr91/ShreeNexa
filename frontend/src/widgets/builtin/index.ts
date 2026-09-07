@@ -50,21 +50,6 @@ export const builtinManifests: LazyWidgetManifest[] = [
       ),
   },
   {
-    id: "market-depth",
-    title: "Market Depth Ladder & Watchlist",
-    description:
-      "20-level standard depth, on-demand 200-level book, and 5-level fallback with connection cost tracking.",
-    category: "watchlist",
-    icon: "📊",
-    defaultWidth: 500,
-    defaultHeight: 520,
-    schema: builtinSchemas["market-depth"],
-    load: () =>
-      import("./MarketDepthWidget").then(
-        (module) => module.marketDepthDefinition,
-      ),
-  },
-  {
     id: "backtest-summary",
     title: "Backtest Performance Summary",
     description: "Key strategy performance metrics and return indicators.",

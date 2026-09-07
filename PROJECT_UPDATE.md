@@ -3590,3 +3590,20 @@ a live branch indicator; run `git status --short --branch` for current state.
 - Constituent drill-in view opens on clicking any index (e.g. NIFTY 50 renders 50 constituent stocks, updated header, and category index navigation sidebar).
 - Official NSE 7-bracket color palette, live streaming simulation toggle, and As-on IST timestamp refresh controls.
 - Full verification: TypeScript, Vitest (MarketHeatmapWidget, engine, index catalog, App tests), backend pytest, ruff, mypy, and browser audit passed cleanly.
+
+### 2026-09-07 — Complete Removal of Market Depth Ladder
+
+- **Navigation & Widget Registry Cleanup**:
+  - Completely removed `"market-depth"` route from `frontend/src/components/Navigation.tsx`.
+  - Removed "Market Depth Ladder" item from sidebar navigation groups.
+  - Removed `market-depth` widget from `frontend/src/widgets/builtin/index.ts` catalog.
+  - Removed `"market-depth"` settings schema from `frontend/src/widgets/builtin/schemas.ts`.
+  - Deleted standalone `frontend/src/widgets/builtin/MarketDepthWidget.tsx` and `frontend/src/widgets/builtin/MarketDepthWidget.test.tsx`.
+  - Preserved core `src/depth/` engine and Kite-style hover market depth modal card in `WatchlistWidget.tsx`.
+- **Quality Gates & Verification**:
+  - TypeScript typecheck (`tsc --noEmit`): 0 errors.
+  - Frontend test suite (`npm run test`): 64/64 test suites passed, 250/250 tests passed.
+  - Frontend production build (`vite build`): Succeeded in 11.26s.
+  - Backend tests (`pytest`): Passed.
+  - Python checks (`ruff check .`, `mypy backend --strict`): 0 issues.
+  - Manifest and fixtures validation: Passed cleanly.
