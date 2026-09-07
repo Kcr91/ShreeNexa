@@ -1,4 +1,12 @@
 import { Watchlist, WatchlistItem, WatchlistColumn } from "./types";
+import {
+  STANDARD_WATCHLISTS,
+  FNO_208_STOCKS,
+  instantiateStandardWatchlist,
+  getStandardWatchlists,
+  searchStandardWatchlists,
+  StandardWatchlistDefinition,
+} from "./standardWatchlists";
 
 export const WATCHLISTS_STORAGE_KEY_V2 = "shreenexa_watchlists_v2";
 export const WATCHLISTS_STORAGE_KEY_V1 = "shreenexa_watchlists_v1";
@@ -186,6 +194,22 @@ export const KNOWN_EQUITY_INSTRUMENTS: Record<string, KnownInstrumentMeta> = {
   VEDL: { securityId: "3063", tradingSymbol: "VEDL-EQ", ltp: 460.0, segment: "NSE_EQ", name: "Vedanta Ltd", instrumentType: "EQUITY" },
   PIDILITIND: { securityId: "2664", tradingSymbol: "PIDILITIND-EQ", ltp: 3150.0, segment: "NSE_EQ", name: "Pidilite Industries Ltd", instrumentType: "EQUITY" },
 };
+
+// Automatically enrich KNOWN_EQUITY_INSTRUMENTS from complete F&O 208 stock universe
+for (const stock of FNO_208_STOCKS) {
+  if (!KNOWN_EQUITY_INSTRUMENTS[stock.symbol]) {
+    KNOWN_EQUITY_INSTRUMENTS[stock.symbol] = {
+      securityId: stock.securityId,
+      tradingSymbol: stock.tradingSymbol,
+      ltp: stock.ltp,
+      segment: stock.segment || "NSE_EQ",
+      name: stock.name,
+      instrumentType: "EQUITY",
+      fiftyTwoWeekHigh: stock.fiftyTwoWeekHigh,
+      fiftyTwoWeekLow: stock.fiftyTwoWeekLow,
+    };
+  }
+}
 
 export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
   // Indices
@@ -2215,3 +2239,27 @@ export function reconcileWithInstrumentMaster(
     })),
   }));
 }
+
+export function addStandardWatchlistToUser(presetId: string): Watchlist {
+  const watchlists = loadWatchlists();
+  const instantiated = instantiateStandardWatchlist(presetId);
+  // Avoid duplicate naming collisions: if same name exists, append counter
+  let finalName = instantiated.name;
+  let counter = 1;
+  while (watchlists.some((w) => w.name === finalName)) {
+    finalName = `${instantiated.name} (${counter})`;
+    counter++;
+  }
+  instantiated.name = finalName;
+  watchlists.push(instantiated);
+  saveWatchlists(watchlists);
+  return instantiated;
+}
+
+export {
+  STANDARD_WATCHLISTS,
+  instantiateStandardWatchlist,
+  getStandardWatchlists,
+  searchStandardWatchlists,
+  type StandardWatchlistDefinition,
+};

@@ -17,21 +17,22 @@ export interface ColumnConfig {
   label: string;
   minWidth: number;
   align?: "left" | "right" | "center";
+  sortable?: boolean;
 }
 
 export const ALL_COLUMNS: ColumnConfig[] = [
-  { id: "symbol", label: "Symbol", minWidth: 100, align: "left" },
-  { id: "ltp", label: "LTP (₹)", minWidth: 80, align: "right" },
-  { id: "changeAbs", label: "Chg (₹)", minWidth: 70, align: "right" },
-  { id: "changePct", label: "Chg %", minWidth: 70, align: "right" },
-  { id: "volume", label: "Volume", minWidth: 80, align: "right" },
-  { id: "fiftyTwoWeekHigh", label: "52W High", minWidth: 110, align: "right" },
-  { id: "fiftyTwoWeekLow", label: "52W Low", minWidth: 110, align: "right" },
-  { id: "fiftyTwoWeek", label: "52W H / L", minWidth: 140, align: "right" },
-  { id: "oi", label: "Open Interest", minWidth: 90, align: "right" },
-  { id: "oiChangePct", label: "OI Chg %", minWidth: 80, align: "right" },
-  { id: "highLow", label: "High / Low", minWidth: 110, align: "right" },
-  { id: "bidAsk", label: "Bid / Ask", minWidth: 110, align: "right" },
+  { id: "symbol", label: "Symbol", minWidth: 100, align: "left", sortable: true },
+  { id: "ltp", label: "LTP (₹)", minWidth: 80, align: "right", sortable: true },
+  { id: "changeAbs", label: "Chg (₹)", minWidth: 70, align: "right", sortable: true },
+  { id: "changePct", label: "Chg %", minWidth: 70, align: "right", sortable: true },
+  { id: "volume", label: "Volume", minWidth: 80, align: "right", sortable: true },
+  { id: "fiftyTwoWeekHigh", label: "52W High", minWidth: 110, align: "right", sortable: true },
+  { id: "fiftyTwoWeekLow", label: "52W Low", minWidth: 110, align: "right", sortable: true },
+  { id: "fiftyTwoWeek", label: "52W H / L", minWidth: 140, align: "right", sortable: false },
+  { id: "oi", label: "Open Interest", minWidth: 90, align: "right", sortable: true },
+  { id: "oiChangePct", label: "OI Chg %", minWidth: 80, align: "right", sortable: true },
+  { id: "highLow", label: "High / Low", minWidth: 110, align: "right", sortable: false },
+  { id: "bidAsk", label: "Bid / Ask", minWidth: 110, align: "right", sortable: false },
 ];
 
 export interface WatchlistItem {
@@ -45,6 +46,7 @@ export interface WatchlistItem {
   expiry?: string;
   strike?: number;
   optionType?: "CE" | "PE";
+  sector?: string;
   // Live dynamic market fields
   ltp?: number;
   changePct?: number;
@@ -74,6 +76,7 @@ export interface Watchlist {
   name: string;
   description?: string;
   isDefault?: boolean;
+  isGroupedBySector?: boolean;
   columns: WatchlistColumn[];
   items: WatchlistItem[];
 }

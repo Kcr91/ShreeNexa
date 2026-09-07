@@ -21,9 +21,11 @@ import {
   KNOWN_EQUITY_INSTRUMENTS,
   resolveCatalogInstrument,
   CatalogInstrument,
+  addStandardWatchlistToUser,
 } from "../../watchlist/storage";
 import { SymbolSearchDropdown } from "./SymbolSearchDropdown";
 import { MarketDepthCard } from "../../depth/MarketDepthCard";
+import { DiscoverWatchlistsModal } from "./DiscoverWatchlistsModal";
 
 export type WatchlistSortOption =
   | "default"
@@ -33,6 +35,22 @@ export type WatchlistSortOption =
   | "name_desc"
   | "price_desc"
   | "price_asc";
+
+export const NON_SORTABLE_COLUMNS: readonly WatchlistColumn[] = [
+  "fiftyTwoWeek", // 52W H / L
+  "highLow",      // High / Low
+  "bidAsk",       // Bid / Ask
+];
+
+export const getFiftyTwoWeekHigh = (item: WatchlistItem): number => {
+  const ltp = item.ltp ?? 0;
+  return item.fiftyTwoWeekHigh ?? (item.high ? Math.max(item.high * 1.15, ltp * 1.12) : ltp * 1.18);
+};
+
+export const getFiftyTwoWeekLow = (item: WatchlistItem): number => {
+  const ltp = item.ltp ?? 0;
+  return item.fiftyTwoWeekLow ?? (item.low ? Math.min(item.low * 0.85, ltp * 0.82) : ltp * 0.78);
+};
 
 export interface WatchlistSettings {
   defaultWatchlistId?: string;
@@ -52,6 +70,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
   });
 
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [isDiscoverModalOpen, setIsDiscoverModalOpen] = useState(false);
   const [newWatchlistName, setNewWatchlistName] = useState("");
   const [isConfiguringColumns, setIsConfiguringColumns] = useState(false);
   const [symbolSearchQuery, setSymbolSearchQuery] = useState("");
@@ -71,6 +90,18 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
       return () => clearTimeout(timer);
     }
   }, [actionNotice]);
+
+  // Global Ctrl + Shift + K to open Discover modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === "K" || e.key === "k")) {
+        e.preventDefault();
+        setIsDiscoverModalOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Market Depth capability
   const depthCapability = useMemo(() => {
@@ -92,6 +123,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
 
   const handleHeaderSort = (colId: WatchlistColumn) => {
+    if (NON_SORTABLE_COLUMNS.includes(colId)) return;
     if (sortColumn !== colId) {
       setSortColumn(colId);
       // For text column (symbol): ascending (A-Z) first. For numbers: descending (high to low) first.
@@ -131,22 +163,16 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
           comp = (a.volume ?? 0) - (b.volume ?? 0);
           break;
         case "fiftyTwoWeekHigh":
-          comp = (a.fiftyTwoWeekHigh ?? 0) - (b.fiftyTwoWeekHigh ?? 0);
+          comp = getFiftyTwoWeekHigh(a) - getFiftyTwoWeekHigh(b);
           break;
         case "fiftyTwoWeekLow":
-          comp = (a.fiftyTwoWeekLow ?? 0) - (b.fiftyTwoWeekLow ?? 0);
-          break;
-        case "fiftyTwoWeek":
-          comp = (a.fiftyTwoWeekHigh ?? 0) - (b.fiftyTwoWeekHigh ?? 0);
+          comp = getFiftyTwoWeekLow(a) - getFiftyTwoWeekLow(b);
           break;
         case "oi":
           comp = (a.oi ?? 0) - (b.oi ?? 0);
           break;
         case "oiChangePct":
           comp = (a.oiChangePct ?? 0) - (b.oiChangePct ?? 0);
-          break;
-        case "highLow":
-          comp = (a.high ?? 0) - (b.high ?? 0);
           break;
         default:
           comp = 0;
@@ -191,6 +217,22 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
     }
   };
 
+  const handleAddStandardWatchlist = (presetId: string) => {
+    const added = addStandardWatchlistToUser(presetId);
+    refreshWatchlists();
+    setActiveWatchlistId(added.id);
+    setActionNotice(`Added standard watchlist "${added.name}" (${added.items.length} stocks)`);
+    setIsDiscoverModalOpen(false);
+  };
+
+  const handleCreateCustomWatchlist = (name: string) => {
+    const created = createWatchlist(name);
+    refreshWatchlists();
+    setActiveWatchlistId(created.id);
+    setActionNotice(`Created watchlist "${created.name}"`);
+    setIsDiscoverModalOpen(false);
+  };
+
   const handleAddResolved = (item: CatalogInstrument) => {
     if (!activeWatchlist) return;
     setAddSymbolError(null);
@@ -206,6 +248,8 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
       changePct: item.changePct ?? 0,
       changeAbs: 0,
       volume: 0,
+      fiftyTwoWeekHigh: item.fiftyTwoWeekHigh,
+      fiftyTwoWeekLow: item.fiftyTwoWeekLow,
       expiry: item.expiry,
       strike: item.strike,
       optionType: item.optionType,
@@ -237,6 +281,8 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
         instrumentType: meta.instrumentType || "EQUITY",
         name: meta.name || meta.tradingSymbol,
         ltp: meta.ltp,
+        fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
+        fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
       };
     }
 
@@ -273,6 +319,8 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
               name: match.name || match.trading_symbol || sym,
               ltp: match.ltp ?? 0,
               changePct: match.change_pct ?? 0,
+              fiftyTwoWeekHigh: match.fifty_two_week_high ?? match.fiftyTwoWeekHigh,
+              fiftyTwoWeekLow: match.fifty_two_week_low ?? match.fiftyTwoWeekLow,
               expiry: match.expiry_date,
               strike: match.strike_price,
               optionType: match.option_type,
@@ -375,7 +423,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
         })}
 
         <button
-          onClick={() => setIsCreatingNew((prev) => !prev)}
+          onClick={() => setIsDiscoverModalOpen(true)}
           style={{
             padding: "2px 8px",
             borderRadius: "var(--radius-sm)",
@@ -385,7 +433,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
             fontSize: "var(--font-size-xs)",
             cursor: "pointer",
           }}
-          title="Create New Watchlist"
+          title="Create New or Select Standard Watchlist"
         >
           + New
         </button>
@@ -673,7 +721,8 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
               >
                 <th style={{ padding: "6px 8px", width: "40px", textAlign: "center" }}>#</th>
                 {activeColumns.map((col) => {
-                  const isSorted = sortColumn === col.id;
+                  const isSortable = col.sortable !== false && !NON_SORTABLE_COLUMNS.includes(col.id);
+                  const isSorted = isSortable && sortColumn === col.id;
                   const sortArrow = isSorted
                     ? sortDirection === "asc"
                       ? "▲"
@@ -683,24 +732,26 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                   return (
                     <th
                       key={col.id}
-                      onClick={() => handleHeaderSort(col.id)}
+                      onClick={isSortable ? () => handleHeaderSort(col.id) : undefined}
                       style={{
                         padding: "6px 8px",
                         textAlign: col.align || "left",
                         minWidth: `${col.minWidth}px`,
                         fontWeight: 600,
-                        cursor: "pointer",
-                        userSelect: "none",
+                        cursor: isSortable ? "pointer" : "default",
+                        userSelect: isSortable ? "none" : "auto",
                       }}
                       role="columnheader"
                       aria-sort={
-                        isSorted
-                          ? sortDirection === "asc"
-                            ? "ascending"
-                            : "descending"
-                          : "none"
+                        isSortable
+                          ? isSorted
+                            ? sortDirection === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                          : undefined
                       }
-                      title={`Click to sort by ${col.label}`}
+                      title={isSortable ? `Click to sort by ${col.label}` : undefined}
                     >
                       <div
                         style={{
@@ -717,30 +768,36 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                         }}
                       >
                         <span>{col.label}</span>
-                        <button
-                          type="button"
-                          aria-label={`Sort by ${col.label}`}
-                          tabIndex={-1}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "none",
-                            border: "none",
-                            padding: 0,
-                            margin: 0,
-                            cursor: "pointer",
-                            fontSize: "10px",
-                            lineHeight: 1,
-                            color: isSorted
-                              ? "var(--color-brand, #58a6ff)"
-                              : "var(--text-muted, #8b949e)",
-                            opacity: isSorted ? 1 : 0.5,
-                            transition: "opacity 0.15s, color 0.15s",
-                          }}
-                        >
-                          {sortArrow}
-                        </button>
+                        {isSortable && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleHeaderSort(col.id);
+                            }}
+                            aria-label={`Sort by ${col.label}`}
+                            tabIndex={-1}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              margin: 0,
+                              cursor: "pointer",
+                              fontSize: "10px",
+                              lineHeight: 1,
+                              color: isSorted
+                                ? "var(--color-brand, #58a6ff)"
+                                : "var(--text-muted, #8b949e)",
+                              opacity: isSorted ? 1 : 0.5,
+                              transition: "opacity 0.15s, color 0.15s",
+                            }}
+                          >
+                            {sortArrow}
+                          </button>
+                        )}
                       </div>
                     </th>
                   );
@@ -756,26 +813,56 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                 const isIndex = item.instrumentType === "INDEX" || item.segment === "IDX_I";
                 const isRowHovered = hoveredSymbol === item.symbol;
                 const isRowSelected = selectedSymbol === item.symbol;
+                const showSectorHeader = Boolean(
+                  activeWatchlist?.isGroupedBySector &&
+                    item.sector &&
+                    (idx === 0 || item.sector !== sortedItems[idx - 1].sector)
+                );
 
                 return (
-                  <tr
-                    key={item.symbol}
-                    onMouseEnter={() => setHoveredSymbol(item.symbol)}
-                    onMouseLeave={() => {
-                      if (hoveredSymbol === item.symbol) setHoveredSymbol(null);
-                    }}
-                    onClick={() => handleSelectSymbol(item)}
-                    style={{
-                      borderBottom: "1px solid var(--border-subtle)",
-                      backgroundColor: isRowSelected
-                        ? "var(--color-primary-bg, rgba(88, 166, 255, 0.08))"
-                        : isRowHovered
-                        ? "var(--bg-elevated, rgba(255, 255, 255, 0.03))"
-                        : "transparent",
-                      transition: "background-color 0.15s ease",
-                      cursor: "pointer",
-                    }}
-                  >
+                  <React.Fragment key={item.symbol}>
+                    {showSectorHeader && (
+                      <tr
+                        key={`sec-header-${item.sector}`}
+                        style={{
+                          backgroundColor: "rgba(56, 126, 209, 0.12)",
+                          borderTop: "1px solid rgba(56, 126, 209, 0.25)",
+                          borderBottom: "1px solid rgba(56, 126, 209, 0.25)",
+                        }}
+                      >
+                        <td
+                          colSpan={activeColumns.length + 2}
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: "#64b5f6",
+                            letterSpacing: "0.6px",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          📂 {item.sector}
+                        </td>
+                      </tr>
+                    )}
+                    <tr
+                      key={item.symbol}
+                      onMouseEnter={() => setHoveredSymbol(item.symbol)}
+                      onMouseLeave={() => {
+                        if (hoveredSymbol === item.symbol) setHoveredSymbol(null);
+                      }}
+                      onClick={() => handleSelectSymbol(item)}
+                      style={{
+                        borderBottom: "1px solid var(--border-subtle)",
+                        backgroundColor: isRowSelected
+                          ? "var(--color-primary-bg, rgba(88, 166, 255, 0.08))"
+                          : isRowHovered
+                          ? "var(--bg-elevated, rgba(255, 255, 255, 0.03))"
+                          : "transparent",
+                        transition: "background-color 0.15s ease",
+                        cursor: "pointer",
+                      }}
+                    >
                     <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>
                       {idx + 1}
                     </td>
@@ -874,6 +961,21 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                                   }}
                                 >
                                   FOREX
+                                </span>
+                              )}
+                              {item.sector && (
+                                <span
+                                  style={{
+                                    fontSize: "9px",
+                                    padding: "1px 4px",
+                                    borderRadius: "var(--radius-sm)",
+                                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                                    color: "var(--text-muted)",
+                                    border: "1px solid var(--border-subtle)",
+                                  }}
+                                  title={`Sector: ${item.sector}`}
+                                >
+                                  {item.sector}
                                 </span>
                               )}
                             </div>
@@ -1013,7 +1115,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                       }
 
                       if (col.id === "fiftyTwoWeekHigh") {
-                        const high52 = item.fiftyTwoWeekHigh ?? (item.high ? Math.max(item.high * 1.15, ltp * 1.12) : ltp * 1.18);
+                        const high52 = getFiftyTwoWeekHigh(item);
                         const diffPct = ((ltp - high52) / high52) * 100;
                         return (
                           <td
@@ -1040,7 +1142,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                       }
 
                       if (col.id === "fiftyTwoWeekLow") {
-                        const low52 = item.fiftyTwoWeekLow ?? (item.low ? Math.min(item.low * 0.85, ltp * 0.82) : ltp * 0.78);
+                        const low52 = getFiftyTwoWeekLow(item);
                         const diffPct = ((ltp - low52) / low52) * 100;
                         return (
                           <td
@@ -1067,8 +1169,8 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                       }
 
                       if (col.id === "fiftyTwoWeek") {
-                        const high52 = item.fiftyTwoWeekHigh ?? (item.high ? Math.max(item.high * 1.15, ltp * 1.12) : ltp * 1.18);
-                        const low52 = item.fiftyTwoWeekLow ?? (item.low ? Math.min(item.low * 0.85, ltp * 0.82) : ltp * 0.78);
+                        const high52 = getFiftyTwoWeekHigh(item);
+                        const low52 = getFiftyTwoWeekLow(item);
                         const diffHigh = ((ltp - high52) / high52) * 100;
                         const diffLow = ((ltp - low52) / low52) * 100;
                         return (
@@ -1444,8 +1546,9 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                       )}
                     </td>
                   </tr>
-                );
-              })}
+                </React.Fragment>
+              );
+            })}
             </tbody>
           </table>
         )}
@@ -1483,6 +1586,21 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
           </div>
         </div>
       )}
+
+      {/* 7. Zerodha-style Discover Watchlists Modal */}
+      <DiscoverWatchlistsModal
+        isOpen={isDiscoverModalOpen}
+        onClose={() => setIsDiscoverModalOpen(false)}
+        userWatchlists={watchlists}
+        activeWatchlistId={activeWatchlistId}
+        onSelectWatchlist={(id) => {
+          setActiveWatchlistId(id);
+          setIsDiscoverModalOpen(false);
+        }}
+        onAddStandardWatchlist={handleAddStandardWatchlist}
+        onCreateCustomWatchlist={handleCreateCustomWatchlist}
+        onDeleteWatchlist={handleDeleteWatchlist}
+      />
     </div>
   );
 };

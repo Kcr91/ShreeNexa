@@ -296,6 +296,55 @@ describe("WatchlistWidget Component", () => {
     expect(rows[1]).toHaveTextContent("TCS");
   });
 
+  it("sorts watchlist items by 52W High (descending then ascending)", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    const highSortBtn = screen.getByLabelText("Sort by 52W High");
+    expect(highSortBtn).toBeInTheDocument();
+
+    // 1st click -> descending (highest 52W High first: TCS at 4585.00)
+    fireEvent.click(highSortBtn);
+    let rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("TCS");
+
+    // 2nd click -> ascending (lowest 52W High first: ICICIBANK at 1335.00)
+    fireEvent.click(highSortBtn);
+    rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("ICICIBANK");
+  });
+
+  it("sorts watchlist items by 52W Low (descending then ascending)", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    const lowSortBtn = screen.getByLabelText("Sort by 52W Low");
+    expect(lowSortBtn).toBeInTheDocument();
+
+    // 1st click -> descending (highest 52W Low first: TCS at 3313.00)
+    fireEvent.click(lowSortBtn);
+    let rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("TCS");
+
+    // 2nd click -> ascending (lowest 52W Low first: ICICIBANK at 980.00)
+    fireEvent.click(lowSortBtn);
+    rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("ICICIBANK");
+  });
+
+  it("does not render sort buttons or sort indicators on composite columns (52WH/L, High/Low, Bid/Ask)", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    // Check that sort buttons for composite columns do not exist
+    expect(screen.queryByLabelText("Sort by 52W H / L")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Sort by High / Low")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Sort by Bid / Ask")).not.toBeInTheDocument();
+
+    // Clicking on High / Low header text does not trigger sort
+    const highLowHeader = screen.getByText("High / Low");
+    fireEvent.click(highLowHeader);
+    expect(highLowHeader.closest("th")).not.toHaveAttribute("aria-sort", "ascending");
+    expect(highLowHeader.closest("th")).not.toHaveAttribute("aria-sort", "descending");
+  });
+
   it("displays 52W High and Low with percentage distance from current price", () => {
     render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
 
@@ -342,4 +391,68 @@ describe("WatchlistWidget Component", () => {
 
     window.removeEventListener("shreenexa:select-symbol", listener);
   });
+
+  it("opens Discover modal on + New button and shows Create new list as first option", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    const newBtn = screen.getByText("+ New");
+    fireEvent.click(newBtn);
+
+    // Modal is open
+    expect(screen.getByPlaceholderText(/Search lists/i)).toBeInTheDocument();
+    expect(screen.getByText("Create new list")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Watchlist Name/i)).toBeInTheDocument();
+    expect(screen.getByText("INDICES")).toBeInTheDocument();
+    expect(screen.getByText("F&O STOCKS")).toBeInTheDocument();
+  });
+
+  it("adds ready-made Nifty 50 watchlist with all 50 stocks from Discover modal", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    // Click + New to open Discover
+    fireEvent.click(screen.getByText("+ New"));
+
+    // Find the Nifty 50 option in the Discover modal
+    const discoverRow = screen.getByText("Nifty 50");
+    fireEvent.click(discoverRow);
+
+    // Modal closes, new tab "Nifty 50" is active with all 50 constituent stocks
+    expect(screen.getByText("(50)")).toBeInTheDocument();
+    expect(screen.getByText("RELIANCE")).toBeInTheDocument();
+    expect(screen.getByText("HDFCBANK")).toBeInTheDocument();
+    expect(screen.getByText("TCS")).toBeInTheDocument();
+    expect(screen.getByText("INFY")).toBeInTheDocument();
+  });
+
+  it("adds ready-made NSE F&O Stocks (Grouped by sector) and renders sector group headers", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    // Click + New
+    fireEvent.click(screen.getByText("+ New"));
+
+    // Find and click "NSE F&O Stocks (Grouped by sector)"
+    const groupedFnoBtn = screen.getByText("NSE F&O Stocks (Grouped by sector)");
+    fireEvent.click(groupedFnoBtn);
+
+    // Verifies 208 stocks are loaded in active tab count
+    expect(screen.getByText("(208)")).toBeInTheDocument();
+
+    // Verify sector group headers are rendered in table
+    expect(screen.getAllByText(/📂/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/📂 Information Technology/i)).toBeInTheDocument();
+    expect(screen.getByText(/📂 Financial Services/i)).toBeInTheDocument();
+  });
+
+  it("filters Discover lists by search query", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    fireEvent.click(screen.getByText("+ New"));
+
+    const searchInput = screen.getByPlaceholderText(/Search lists/i);
+    fireEvent.change(searchInput, { target: { value: "Pharma" } });
+
+    expect(screen.getByText("Nifty Pharma")).toBeInTheDocument();
+    expect(screen.queryByText("Nifty Auto")).not.toBeInTheDocument();
+  });
 });
+

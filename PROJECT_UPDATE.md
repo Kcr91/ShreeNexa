@@ -3555,4 +3555,35 @@ a live branch indicator; run `git status --short --branch` for current state.
   - E2E browser verification completed with subagent and visual screenshot captured.
   - Committed at `b4983a2` and pushed to `origin/main`.
 
+### 2026-09-07 — Standard Watchlists Catalog & Zerodha-Style Discover Modal
+
+- **Ready-Made Standard Watchlists Catalog**:
+  - Defined complete standard presets in `frontend/src/watchlist/standardWatchlists.ts`:
+    - **Nifty 50** (all 50 constituent blue-chip equities, flat and sector-grouped).
+    - **BSE Sensex** (30 constituents, flat and sector-grouped).
+    - **Broad Market**: Nifty Next 50, Nifty 100, Nifty 200, Nifty LargeMidcap 250, Nifty Midcap 150, Nifty Midcap Select, Nifty Smallcap 250, Nifty Microcap 250.
+    - **Sectoral Indices**: Bank Nifty, Nifty FinNifty, Nifty IT, Nifty Auto, Nifty FMCG, Nifty Pharma, Nifty Metal, Nifty Realty, BSE Bankex, Major & Global Indices.
+    - **NSE F&O Equities**: Complete authentic master list of all **208 NSE F&O equities** (`FNO_208_STOCKS`) with live prices, 52W metrics, and sector groupings.
+    - **NSE F&O Stocks (Grouped by sector)**: All 208 equities organized under sticky sector headers (e.g. `📂 Financial Services`, `📂 Information Technology`, `📂 Automobile`, `📂 Healthcare & Pharma`, etc.).
+- **Zerodha-Style Discover Modal**:
+  - Implemented `DiscoverWatchlistsModal.tsx` matching Zerodha Kite's dark-theme aesthetic:
+    - Search input (`"Search lists"`, `Ctrl + Shift + K` badge) with real-time filtering across preset names, categories, descriptions, and constituent symbols.
+    - Tabs: `My lists`, `Discover` (active orange accent), and `+ New list`.
+    - First option under Discover displays `"Create new list"` with input field and `"Create"` button for blank custom list creation.
+    - Categorized sections: `INDICES` and `F&O STOCKS` with stack/layers SVG icons, symbol counts, and hover action buttons (`+ Add to my lists` / `✓ Added`).
+  - Added global `Ctrl + Shift + K` hotkey and wired `+ New` button in `WatchlistWidget.tsx`.
+  - Added sector group header rows (`📂 {sector}`) and symbol sector badge chips in the watchlist table.
+- **Backend Model Extension**:
+  - Added `sector: str | None = None` to `WatchlistItemModel` and `is_grouped_by_sector: bool = False` to `WatchlistCreateModel` and `WatchlistResponse` in `backend/app/api/watchlists.py`.
+- **Quality Gates & Verification**:
+  - `src/watchlist/standardWatchlists.test.ts`: 6/6 tests passed.
+  - `src/widgets/builtin/WatchlistWidget.test.tsx`: 23/23 tests passed.
+  - Full Vitest suite: 242 tests passed across 65 test files.
+  - TypeScript typecheck (`tsc --noEmit`): 0 errors.
+  - Vite production build (`vite build`): Succeeded cleanly.
+  - Backend tests (`pytest backend/tests/unit/test_watchlists_api.py`): 4/4 passed.
+  - Backend linting and typing (`ruff check`, `mypy --strict`): 0 issues.
+  - End-to-end browser verification via subagent with video recording and screenshots captured.
+
+
 

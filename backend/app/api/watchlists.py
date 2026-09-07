@@ -19,6 +19,7 @@ class WatchlistItemModel(BaseModel):
     security_id: str = ""
     trading_symbol: str = ""
     order: int = 0
+    sector: str | None = None
     expiry: str | None = None
     strike: float | None = None
     option_type: str | None = None
@@ -29,6 +30,7 @@ class WatchlistCreateModel(BaseModel):
 
     name: str = Field(min_length=1, max_length=64)
     description: str = ""
+    is_grouped_by_sector: bool = False
     columns: list[str] = Field(default_factory=lambda: ["symbol", "ltp", "changePct", "volume"])
     items: list[WatchlistItemModel] = Field(default_factory=list)
 
@@ -54,6 +56,7 @@ class WatchlistResponse(BaseModel):
     name: str
     description: str
     is_default: bool = False
+    is_grouped_by_sector: bool = False
     columns: list[str]
     items: list[WatchlistItemModel]
 
@@ -166,6 +169,7 @@ def create_watchlist(payload: WatchlistCreateModel) -> dict[str, Any]:
         "name": payload.name,
         "description": payload.description,
         "is_default": False,
+        "is_grouped_by_sector": payload.is_grouped_by_sector,
         "columns": payload.columns,
         "items": items_data,
     }
