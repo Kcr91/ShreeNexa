@@ -121,3 +121,6 @@ run/
 var/
 local-state/
 sessions/
+
+# Cached NSE/Dhan downloads used by scripts/fetch_nse_constituents.py
+build/nse-cache/

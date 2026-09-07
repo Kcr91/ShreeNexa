@@ -1,6 +1,9 @@
 export type WeightingSource =
   | "OFFICIAL_NSE"
   | "FREE_FLOAT_MCAP"
+  // Membership derived from the parent index by published methodology screens,
+  // used for indices where NSE publishes no constituent CSV (Shariah, ESG, EV).
+  | "DERIVED_SCREEN"
   | "FALLBACK_EQUAL_WEIGHT";
 
 export type IndexCategory =
