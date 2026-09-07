@@ -3535,3 +3535,24 @@ a live branch indicator; run `git status --short --branch` for current state.
   - All 653 backend unit tests passed.
   - Committed and pushed to `origin/main`.
 
+### 2026-09-07 — Column-Header Sorting & 20-Level NSE Market Depth Expansion
+
+- **Watchlist Column-Header Sorting**:
+  - Removed separate `<select>` dropdown menu from header toolbar.
+  - Implemented interactive sort arrow buttons (`▲` / `▼` / `↕`) on every column header (`Symbol`, `LTP (₹)`, `Chg (₹)`, `Chg %`, `52W High`, `52W Low`, `Volume`, etc.).
+  - Clicking any column header sorts by that column (alphabetical for `Symbol`, descending high-to-low first for numeric values, toggling on second click, resetting on third click).
+- **NSE 20-Level Market Depth Expansion**:
+  - Connected the down arrow toggle in the Market Depth card bid & ask section to expand from 5-level depth to the full NSE 20-level bid & ask list (`LEVEL_20`).
+  - Extended `MPHASIS` mock depth to 20 levels and supported smooth scrollable container when expanded.
+  - Down arrow button flips between `▼ Show 20 depth` and `▲ Show 5 depth`.
+- **Default Columns & Storage Migration**:
+  - Included `fiftyTwoWeekHigh` and `fiftyTwoWeekLow` in default `columns` list.
+  - Upgraded storage key to `shreenexa_watchlists_v2` with seamless auto-migration from `v1`.
+- **Quality Gates & Verification**:
+  - 100% test pass across 64 test files (239 tests in Vitest).
+  - TypeScript typecheck passed (`tsc --noEmit`).
+  - Vite production build succeeded.
+  - E2E browser verification completed with subagent and visual screenshot captured.
+  - Committed at `b4983a2` and pushed to `origin/main`.
+
+
