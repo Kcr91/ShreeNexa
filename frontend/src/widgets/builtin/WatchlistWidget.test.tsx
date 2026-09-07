@@ -86,7 +86,7 @@ describe("WatchlistWidget Component", () => {
     fireEvent.click(bidAskCheckbox);
 
     // Table now contains Bid / Ask header
-    expect(screen.getByText("Bid / Ask", { selector: "th" })).toBeInTheDocument();
+    expect(screen.getByText("Bid / Ask", { selector: "th *" })).toBeInTheDocument();
   });
 
   it("adds Nifty50 index to watchlist without error", () => {
@@ -266,30 +266,32 @@ describe("WatchlistWidget Component", () => {
     expect(screen.getByText("BAJFINANCE")).toBeInTheDocument();
   });
 
-  it("sorts watchlist items by % change, name, or current price using the header grade filter", () => {
+  it("sorts watchlist items by clicking arrow button beside column title (symbol, change, price)", () => {
     render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
 
-    const sortSelect = screen.getByLabelText("Grade or filter watchlist");
-    expect(sortSelect).toBeInTheDocument();
+    const chgPctSortBtn = screen.getByLabelText("Sort by Chg %");
+    expect(chgPctSortBtn).toBeInTheDocument();
 
-    // Sort by % Change (Low to High - biggest losers first)
-    fireEvent.change(sortSelect, { target: { value: "pct_asc" } });
+    // Click Chg % sort button -> sorts descending (High to Low - biggest gainers first)
+    fireEvent.click(chgPctSortBtn);
     let rows = screen.getAllByRole("row");
-    // Row 0 is header, Row 1 should be MPHASIS (-2.68%)
-    expect(rows[1]).toHaveTextContent("MPHASIS");
-
-    // Sort by % Change (High to Low - biggest gainers first)
-    fireEvent.change(sortSelect, { target: { value: "pct_desc" } });
-    rows = screen.getAllByRole("row");
+    // Row 0 is header, Row 1 should be ICICIBANK (+1.40%)
     expect(rows[1]).toHaveTextContent("ICICIBANK");
 
-    // Sort by Name (A to Z)
-    fireEvent.change(sortSelect, { target: { value: "name_asc" } });
+    // Click Chg % again -> sorts ascending (Low to High - biggest losers first)
+    fireEvent.click(chgPctSortBtn);
+    rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("MPHASIS");
+
+    // Click Symbol sort button -> sorts alphabetically (A to Z)
+    const symbolSortBtn = screen.getByLabelText("Sort by Symbol");
+    fireEvent.click(symbolSortBtn);
     rows = screen.getAllByRole("row");
     expect(rows[1]).toHaveTextContent("HDFCBANK");
 
-    // Sort by Current Price (High to Low)
-    fireEvent.change(sortSelect, { target: { value: "price_desc" } });
+    // Click LTP sort button -> sorts by Current Price (High to Low)
+    const ltpSortBtn = screen.getByLabelText("Sort by LTP (₹)");
+    fireEvent.click(ltpSortBtn);
     rows = screen.getAllByRole("row");
     expect(rows[1]).toHaveTextContent("TCS");
   });
@@ -297,19 +299,9 @@ describe("WatchlistWidget Component", () => {
   it("displays 52W High and Low with percentage distance from current price", () => {
     render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
 
-    // Open Columns settings
-    const colBtn = screen.getByText(/⚙ Columns/i);
-    fireEvent.click(colBtn);
-
-    // Enable 52W High and 52W Low columns
-    const highCheckbox = screen.getByLabelText("52W High");
-    fireEvent.click(highCheckbox);
-    const lowCheckbox = screen.getByLabelText("52W Low");
-    fireEvent.click(lowCheckbox);
-
-    // Check table headers
-    expect(screen.getByText("52W High", { selector: "th" })).toBeInTheDocument();
-    expect(screen.getByText("52W Low", { selector: "th" })).toBeInTheDocument();
+    // Check table headers for 52W High and 52W Low
+    expect(screen.getByText("52W High")).toBeInTheDocument();
+    expect(screen.getByText("52W Low")).toBeInTheDocument();
 
     // Verify formatted distance percentage rendered for MPHASIS
     // MPHASIS: ltp 2357.10, 52W High 3125.00 (-24.57%), 52W Low 2180.00 (+8.12%)

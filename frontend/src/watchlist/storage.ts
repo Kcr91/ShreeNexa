@@ -1,6 +1,8 @@
 import { Watchlist, WatchlistItem, WatchlistColumn } from "./types";
 
-const WATCHLISTS_STORAGE_KEY = "shreenexa_watchlists_v1";
+export const WATCHLISTS_STORAGE_KEY_V2 = "shreenexa_watchlists_v2";
+export const WATCHLISTS_STORAGE_KEY_V1 = "shreenexa_watchlists_v1";
+export const WATCHLISTS_STORAGE_KEY = WATCHLISTS_STORAGE_KEY_V2;
 
 export type InstrumentCategoryType =
   | "INDEX"
@@ -1731,7 +1733,7 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
     name: "NIFTY 50",
     description: "Top large cap Indian equities",
     isDefault: true,
-    columns: ["symbol", "ltp", "changeAbs", "changePct", "volume", "highLow"],
+    columns: ["symbol", "ltp", "changeAbs", "changePct", "fiftyTwoWeekHigh", "fiftyTwoWeekLow", "volume", "highLow"],
     items: [
       {
         symbol: "MPHASIS",
@@ -1989,27 +1991,51 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
 
 export function loadWatchlists(): Watchlist[] {
   try {
-    const raw = localStorage.getItem(WATCHLISTS_STORAGE_KEY);
+    let raw = localStorage.getItem(WATCHLISTS_STORAGE_KEY_V2);
+    let isMigratingV1 = false;
+    if (!raw) {
+      raw = localStorage.getItem(WATCHLISTS_STORAGE_KEY_V1);
+      if (raw) isMigratingV1 = true;
+    }
     if (!raw) {
       saveWatchlists(DEFAULT_WATCHLISTS);
       return DEFAULT_WATCHLISTS;
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Purge/sanitize: re-resolve missing security IDs against known instruments
-      const sanitized = parsed.map((wl: Watchlist) => ({
-        ...wl,
-        items: (wl.items || []).map((it) => {
-          if ((!it.securityId || it.securityId.trim() === "") && KNOWN_EQUITY_INSTRUMENTS[it.symbol]) {
+      // Purge/sanitize: re-resolve missing security IDs and ensure new default columns & 52w metrics
+      const sanitized = parsed.map((wl: Watchlist) => {
+        let cols = [...(wl.columns || ["symbol", "ltp", "changePct", "volume"])];
+        if (isMigratingV1) {
+          // If migrating from v1, ensure changeAbs and 52w columns are enabled
+          const pctIdx = cols.indexOf("changePct");
+          if (pctIdx !== -1 && !cols.includes("changeAbs")) {
+            cols.splice(pctIdx, 0, "changeAbs");
+          }
+          if (!cols.includes("fiftyTwoWeekHigh")) cols.push("fiftyTwoWeekHigh");
+          if (!cols.includes("fiftyTwoWeekLow")) cols.push("fiftyTwoWeekLow");
+        }
+        return {
+          ...wl,
+          columns: cols,
+          items: (wl.items || []).map((it) => {
+            const known = KNOWN_EQUITY_INSTRUMENTS[it.symbol];
             return {
               ...it,
-              securityId: KNOWN_EQUITY_INSTRUMENTS[it.symbol].securityId,
-              tradingSymbol: it.tradingSymbol || KNOWN_EQUITY_INSTRUMENTS[it.symbol].tradingSymbol,
+              securityId:
+                (!it.securityId || it.securityId.trim() === "") && known
+                  ? known.securityId
+                  : it.securityId,
+              tradingSymbol: it.tradingSymbol || known?.tradingSymbol,
+              fiftyTwoWeekHigh: it.fiftyTwoWeekHigh ?? known?.fiftyTwoWeekHigh,
+              fiftyTwoWeekLow: it.fiftyTwoWeekLow ?? known?.fiftyTwoWeekLow,
             };
-          }
-          return it;
-        }),
-      }));
+          }),
+        };
+      });
+      if (isMigratingV1) {
+        saveWatchlists(sanitized);
+      }
       return sanitized;
     }
   } catch {
@@ -2020,7 +2046,7 @@ export function loadWatchlists(): Watchlist[] {
 
 export function saveWatchlists(watchlists: Watchlist[]): void {
   try {
-    localStorage.setItem(WATCHLISTS_STORAGE_KEY, JSON.stringify(watchlists));
+    localStorage.setItem(WATCHLISTS_STORAGE_KEY_V2, JSON.stringify(watchlists));
   } catch (err) {
     console.error("Failed to save watchlists to localStorage:", err);
   }

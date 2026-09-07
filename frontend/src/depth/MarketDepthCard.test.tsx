@@ -81,20 +81,29 @@ describe("MarketDepthCard Component", () => {
     expect(screen.getByText(/\(-24\.6%\)/)).toBeInTheDocument();
   });
 
-  it("toggles market details collapse on chevron click", () => {
+  it("expands to 20-level NSE bid and ask list when clicking down arrow in bid and ask section", () => {
     render(<MarketDepthCard item={mockMphasis} />);
 
+    // Initially, exactly 5 bid/offer rows are displayed
+    expect(screen.getAllByTestId("depth-row").length).toBe(5);
+    expect(screen.getByText("Show 20 depth")).toBeInTheDocument();
     expect(screen.getByText("Volume")).toBeInTheDocument();
 
-    // Click collapse chevron
+    // Click the down arrow toggle in bid and ask section
     const chevron = screen.getByTestId("depth-collapse-toggle");
     fireEvent.click(chevron);
 
-    // Details hidden
-    expect(screen.queryByText("Volume")).toBeNull();
+    // Should now display all 20 NSE bid/ask rows
+    expect(screen.getAllByTestId("depth-row").length).toBe(20);
+    expect(screen.getByText("Show 5 depth")).toBeInTheDocument();
+    expect(screen.getByText("20-Level Full Depth (NSE)")).toBeInTheDocument();
 
-    // Click again to re-open
-    fireEvent.click(chevron);
+    // Market statistics remain visible
     expect(screen.getByText("Volume")).toBeInTheDocument();
+
+    // Click again to collapse back to 5 depth
+    fireEvent.click(chevron);
+    expect(screen.getAllByTestId("depth-row").length).toBe(5);
+    expect(screen.getByText("Show 20 depth")).toBeInTheDocument();
   });
 });

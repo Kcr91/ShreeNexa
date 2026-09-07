@@ -88,28 +88,72 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
     return watchlists.find((w) => w.id === activeWatchlistId) || watchlists[0];
   }, [watchlists, activeWatchlistId]);
 
-  const [sortBy, setSortBy] = useState<WatchlistSortOption>("default");
+  const [sortColumn, setSortColumn] = useState<WatchlistColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
+
+  const handleHeaderSort = (colId: WatchlistColumn) => {
+    if (sortColumn !== colId) {
+      setSortColumn(colId);
+      // For text column (symbol): ascending (A-Z) first. For numbers: descending (high to low) first.
+      setSortDirection(colId === "symbol" ? "asc" : "desc");
+    } else if (sortDirection === (colId === "symbol" ? "asc" : "desc")) {
+      setSortDirection(colId === "symbol" ? "desc" : "asc");
+    } else {
+      setSortColumn(null);
+      setSortDirection(null);
+    }
+  };
 
   const sortedItems = useMemo(() => {
     if (!activeWatchlist?.items) return [];
     const list = [...activeWatchlist.items];
-    switch (sortBy) {
-      case "pct_desc":
-        return list.sort((a, b) => (b.changePct ?? 0) - (a.changePct ?? 0));
-      case "pct_asc":
-        return list.sort((a, b) => (a.changePct ?? 0) - (b.changePct ?? 0));
-      case "name_asc":
-        return list.sort((a, b) => (a.name || a.symbol).localeCompare(b.name || b.symbol));
-      case "name_desc":
-        return list.sort((a, b) => (b.name || b.symbol).localeCompare(a.name || a.symbol));
-      case "price_desc":
-        return list.sort((a, b) => (b.ltp ?? 0) - (a.ltp ?? 0));
-      case "price_asc":
-        return list.sort((a, b) => (a.ltp ?? 0) - (b.ltp ?? 0));
-      default:
-        return list;
-    }
-  }, [activeWatchlist, sortBy]);
+    if (!sortColumn || !sortDirection) return list;
+
+    return list.sort((a, b) => {
+      let comp = 0;
+      switch (sortColumn) {
+        case "symbol": {
+          const nameA = a.name || a.symbol;
+          const nameB = b.name || b.symbol;
+          comp = nameA.localeCompare(nameB);
+          break;
+        }
+        case "ltp":
+          comp = (a.ltp ?? 0) - (b.ltp ?? 0);
+          break;
+        case "changeAbs":
+          comp = (a.changeAbs ?? 0) - (b.changeAbs ?? 0);
+          break;
+        case "changePct":
+          comp = (a.changePct ?? 0) - (b.changePct ?? 0);
+          break;
+        case "volume":
+          comp = (a.volume ?? 0) - (b.volume ?? 0);
+          break;
+        case "fiftyTwoWeekHigh":
+          comp = (a.fiftyTwoWeekHigh ?? 0) - (b.fiftyTwoWeekHigh ?? 0);
+          break;
+        case "fiftyTwoWeekLow":
+          comp = (a.fiftyTwoWeekLow ?? 0) - (b.fiftyTwoWeekLow ?? 0);
+          break;
+        case "fiftyTwoWeek":
+          comp = (a.fiftyTwoWeekHigh ?? 0) - (b.fiftyTwoWeekHigh ?? 0);
+          break;
+        case "oi":
+          comp = (a.oi ?? 0) - (b.oi ?? 0);
+          break;
+        case "oiChangePct":
+          comp = (a.oiChangePct ?? 0) - (b.oiChangePct ?? 0);
+          break;
+        case "highLow":
+          comp = (a.high ?? 0) - (b.high ?? 0);
+          break;
+        default:
+          comp = 0;
+      }
+      return sortDirection === "asc" ? comp : -comp;
+    });
+  }, [activeWatchlist, sortColumn, sortDirection]);
 
   const handleSelectSymbol = (item: WatchlistItem) => {
     setSelectedSymbol(item.symbol);
@@ -451,32 +495,6 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
         </form>
 
         <div style={{ display: "flex", gap: "var(--spacing-1)", alignItems: "center" }}>
-          {/* Grade / Sort Filter Dropdown */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as WatchlistSortOption)}
-            aria-label="Grade or filter watchlist"
-            title="Grade or sort watchlist"
-            style={{
-              padding: "4px 8px",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-subtle)",
-              backgroundColor: "var(--bg-elevated)",
-              color: "var(--text-primary)",
-              fontSize: "var(--font-size-xs)",
-              height: "28px",
-              cursor: "pointer",
-            }}
-          >
-            <option value="default">Grade: Default</option>
-            <option value="pct_desc">Grade: % Change (High → Low)</option>
-            <option value="pct_asc">Grade: % Change (Low → High)</option>
-            <option value="name_asc">Grade: Name (A → Z)</option>
-            <option value="name_desc">Grade: Name (Z → A)</option>
-            <option value="price_desc">Grade: Price (High → Low)</option>
-            <option value="price_asc">Grade: Price (Low → High)</option>
-          </select>
-
           <button
             type="button"
             onClick={() => setIsConfiguringColumns((prev) => !prev)}
@@ -654,19 +672,79 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                 }}
               >
                 <th style={{ padding: "6px 8px", width: "40px", textAlign: "center" }}>#</th>
-                {activeColumns.map((col) => (
-                  <th
-                    key={col.id}
-                    style={{
-                      padding: "6px 8px",
-                      textAlign: col.align || "left",
-                      minWidth: `${col.minWidth}px`,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {col.label}
-                  </th>
-                ))}
+                {activeColumns.map((col) => {
+                  const isSorted = sortColumn === col.id;
+                  const sortArrow = isSorted
+                    ? sortDirection === "asc"
+                      ? "▲"
+                      : "▼"
+                    : "↕";
+
+                  return (
+                    <th
+                      key={col.id}
+                      onClick={() => handleHeaderSort(col.id)}
+                      style={{
+                        padding: "6px 8px",
+                        textAlign: col.align || "left",
+                        minWidth: `${col.minWidth}px`,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        userSelect: "none",
+                      }}
+                      role="columnheader"
+                      aria-sort={
+                        isSorted
+                          ? sortDirection === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
+                      title={`Click to sort by ${col.label}`}
+                    >
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          justifyContent:
+                            col.align === "right"
+                              ? "flex-end"
+                              : col.align === "center"
+                              ? "center"
+                              : "flex-start",
+                          width: "100%",
+                        }}
+                      >
+                        <span>{col.label}</span>
+                        <button
+                          type="button"
+                          aria-label={`Sort by ${col.label}`}
+                          tabIndex={-1}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            margin: 0,
+                            cursor: "pointer",
+                            fontSize: "10px",
+                            lineHeight: 1,
+                            color: isSorted
+                              ? "var(--color-brand, #58a6ff)"
+                              : "var(--text-muted, #8b949e)",
+                            opacity: isSorted ? 1 : 0.5,
+                            transition: "opacity 0.15s, color 0.15s",
+                          }}
+                        >
+                          {sortArrow}
+                        </button>
+                      </div>
+                    </th>
+                  );
+                })}
                 <th style={{ padding: "6px 8px", width: "190px", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>

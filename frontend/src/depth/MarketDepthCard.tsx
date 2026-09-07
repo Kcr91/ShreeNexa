@@ -34,7 +34,7 @@ export interface MarketDepthCardProps {
   capability?: string;
 }
 
-// Exact mock data from screenshot for MPHASIS if applicable
+// Exact mock data from screenshot for MPHASIS if applicable, extended to 20 levels
 const MPHASIS_DEFAULT_DEPTH = {
   bids: [
     { price: 2357.10, orders: 5, quantity: 99 },
@@ -42,6 +42,21 @@ const MPHASIS_DEFAULT_DEPTH = {
     { price: 2356.10, orders: 1, quantity: 48 },
     { price: 2356.00, orders: 2, quantity: 48 },
     { price: 2355.90, orders: 1, quantity: 1 },
+    { price: 2355.80, orders: 3, quantity: 65 },
+    { price: 2355.50, orders: 2, quantity: 120 },
+    { price: 2355.30, orders: 4, quantity: 85 },
+    { price: 2355.00, orders: 6, quantity: 210 },
+    { price: 2354.80, orders: 2, quantity: 45 },
+    { price: 2354.50, orders: 3, quantity: 130 },
+    { price: 2354.20, orders: 1, quantity: 70 },
+    { price: 2354.00, orders: 5, quantity: 320 },
+    { price: 2353.70, orders: 2, quantity: 95 },
+    { price: 2353.50, orders: 4, quantity: 160 },
+    { price: 2353.20, orders: 1, quantity: 40 },
+    { price: 2353.00, orders: 7, quantity: 450 },
+    { price: 2352.80, orders: 2, quantity: 80 },
+    { price: 2352.50, orders: 3, quantity: 175 },
+    { price: 2352.00, orders: 8, quantity: 510 },
   ],
   totalBidQty: 35801,
   asks: [
@@ -50,6 +65,21 @@ const MPHASIS_DEFAULT_DEPTH = {
     { price: 2357.90, orders: 1, quantity: 7 },
     { price: 2358.00, orders: 1, quantity: 1 },
     { price: 2358.40, orders: 2, quantity: 12 },
+    { price: 2358.60, orders: 3, quantity: 45 },
+    { price: 2358.90, orders: 1, quantity: 28 },
+    { price: 2359.10, orders: 4, quantity: 95 },
+    { price: 2359.50, orders: 5, quantity: 180 },
+    { price: 2359.80, orders: 2, quantity: 50 },
+    { price: 2360.00, orders: 7, quantity: 340 },
+    { price: 2360.30, orders: 1, quantity: 65 },
+    { price: 2360.50, orders: 3, quantity: 110 },
+    { price: 2360.80, orders: 2, quantity: 85 },
+    { price: 2361.00, orders: 6, quantity: 290 },
+    { price: 2361.40, orders: 1, quantity: 40 },
+    { price: 2361.70, orders: 3, quantity: 125 },
+    { price: 2362.00, orders: 5, quantity: 215 },
+    { price: 2362.50, orders: 4, quantity: 160 },
+    { price: 2363.00, orders: 9, quantity: 480 },
   ],
   totalAskQty: 23606,
 };
@@ -60,7 +90,7 @@ export const MarketDepthCard: React.FC<MarketDepthCardProps> = ({
   isEmbedded = false,
   capability,
 }) => {
-  const [showDetails, setShowDetails] = useState(true);
+  const [show20Depth, setShow20Depth] = useState(false);
 
   const ltp = item.ltp ?? item.lastPrice ?? 1000.0;
   const changeAbs = item.changeAbs ?? (item.changePct ? (ltp * item.changePct) / 100 : 0);
@@ -90,7 +120,7 @@ export const MarketDepthCard: React.FC<MarketDepthCardProps> = ({
   const rangeSpan = Math.max(high - low, 0.01);
   const currentSliderPct = Math.min(100, Math.max(0, ((ltp - low) / rangeSpan) * 100));
 
-  // Depth data
+  // Depth data - generate full 20 levels
   const depthBook: {
     bids: { price: number; orders: number; quantity: number }[];
     asks: { price: number; orders: number; quantity: number }[];
@@ -103,20 +133,23 @@ export const MarketDepthCard: React.FC<MarketDepthCardProps> = ({
     const generated: MarketDepthBook = generateMockDepthBook(
       item.symbol,
       item.segment || "NSE_EQ",
-      "LEVEL_5",
+      "LEVEL_20",
       ltp,
       Number(item.securityId) || 1000
     );
     return {
-      bids: generated.bids.slice(0, 5),
-      asks: generated.asks.slice(0, 5),
+      bids: generated.bids.slice(0, 20),
+      asks: generated.asks.slice(0, 20),
       totalBidQty: generated.totalBidQty,
       totalAskQty: generated.totalAskQty,
     };
   }, [item.symbol, item.segment, item.securityId, ltp]);
 
-  const maxBidQty = Math.max(...depthBook.bids.map((b) => b.quantity), 1);
-  const maxAskQty = Math.max(...depthBook.asks.map((a) => a.quantity), 1);
+  const rowCount = show20Depth ? 20 : 5;
+  const visibleBids = depthBook.bids.slice(0, rowCount);
+  const visibleAsks = depthBook.asks.slice(0, rowCount);
+  const maxBidQty = Math.max(...visibleBids.map((b) => b.quantity), 1);
+  const maxAskQty = Math.max(...visibleAsks.map((a) => a.quantity), 1);
 
   return (
     <div
@@ -155,20 +188,18 @@ export const MarketDepthCard: React.FC<MarketDepthCardProps> = ({
           >
             {item.symbol}
           </span>
-          {capability && (
-            <span
-              style={{
-                fontSize: "10px",
-                color: "#58a6ff",
-                backgroundColor: "rgba(88, 166, 255, 0.12)",
-                padding: "1px 6px",
-                borderRadius: "3px",
-                fontWeight: 600,
-              }}
-            >
-              {capability}
-            </span>
-          )}
+          <span
+            style={{
+              fontSize: "10px",
+              color: "#58a6ff",
+              backgroundColor: "rgba(88, 166, 255, 0.12)",
+              padding: "1px 6px",
+              borderRadius: "3px",
+              fontWeight: 600,
+            }}
+          >
+            {capability || (show20Depth ? "20-Level Full Depth (NSE)" : "5-Level Depth (NSE)")}
+          </span>
           {onClose && (
             <button
               type="button"
@@ -212,7 +243,7 @@ export const MarketDepthCard: React.FC<MarketDepthCardProps> = ({
         </div>
       </div>
 
-      {/* 2. 5-Level Depth Table */}
+      {/* 2. Depth Table (5-level or expanded 20-level) */}
       <div style={{ marginBottom: "8px" }}>
         {/* Table Headers */}
         <div
@@ -240,11 +271,19 @@ export const MarketDepthCard: React.FC<MarketDepthCardProps> = ({
           </div>
         </div>
 
-        {/* 5 Rows of Bids and Offers */}
-        <div style={{ marginTop: "4px" }}>
-          {Array.from({ length: 5 }).map((_, idx) => {
-            const bid = depthBook.bids[idx];
-            const ask = depthBook.asks[idx];
+        {/* Rows of Bids and Offers (5 or 20) */}
+        <div
+          data-testid="depth-rows-container"
+          style={{
+            marginTop: "4px",
+            maxHeight: show20Depth ? "340px" : "auto",
+            overflowY: show20Depth ? "auto" : "visible",
+            paddingRight: show20Depth ? "4px" : "0",
+          }}
+        >
+          {Array.from({ length: rowCount }).map((_, idx) => {
+            const bid = visibleBids[idx];
+            const ask = visibleAsks[idx];
 
             const bidBarWidthPct = bid ? Math.min(100, Math.round((bid.quantity / maxBidQty) * 100)) : 0;
             const askBarWidthPct = ask ? Math.min(100, Math.round((ask.quantity / maxAskQty) * 100)) : 0;
@@ -252,6 +291,7 @@ export const MarketDepthCard: React.FC<MarketDepthCardProps> = ({
             return (
               <div
                 key={idx}
+                data-testid="depth-row"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
@@ -357,37 +397,38 @@ export const MarketDepthCard: React.FC<MarketDepthCardProps> = ({
         </div>
       </div>
 
-      {/* 3. Expand / Collapse Arrow */}
+      {/* 3. Expand / Collapse Arrow for NSE 20 Bid/Ask List */}
       <div
         data-testid="depth-collapse-toggle"
         role="button"
-        aria-label="Toggle market details"
+        aria-label={show20Depth ? "Collapse to 5 depth" : "Show NSE 20 bid ask list"}
         style={{
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          padding: "2px 0 6px 0",
+          gap: "6px",
+          padding: "5px 0",
           cursor: "pointer",
+          color: show20Depth ? "var(--color-brand, #58a6ff)" : "#8b949e",
+          fontSize: "11px",
+          fontWeight: 600,
+          borderTop: "1px dashed #30363d",
+          borderBottom: "1px dashed #30363d",
+          margin: "4px 0 8px 0",
+          backgroundColor: show20Depth ? "rgba(88, 166, 255, 0.08)" : "transparent",
+          borderRadius: "4px",
+          transition: "all 0.15s ease",
+          userSelect: "none",
         }}
-        onClick={() => setShowDetails((prev) => !prev)}
-        title={showDetails ? "Collapse details" : "Expand details"}
+        onClick={() => setShow20Depth((prev) => !prev)}
+        title={show20Depth ? "Collapse to 5 depth" : "Show NSE 20 bid ask list"}
       >
-        <span
-          style={{
-            fontSize: "12px",
-            color: "#8b949e",
-            transform: showDetails ? "none" : "rotate(180deg)",
-            transition: "transform 0.2s ease",
-            userSelect: "none",
-          }}
-        >
-          v
-        </span>
+        <span style={{ fontSize: "11px" }}>{show20Depth ? "▲" : "▼"}</span>
+        <span>{show20Depth ? "Show 5 depth" : "Show 20 depth"}</span>
       </div>
 
       {/* 4. Detailed Market Statistics & Day Range */}
-      {showDetails && (
-        <div style={{ borderTop: "1px solid #23272e", paddingTop: "10px" }}>
+      <div style={{ borderTop: "1px solid #23272e", paddingTop: "10px" }}>
           {/* Open & Prev. Close */}
           <div
             style={{
@@ -588,7 +629,6 @@ export const MarketDepthCard: React.FC<MarketDepthCardProps> = ({
             </div>
           </div>
         </div>
-      )}
-    </div>
+      </div>
   );
 };
