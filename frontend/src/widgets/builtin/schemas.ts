@@ -103,6 +103,7 @@ export const builtinSchemas = {
         type: "select",
         default: "LADDER",
         options: [
+          { label: "5-Level Depth Card", value: "CARD" },
           { label: "Depth Ladder", value: "LADDER" },
           { label: "Depth Watchlist", value: "WATCHLIST" },
         ],

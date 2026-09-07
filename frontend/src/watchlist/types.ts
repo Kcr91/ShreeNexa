@@ -1,9 +1,12 @@
 export type WatchlistColumn =
   | "symbol"
   | "ltp"
-  | "changePct"
   | "changeAbs"
+  | "changePct"
   | "volume"
+  | "fiftyTwoWeekHigh"
+  | "fiftyTwoWeekLow"
+  | "fiftyTwoWeek"
   | "oi"
   | "oiChangePct"
   | "highLow"
@@ -19,9 +22,12 @@ export interface ColumnConfig {
 export const ALL_COLUMNS: ColumnConfig[] = [
   { id: "symbol", label: "Symbol", minWidth: 100, align: "left" },
   { id: "ltp", label: "LTP (₹)", minWidth: 80, align: "right" },
-  { id: "changePct", label: "Chg %", minWidth: 70, align: "right" },
   { id: "changeAbs", label: "Chg (₹)", minWidth: 70, align: "right" },
+  { id: "changePct", label: "Chg %", minWidth: 70, align: "right" },
   { id: "volume", label: "Volume", minWidth: 80, align: "right" },
+  { id: "fiftyTwoWeekHigh", label: "52W High", minWidth: 110, align: "right" },
+  { id: "fiftyTwoWeekLow", label: "52W Low", minWidth: 110, align: "right" },
+  { id: "fiftyTwoWeek", label: "52W H / L", minWidth: 140, align: "right" },
   { id: "oi", label: "Open Interest", minWidth: 90, align: "right" },
   { id: "oiChangePct", label: "OI Chg %", minWidth: 80, align: "right" },
   { id: "highLow", label: "High / Low", minWidth: 110, align: "right" },
@@ -48,6 +54,16 @@ export interface WatchlistItem {
   oiChangePct?: number;
   high?: number;
   low?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
+  prevClose?: number;
+  open?: number;
+  close?: number;
+  avgPrice?: number;
+  lowerCircuit?: number;
+  upperCircuit?: number;
+  ltq?: number;
+  ltt?: string;
   bid?: number;
   ask?: number;
   isStale?: boolean;

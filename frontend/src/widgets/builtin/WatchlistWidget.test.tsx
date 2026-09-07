@@ -265,4 +265,89 @@ describe("WatchlistWidget Component", () => {
     // Second match (BAJFINANCE from Bajaj Finance Ltd) should be added
     expect(screen.getByText("BAJFINANCE")).toBeInTheDocument();
   });
+
+  it("sorts watchlist items by % change, name, or current price using the header grade filter", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    const sortSelect = screen.getByLabelText("Grade or filter watchlist");
+    expect(sortSelect).toBeInTheDocument();
+
+    // Sort by % Change (Low to High - biggest losers first)
+    fireEvent.change(sortSelect, { target: { value: "pct_asc" } });
+    let rows = screen.getAllByRole("row");
+    // Row 0 is header, Row 1 should be MPHASIS (-2.68%)
+    expect(rows[1]).toHaveTextContent("MPHASIS");
+
+    // Sort by % Change (High to Low - biggest gainers first)
+    fireEvent.change(sortSelect, { target: { value: "pct_desc" } });
+    rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("ICICIBANK");
+
+    // Sort by Name (A to Z)
+    fireEvent.change(sortSelect, { target: { value: "name_asc" } });
+    rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("HDFCBANK");
+
+    // Sort by Current Price (High to Low)
+    fireEvent.change(sortSelect, { target: { value: "price_desc" } });
+    rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("TCS");
+  });
+
+  it("displays 52W High and Low with percentage distance from current price", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    // Open Columns settings
+    const colBtn = screen.getByText(/⚙ Columns/i);
+    fireEvent.click(colBtn);
+
+    // Enable 52W High and 52W Low columns
+    const highCheckbox = screen.getByLabelText("52W High");
+    fireEvent.click(highCheckbox);
+    const lowCheckbox = screen.getByLabelText("52W Low");
+    fireEvent.click(lowCheckbox);
+
+    // Check table headers
+    expect(screen.getByText("52W High", { selector: "th" })).toBeInTheDocument();
+    expect(screen.getByText("52W Low", { selector: "th" })).toBeInTheDocument();
+
+    // Verify formatted distance percentage rendered for MPHASIS
+    // MPHASIS: ltp 2357.10, 52W High 3125.00 (-24.57%), 52W Low 2180.00 (+8.12%)
+    expect(screen.getByText(/3,125\.00/i)).toBeInTheDocument();
+    expect(screen.getByText(/-24\.57%/i)).toBeInTheDocument();
+    expect(screen.getByText(/2,180\.00/i)).toBeInTheDocument();
+    expect(screen.getByText(/\+8\.12%/i)).toBeInTheDocument();
+  });
+
+  it("places price change (Chg ₹) column immediately before percentage change (Chg %)", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    const headers = screen.getAllByRole("columnheader");
+    const headerTexts = headers.map((h) => h.textContent?.trim() || "");
+
+    const chgAbsIndex = headerTexts.findIndex((t) => t.includes("Chg (₹)"));
+    const chgPctIndex = headerTexts.findIndex((t) => t.includes("Chg %"));
+
+    expect(chgAbsIndex).toBeGreaterThan(-1);
+    expect(chgPctIndex).toBeGreaterThan(-1);
+    expect(chgAbsIndex).toBe(chgPctIndex - 1);
+  });
+
+  it("dispatches shreenexa:select-symbol event when a script row is clicked", () => {
+    let capturedEvent: any = null;
+    const listener = (e: any) => {
+      capturedEvent = e.detail;
+    };
+    window.addEventListener("shreenexa:select-symbol", listener);
+
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+    const mphasisRow = screen.getByText("MPHASIS").closest("tr")!;
+    fireEvent.click(mphasisRow);
+
+    expect(capturedEvent).not.toBeNull();
+    expect(capturedEvent.symbol).toBe("MPHASIS");
+    expect(capturedEvent.item.ltp).toBe(2357.10);
+
+    window.removeEventListener("shreenexa:select-symbol", listener);
+  });
 });

@@ -7,12 +7,15 @@ import {
 import {
   generateMockDepthBook,
 } from "../../depth/engine";
+import { MarketDepthCard } from "../../depth/MarketDepthCard";
+import { WatchlistItem } from "../../watchlist/types";
+import { DEFAULT_WATCHLISTS } from "../../watchlist/storage";
 
 export interface DepthWidgetSettings {
   defaultSymbol?: string;
   defaultSegment?: string;
   defaultLevel?: DepthLevelType;
-  defaultMode?: "LADDER" | "WATCHLIST";
+  defaultMode?: "CARD" | "LADDER" | "WATCHLIST";
 }
 
 const DEFAULT_PINNED_WATCHLIST: DepthWatchlistItem[] = [
@@ -105,16 +108,66 @@ const DEFAULT_PINNED_WATCHLIST: DepthWatchlistItem[] = [
 export const MarketDepthWidget: React.FC<WidgetComponentProps<DepthWidgetSettings>> = ({
   settings,
 }) => {
-  const [viewMode, setViewMode] = useState<"LADDER" | "WATCHLIST">(
+  const [viewMode, setViewMode] = useState<"CARD" | "LADDER" | "WATCHLIST">(
     settings.defaultMode || "LADDER"
   );
   const [symbol, setSymbol] = useState<string>(settings.defaultSymbol || "RELIANCE");
   const [segment, setSegment] = useState<string>(settings.defaultSegment || "NSE_EQ");
   const [level, setLevel] = useState<DepthLevelType>(settings.defaultLevel || "LEVEL_20");
+  const [selectedItem, setSelectedItem] = useState<WatchlistItem | null>(null);
+
+  useEffect(() => {
+    const handleSelectSymbol = (e: Event) => {
+      const detail = (e as CustomEvent<{ symbol?: string; segment?: string; item?: WatchlistItem }>).detail;
+      if (detail?.symbol) {
+        setSymbol(detail.symbol);
+        if (detail.segment) setSegment(detail.segment);
+        if (detail.item) setSelectedItem(detail.item);
+      }
+    };
+    window.addEventListener("shreenexa:select-symbol", handleSelectSymbol);
+    return () => {
+      window.removeEventListener("shreenexa:select-symbol", handleSelectSymbol);
+    };
+  }, []);
 
   const depthBook = useMemo(() => {
     return generateMockDepthBook(symbol, segment, level, 2980.0);
   }, [symbol, segment, level]);
+
+  const cardItem: WatchlistItem = useMemo(() => {
+    if (selectedItem && selectedItem.symbol === symbol) {
+      return selectedItem;
+    }
+    for (const wl of DEFAULT_WATCHLISTS) {
+      const match = wl.items.find((i) => i.symbol === symbol);
+      if (match) return match;
+    }
+    const topBid = depthBook.bids[0]?.price ?? 2357.10;
+    const price = topBid > 0 ? topBid : 2357.10;
+    return {
+      symbol,
+      segment,
+      securityId: "0",
+      tradingSymbol: symbol,
+      order: 0,
+      ltp: price,
+      changeAbs: 0,
+      changePct: 0,
+      fiftyTwoWeekHigh: price * 1.25,
+      fiftyTwoWeekLow: price * 0.85,
+      open: price,
+      prevClose: price,
+      high: price * 1.02,
+      low: price * 0.98,
+      volume: 100000,
+      avgPrice: price,
+      lowerCircuit: price * 0.9,
+      upperCircuit: price * 1.1,
+      ltq: 1,
+      ltt: "2026-09-07 11:40:00",
+    };
+  }, [selectedItem, symbol, segment, depthBook]);
 
   const [watchlist, setWatchlist] = useState<DepthWatchlistItem[]>(DEFAULT_PINNED_WATCHLIST);
 
@@ -165,6 +218,22 @@ export const MarketDepthWidget: React.FC<WidgetComponentProps<DepthWidgetSetting
         <div style={{ display: "flex", gap: "var(--spacing-1)" }}>
           <button
             type="button"
+            onClick={() => setViewMode("CARD")}
+            style={{
+              padding: "4px 10px",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-subtle)",
+              backgroundColor: viewMode === "CARD" ? "var(--color-brand)" : "transparent",
+              color: viewMode === "CARD" ? "#fff" : "var(--text-muted)",
+              fontWeight: 600,
+              fontSize: "var(--font-size-xs)",
+              cursor: "pointer",
+            }}
+          >
+            5-Level Depth
+          </button>
+          <button
+            type="button"
             onClick={() => setViewMode("LADDER")}
             style={{
               padding: "4px 10px",
@@ -197,7 +266,7 @@ export const MarketDepthWidget: React.FC<WidgetComponentProps<DepthWidgetSetting
           </button>
         </div>
 
-        {viewMode === "LADDER" && (
+        {viewMode !== "WATCHLIST" && (
           <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)" }}>
             <select
               value={symbol}
@@ -212,6 +281,7 @@ export const MarketDepthWidget: React.FC<WidgetComponentProps<DepthWidgetSetting
                 fontWeight: 700,
               }}
             >
+              <option value="MPHASIS">MPHASIS</option>
               <option value="RELIANCE">RELIANCE</option>
               <option value="HDFCBANK">HDFCBANK</option>
               <option value="ICICIBANK">ICICIBANK</option>
@@ -356,7 +426,24 @@ export const MarketDepthWidget: React.FC<WidgetComponentProps<DepthWidgetSetting
       )}
 
       {/* 3. Main Content Area */}
-      {viewMode === "LADDER" ? (
+      {viewMode === "CARD" ? (
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            display: "flex",
+            justifyContent: "center",
+            padding: "var(--spacing-2)",
+          }}
+        >
+          <div style={{ width: "100%", maxWidth: "440px" }}>
+            <MarketDepthCard
+              item={cardItem}
+              capability={depthBook.isFallback ? "5-level" : "20-level"}
+            />
+          </div>
+        </div>
+      ) : viewMode === "LADDER" ? (
         // Depth Ladder Table
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
           <table
@@ -726,6 +813,7 @@ export const marketDepthDefinition: WidgetDefinition<DepthWidgetSettings> = {
         type: "select",
         default: "LADDER",
         options: [
+          { label: "5-Level Depth Card", value: "CARD" },
           { label: "Depth Ladder", value: "LADDER" },
           { label: "Depth Watchlist", value: "WATCHLIST" },
         ],

@@ -8,11 +8,6 @@ import {
   WatchlistItem,
 } from "../../watchlist/types";
 import {
-  DepthLevelType,
-  MarketDepthBook,
-} from "../../depth/types";
-import {
-  generateMockDepthBook,
   resolveSegmentDepthCapability,
 } from "../../depth/engine";
 import {
@@ -28,6 +23,16 @@ import {
   CatalogInstrument,
 } from "../../watchlist/storage";
 import { SymbolSearchDropdown } from "./SymbolSearchDropdown";
+import { MarketDepthCard } from "../../depth/MarketDepthCard";
+
+export type WatchlistSortOption =
+  | "default"
+  | "pct_desc"
+  | "pct_asc"
+  | "name_asc"
+  | "name_desc"
+  | "price_desc"
+  | "price_asc";
 
 export interface WatchlistSettings {
   defaultWatchlistId?: string;
@@ -56,7 +61,6 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [depthItem, setDepthItem] = useState<WatchlistItem | null>(null);
-  const [depthLevelType, setDepthLevelType] = useState<DepthLevelType>("LEVEL_20");
   const [moreMenuSymbol, setMoreMenuSymbol] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
@@ -68,49 +72,11 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
     }
   }, [actionNotice]);
 
-  // Market Depth capability & mock book
+  // Market Depth capability
   const depthCapability = useMemo(() => {
     if (!depthItem) return null;
-    return resolveSegmentDepthCapability(depthItem.segment, depthLevelType);
-  }, [depthItem, depthLevelType]);
-
-  const depthBook: MarketDepthBook | null = useMemo(() => {
-    if (!depthItem || !depthCapability) return null;
-    const baseLtp = (depthItem.ltp ?? 0) > 0 ? (depthItem.ltp as number) : 1000.0;
-    return generateMockDepthBook(
-      depthItem.symbol,
-      depthItem.segment,
-      depthLevelType,
-      baseLtp,
-      Number(depthItem.securityId) || 1000
-    );
-  }, [depthItem, depthCapability, depthLevelType]);
-
-  // Helper for instrument segment badge
-  const getSegmentBadge = (item: WatchlistItem) => {
-    const seg = item.segment || "NSE_EQ";
-    const instType = item.instrumentType || "EQUITY";
-
-    if (instType === "INDEX" || seg === "IDX_I") {
-      return { label: "INDICES", bg: "rgba(163, 113, 247, 0.15)", color: "#a371f7", border: "rgba(163, 113, 247, 0.3)" };
-    }
-    if (instType === "ETF") {
-      return { label: "ETF", bg: "rgba(46, 160, 67, 0.15)", color: "#3fb950", border: "rgba(46, 160, 67, 0.3)" };
-    }
-    if (seg.startsWith("MCX") || instType === "FUTCOM") {
-      return { label: "MCX", bg: "rgba(240, 136, 62, 0.15)", color: "#f0883e", border: "rgba(240, 136, 62, 0.3)" };
-    }
-    if (seg.includes("CURRENCY") || instType === "FUTCUR") {
-      return { label: "FOREX", bg: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", border: "rgba(56, 189, 248, 0.3)" };
-    }
-    if (seg === "NSE_FNO") {
-      return { label: "NFO", bg: "rgba(88, 166, 255, 0.15)", color: "#58a6ff", border: "rgba(88, 166, 255, 0.3)" };
-    }
-    if (seg === "BSE_EQ") {
-      return { label: "BSE", bg: "rgba(210, 153, 34, 0.15)", color: "#d29922", border: "rgba(210, 153, 34, 0.3)" };
-    }
-    return { label: "NSE", bg: "rgba(56, 139, 253, 0.15)", color: "#58a6ff", border: "rgba(56, 139, 253, 0.3)" };
-  };
+    return resolveSegmentDepthCapability(depthItem.segment, "LEVEL_20");
+  }, [depthItem]);
 
   // Reload watchlists from storage
   const refreshWatchlists = () => {
@@ -121,6 +87,42 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
   const activeWatchlist = useMemo(() => {
     return watchlists.find((w) => w.id === activeWatchlistId) || watchlists[0];
   }, [watchlists, activeWatchlistId]);
+
+  const [sortBy, setSortBy] = useState<WatchlistSortOption>("default");
+
+  const sortedItems = useMemo(() => {
+    if (!activeWatchlist?.items) return [];
+    const list = [...activeWatchlist.items];
+    switch (sortBy) {
+      case "pct_desc":
+        return list.sort((a, b) => (b.changePct ?? 0) - (a.changePct ?? 0));
+      case "pct_asc":
+        return list.sort((a, b) => (a.changePct ?? 0) - (b.changePct ?? 0));
+      case "name_asc":
+        return list.sort((a, b) => (a.name || a.symbol).localeCompare(b.name || b.symbol));
+      case "name_desc":
+        return list.sort((a, b) => (b.name || b.symbol).localeCompare(a.name || a.symbol));
+      case "price_desc":
+        return list.sort((a, b) => (b.ltp ?? 0) - (a.ltp ?? 0));
+      case "price_asc":
+        return list.sort((a, b) => (a.ltp ?? 0) - (b.ltp ?? 0));
+      default:
+        return list;
+    }
+  }, [activeWatchlist, sortBy]);
+
+  const handleSelectSymbol = (item: WatchlistItem) => {
+    setSelectedSymbol(item.symbol);
+    try {
+      window.dispatchEvent(
+        new CustomEvent("shreenexa:select-symbol", {
+          detail: { symbol: item.symbol, item },
+        })
+      );
+    } catch {
+      // safe fallback
+    }
+  };
 
   // Keep activeWatchlistId synced if active watchlist was deleted
   useEffect(() => {
@@ -448,7 +450,33 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
           </button>
         </form>
 
-        <div style={{ display: "flex", gap: "var(--spacing-1)" }}>
+        <div style={{ display: "flex", gap: "var(--spacing-1)", alignItems: "center" }}>
+          {/* Grade / Sort Filter Dropdown */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as WatchlistSortOption)}
+            aria-label="Grade or filter watchlist"
+            title="Grade or sort watchlist"
+            style={{
+              padding: "4px 8px",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-subtle)",
+              backgroundColor: "var(--bg-elevated)",
+              color: "var(--text-primary)",
+              fontSize: "var(--font-size-xs)",
+              height: "28px",
+              cursor: "pointer",
+            }}
+          >
+            <option value="default">Grade: Default</option>
+            <option value="pct_desc">Grade: % Change (High → Low)</option>
+            <option value="pct_asc">Grade: % Change (Low → High)</option>
+            <option value="name_asc">Grade: Name (A → Z)</option>
+            <option value="name_desc">Grade: Name (Z → A)</option>
+            <option value="price_desc">Grade: Price (High → Low)</option>
+            <option value="price_asc">Grade: Price (Low → High)</option>
+          </select>
+
           <button
             type="button"
             onClick={() => setIsConfiguringColumns((prev) => !prev)}
@@ -643,7 +671,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
               </tr>
             </thead>
             <tbody>
-              {activeWatchlist.items.map((item, idx) => {
+              {sortedItems.map((item, idx) => {
                 const changePct = item.changePct ?? 0;
                 const isUp = changePct >= 0;
                 const ltp = item.ltp ?? 0;
@@ -658,7 +686,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                     onMouseLeave={() => {
                       if (hoveredSymbol === item.symbol) setHoveredSymbol(null);
                     }}
-                    onClick={() => setSelectedSymbol(item.symbol)}
+                    onClick={() => handleSelectSymbol(item)}
                     style={{
                       borderBottom: "1px solid var(--border-subtle)",
                       backgroundColor: isRowSelected
@@ -906,6 +934,91 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                         );
                       }
 
+                      if (col.id === "fiftyTwoWeekHigh") {
+                        const high52 = item.fiftyTwoWeekHigh ?? (item.high ? Math.max(item.high * 1.15, ltp * 1.12) : ltp * 1.18);
+                        const diffPct = ((ltp - high52) / high52) * 100;
+                        return (
+                          <td
+                            key={col.id}
+                            style={{
+                              padding: "6px 8px",
+                              textAlign: "right",
+                              fontFamily: "var(--font-family-mono)",
+                              color: "var(--text-primary)",
+                            }}
+                          >
+                            <span>₹{high52.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                color: diffPct >= 0 ? "var(--color-up)" : "var(--color-down)",
+                                marginLeft: "4px",
+                              }}
+                            >
+                              ({diffPct >= 0 ? "+" : ""}{diffPct.toFixed(2)}%)
+                            </span>
+                          </td>
+                        );
+                      }
+
+                      if (col.id === "fiftyTwoWeekLow") {
+                        const low52 = item.fiftyTwoWeekLow ?? (item.low ? Math.min(item.low * 0.85, ltp * 0.82) : ltp * 0.78);
+                        const diffPct = ((ltp - low52) / low52) * 100;
+                        return (
+                          <td
+                            key={col.id}
+                            style={{
+                              padding: "6px 8px",
+                              textAlign: "right",
+                              fontFamily: "var(--font-family-mono)",
+                              color: "var(--text-primary)",
+                            }}
+                          >
+                            <span>₹{low52.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                color: diffPct >= 0 ? "var(--color-up)" : "var(--color-down)",
+                                marginLeft: "4px",
+                              }}
+                            >
+                              ({diffPct >= 0 ? "+" : ""}{diffPct.toFixed(2)}%)
+                            </span>
+                          </td>
+                        );
+                      }
+
+                      if (col.id === "fiftyTwoWeek") {
+                        const high52 = item.fiftyTwoWeekHigh ?? (item.high ? Math.max(item.high * 1.15, ltp * 1.12) : ltp * 1.18);
+                        const low52 = item.fiftyTwoWeekLow ?? (item.low ? Math.min(item.low * 0.85, ltp * 0.82) : ltp * 0.78);
+                        const diffHigh = ((ltp - high52) / high52) * 100;
+                        const diffLow = ((ltp - low52) / low52) * 100;
+                        return (
+                          <td
+                            key={col.id}
+                            style={{
+                              padding: "6px 8px",
+                              textAlign: "right",
+                              fontFamily: "var(--font-family-mono)",
+                              fontSize: "11px",
+                            }}
+                          >
+                            <div>
+                              H: ₹{high52.toFixed(1)}{" "}
+                              <span style={{ color: diffHigh >= 0 ? "var(--color-up)" : "var(--color-down)" }}>
+                                ({diffHigh >= 0 ? "+" : ""}{diffHigh.toFixed(1)}%)
+                              </span>
+                            </div>
+                            <div style={{ color: "var(--text-muted)", marginTop: "1px" }}>
+                              L: ₹{low52.toFixed(1)}{" "}
+                              <span style={{ color: diffLow >= 0 ? "var(--color-up)" : "var(--color-down)" }}>
+                                ({diffLow >= 0 ? "+" : ""}{diffLow.toFixed(1)}%)
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      }
+
                       if (col.id === "highLow") {
                         const high = item.high !== undefined ? `₹${item.high.toFixed(1)}` : "—";
                         const low = item.low !== undefined ? `₹${item.low.toFixed(1)}` : "—";
@@ -1012,7 +1125,10 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                           <button
                             type="button"
                             aria-label="Market Depth"
-                            onClick={() => setDepthItem(item)}
+                            onClick={() => {
+                              setDepthItem(item);
+                              handleSelectSymbol(item);
+                            }}
                             style={{
                               width: "26px",
                               height: "24px",
@@ -1258,7 +1374,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
       </div>
 
       {/* 6. Market Depth Modal */}
-      {depthItem && depthBook && (
+      {depthItem && (
         <div
           role="dialog"
           aria-label="Market Depth Modal"
@@ -1276,240 +1392,16 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
           }}
           onClick={() => setDepthItem(null)}
         >
-          <div
-            style={{
-              width: "520px",
-              maxWidth: "95vw",
-              backgroundColor: "var(--bg-surface, #161b22)",
-              borderRadius: "8px",
-              border: "1px solid var(--border-default, #30363d)",
-              padding: "16px",
-              boxShadow: "0 12px 36px rgba(0, 0, 0, 0.8)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontWeight: 700, color: "#fff", fontSize: "15px" }}>
-                  {depthItem.tradingSymbol || depthItem.symbol}
-                </span>
-                <span
-                  style={{
-                    fontSize: "10px",
-                    padding: "1px 6px",
-                    borderRadius: "3px",
-                    backgroundColor: getSegmentBadge(depthItem).bg,
-                    color: getSegmentBadge(depthItem).color,
-                    border: `1px solid ${getSegmentBadge(depthItem).border}`,
-                    fontWeight: 700,
-                  }}
-                >
-                  {getSegmentBadge(depthItem).label}
-                </span>
-                <span style={{ fontSize: "12px", color: "var(--text-muted, #8b949e)" }}>
-                  {depthItem.name}
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                {(depthItem.ltp ?? 0) > 0 && (
-                  <span style={{ fontFamily: "var(--font-family-mono)", fontWeight: 700, fontSize: "14px", color: "#fff" }}>
-                    ₹{(depthItem.ltp ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  aria-label="Close modal"
-                  onClick={() => setDepthItem(null)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--text-muted, #8b949e)",
-                    cursor: "pointer",
-                    fontSize: "16px",
-                    padding: "2px 6px",
-                  }}
-                  title="Close modal"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Capability & Spread Info */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "10px",
-                color: "var(--text-muted, #8b949e)",
-                fontSize: "11px",
-                backgroundColor: "var(--bg-elevated, #0d1117)",
-                padding: "6px 10px",
-                borderRadius: "4px",
-                border: "1px solid var(--border-subtle, #30363d)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span>
-                  Capability:{" "}
-                  <strong style={{ color: "#58a6ff" }}>
-                    {depthCapability?.actualLevel === "LEVEL_20"
-                      ? "20-Level Full Depth (NSE)"
-                      : "5-Level Depth Feed (MCX/Forex/BSE)"}
-                  </strong>
-                </span>
-                <div style={{ display: "flex", gap: "4px" }}>
-                  <button
-                    type="button"
-                    onClick={() => setDepthLevelType("LEVEL_5")}
-                    style={{
-                      padding: "1px 6px",
-                      fontSize: "10px",
-                      borderRadius: "3px",
-                      border: "1px solid var(--border-subtle, #30363d)",
-                      backgroundColor: depthLevelType === "LEVEL_5" ? "var(--color-brand, #58a6ff)" : "transparent",
-                      color: depthLevelType === "LEVEL_5" ? "#fff" : "var(--text-muted, #8b949e)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    5
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDepthLevelType("LEVEL_20")}
-                    style={{
-                      padding: "1px 6px",
-                      fontSize: "10px",
-                      borderRadius: "3px",
-                      border: "1px solid var(--border-subtle, #30363d)",
-                      backgroundColor: depthLevelType === "LEVEL_20" ? "var(--color-brand, #58a6ff)" : "transparent",
-                      color: depthLevelType === "LEVEL_20" ? "#fff" : "var(--text-muted, #8b949e)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    20
-                  </button>
-                </div>
-              </div>
-              <span>
-                Spread: ₹{depthBook.spread.toFixed(2)} ({depthBook.spreadPct}%)
-              </span>
-            </div>
-
-            {/* Bids & Asks Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              {/* Bids */}
-              <div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "40px 1fr 1fr",
-                    fontWeight: 600,
-                    color: "#3fb950",
-                    borderBottom: "1px solid rgba(63, 185, 80, 0.3)",
-                    paddingBottom: "4px",
-                    marginBottom: "4px",
-                    fontSize: "11px",
-                  }}
-                >
-                  <span>Orders</span>
-                  <span style={{ textAlign: "right" }}>Qty</span>
-                  <span style={{ textAlign: "right" }}>Bid Price</span>
-                </div>
-                {depthBook.bids.slice(0, depthCapability?.actualLevel === "LEVEL_20" ? 20 : 5).map((bid, i) => (
-                  <div
-                    key={`bid-${i}`}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "40px 1fr 1fr",
-                      padding: "2px 0",
-                      fontFamily: "var(--font-family-mono)",
-                      fontSize: "11px",
-                    }}
-                  >
-                    <span style={{ color: "var(--text-muted, #8b949e)" }}>{bid.orders}</span>
-                    <span style={{ textAlign: "right", color: "var(--text-primary, #f0f6fc)" }}>
-                      {bid.quantity.toLocaleString("en-IN")}
-                    </span>
-                    <span style={{ textAlign: "right", color: "#3fb950", fontWeight: 600 }}>
-                      {bid.price.toFixed(2)}
-                    </span>
-                  </div>
-                ))}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    borderTop: "1px solid var(--border-subtle, #30363d)",
-                    marginTop: "6px",
-                    paddingTop: "4px",
-                    fontWeight: 600,
-                    fontSize: "11px",
-                  }}
-                >
-                  <span>Total Bid</span>
-                  <span style={{ fontFamily: "var(--font-family-mono)", color: "#3fb950" }}>
-                    {depthBook.totalBidQty.toLocaleString("en-IN")}
-                  </span>
-                </div>
-              </div>
-
-              {/* Asks */}
-              <div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 40px",
-                    fontWeight: 600,
-                    color: "#f85149",
-                    borderBottom: "1px solid rgba(248, 81, 73, 0.3)",
-                    paddingBottom: "4px",
-                    marginBottom: "4px",
-                    fontSize: "11px",
-                  }}
-                >
-                  <span>Ask Price</span>
-                  <span style={{ textAlign: "right" }}>Qty</span>
-                  <span style={{ textAlign: "right" }}>Orders</span>
-                </div>
-                {depthBook.asks.slice(0, depthCapability?.actualLevel === "LEVEL_20" ? 20 : 5).map((ask, i) => (
-                  <div
-                    key={`ask-${i}`}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr 40px",
-                      padding: "2px 0",
-                      fontFamily: "var(--font-family-mono)",
-                      fontSize: "11px",
-                    }}
-                  >
-                    <span style={{ color: "#f85149", fontWeight: 600 }}>{ask.price.toFixed(2)}</span>
-                    <span style={{ textAlign: "right", color: "var(--text-primary, #f0f6fc)" }}>
-                      {ask.quantity.toLocaleString("en-IN")}
-                    </span>
-                    <span style={{ textAlign: "right", color: "var(--text-muted, #8b949e)" }}>{ask.orders}</span>
-                  </div>
-                ))}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    borderTop: "1px solid var(--border-subtle, #30363d)",
-                    marginTop: "6px",
-                    paddingTop: "4px",
-                    fontWeight: 600,
-                    fontSize: "11px",
-                  }}
-                >
-                  <span>Total Ask</span>
-                  <span style={{ fontFamily: "var(--font-family-mono)", color: "#f85149" }}>
-                    {depthBook.totalAskQty.toLocaleString("en-IN")}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: "95vw" }}>
+            <MarketDepthCard
+              item={depthItem}
+              onClose={() => setDepthItem(null)}
+              capability={
+                depthCapability?.actualLevel === "LEVEL_20"
+                  ? "20-Level Full Depth (NSE)"
+                  : "5-Level Depth Feed"
+              }
+            />
           </div>
         </div>
       )}
