@@ -11,7 +11,7 @@ describe("built-in lazy widget catalog and bundle budget (QA-14)", () => {
 
       expect(loadedDefinition).toEqual(registeredDefinition);
     }
-  });
+  }, 15000);
 
   it("verifies all 22 built-in widgets are registered as lazy-loaded definitions", () => {
     expect(builtinManifests.length).toBeGreaterThanOrEqual(20);

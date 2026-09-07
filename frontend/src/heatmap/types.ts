@@ -3,6 +3,14 @@ export type WeightingSource =
   | "FREE_FLOAT_MCAP"
   | "FALLBACK_EQUAL_WEIGHT";
 
+export type IndexCategory =
+  | "BROAD_MARKET"
+  | "SECTORAL"
+  | "THEMATIC"
+  | "STRATEGY";
+
+export type NseColorBracket = "5" | "3" | "1" | "0" | "-1" | "-3" | "-5";
+
 export interface MarketBreadth {
   totalCount: number;
   advances: number;
@@ -21,6 +29,7 @@ export interface MarketBreadth {
 
 export interface IndexHeatmapItem {
   indexName: string;
+  category?: IndexCategory;
   sector: string;
   weight: number;
   changePct: number;
@@ -30,22 +39,27 @@ export interface IndexHeatmapItem {
   unchanged: number;
   futuresBasis: number;
   oiChangePct: number;
+  constituentCount?: number;
   weightingSource: WeightingSource;
 }
 
 export interface ConstituentHeatmapItem {
   symbol: string;
+  name?: string;
   sector: string;
   weight: number;
   isWeightFallback: boolean;
   weightingSource: WeightingSource;
   changePct: number;
+  changeAbs?: number;
   ltp: number;
+  prevClose?: number;
   volume: number;
 }
 
 export interface ConstituentHeatmapResponse {
   indexName: string;
+  category?: IndexCategory;
   breadth: MarketBreadth;
   cellTotalWeight: number;
   constituents: ConstituentHeatmapItem[];

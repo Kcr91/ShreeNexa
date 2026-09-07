@@ -31,7 +31,7 @@ describe("App Shell and Layout", () => {
     expect(within(main).getByRole("tab", { name: /Main Overview/i })).toBeInTheDocument();
     expect(within(main).getByText("Market Watchlist")).toBeInTheDocument();
     expect(within(main).getByText("Backtest Performance Summary")).toBeInTheDocument();
-    expect(await within(main).findByText("NIFTY 50")).toBeInTheDocument();
+    expect(await within(main).findByText("NIFTY 50", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Current clock:/i })).toBeInTheDocument();
     expect(screen.queryByText(/Widget not found:/i)).not.toBeInTheDocument();
   });

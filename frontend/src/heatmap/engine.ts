@@ -131,11 +131,35 @@ export function handleMissingWeights(
 }
 
 export function getHeatmapTileColor(changePct: number): string {
-  if (changePct >= 3.0) return "rgba(16, 185, 129, 0.9)"; // Strong green
-  if (changePct >= 1.0) return "rgba(16, 185, 129, 0.65)"; // Medium green
-  if (changePct >= 0.2) return "rgba(16, 185, 129, 0.35)"; // Mild green
-  if (changePct > -0.2) return "rgba(100, 116, 139, 0.25)"; // Neutral slate
-  if (changePct > -1.0) return "rgba(239, 68, 68, 0.35)"; // Mild red
-  if (changePct > -3.0) return "rgba(239, 68, 68, 0.65)"; // Medium red
-  return "rgba(239, 68, 68, 0.9)"; // Strong red
+  if (changePct > 0) {
+    const intensity = Math.min(Math.abs(changePct) / 3.0, 1.0);
+    const alpha = 0.35 + intensity * 0.55;
+    return `rgba(16, 185, 129, ${alpha.toFixed(2)})`;
+  } else if (changePct < 0) {
+    const intensity = Math.min(Math.abs(changePct) / 3.0, 1.0);
+    const alpha = 0.35 + intensity * 0.55;
+    return `rgba(239, 68, 68, ${alpha.toFixed(2)})`;
+  }
+  return "rgba(100, 116, 139, 0.4)";
+}
+
+export function getNseColorBracket(changePct: number): "5" | "3" | "1" | "0" | "-1" | "-3" | "-5" {
+  if (changePct >= 5.0) return "5";
+  if (changePct >= 3.0) return "3";
+  if (changePct > 0.0) return "1";
+  if (changePct === 0.0) return "0";
+  if (changePct > -3.0) return "-1";
+  if (changePct > -5.0) return "-3";
+  return "-5";
+}
+
+export function getNseColorForPct(changePct: number): string {
+  // Official NSE India Heatmap Palette (Images 1 to 4)
+  if (changePct >= 5.0) return "#0b7a3e"; // 5: Dark Green
+  if (changePct >= 3.0) return "#28a745"; // 3: Medium Green
+  if (changePct > 0.0) return "#58ba6d"; // 1: Light Green
+  if (changePct === 0.0) return "#8e99a8"; // 0%: Slate Grey
+  if (changePct > -3.0) return "#e87070"; // -1: Soft Coral / Light Red
+  if (changePct > -5.0) return "#c9302c"; // -3: Medium Red
+  return "#8b0000"; // -5: Dark Maroon Red
 }

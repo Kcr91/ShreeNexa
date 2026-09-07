@@ -3584,6 +3584,9 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Backend tests (`pytest backend/tests/unit/test_watchlists_api.py`): 4/4 passed.
   - Backend linting and typing (`ruff check`, `mypy --strict`): 0 issues.
   - End-to-end browser verification via subagent with video recording and screenshots captured.
+### 2026-09-07 — NSE India Live Market Indices Heatmap & Constituent Drill-In
 
-
-
+- Implemented official 4-category index navigation: Broad Market Indices (21), Sectoral Indices (23), Thematic Indices (39), Strategy Indices (6).
+- Constituent drill-in view opens on clicking any index (e.g. NIFTY 50 renders 50 constituent stocks, updated header, and category index navigation sidebar).
+- Official NSE 7-bracket color palette, live streaming simulation toggle, and As-on IST timestamp refresh controls.
+- Full verification: TypeScript, Vitest (MarketHeatmapWidget, engine, index catalog, App tests), backend pytest, ruff, mypy, and browser audit passed cleanly.

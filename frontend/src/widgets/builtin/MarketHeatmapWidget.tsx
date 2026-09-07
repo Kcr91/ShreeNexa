@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { WidgetComponentProps, WidgetDefinition } from "../types";
 import {
+  IndexCategory,
   IndexHeatmapItem,
   ConstituentHeatmapItem,
   MarketBreadth,
@@ -8,157 +9,48 @@ import {
 import {
   calculateMarketBreadth,
   handleMissingWeights,
-  getHeatmapTileColor,
+  getNseColorForPct,
 } from "../../heatmap/engine";
+import {
+  ALL_INDICES_BY_CATEGORY,
+  BROAD_MARKET_INDICES,
+  SECTORAL_INDICES,
+  THEMATIC_INDICES,
+  STRATEGY_INDICES,
+  NIFTY_50_AUTHENTIC_CONSTITUENTS,
+  getConstituentsForIndex,
+} from "../../heatmap/indicesCatalog";
 
 export interface HeatmapSettings {
   defaultMode?: "INDICES" | "CONSTITUENTS";
+  defaultCategory?: IndexCategory;
   defaultIndexName?: string;
 }
 
-const DEFAULT_INDICES: IndexHeatmapItem[] = [
-  {
-    indexName: "NIFTY 50",
-    sector: "Large Cap Benchmark",
-    weight: 25.0,
-    changePct: 0.85,
-    ltp: 25250.0,
-    advances: 32,
-    declines: 16,
-    unchanged: 2,
-    futuresBasis: 42.5,
-    oiChangePct: 2.8,
-    weightingSource: "OFFICIAL_NSE",
-  },
-  {
-    indexName: "NIFTY BANK",
-    sector: "Banking",
-    weight: 20.0,
-    changePct: 1.40,
-    ltp: 52150.0,
-    advances: 9,
-    declines: 3,
-    unchanged: 0,
-    futuresBasis: 65.0,
-    oiChangePct: 4.1,
-    weightingSource: "OFFICIAL_NSE",
-  },
-  {
-    indexName: "NIFTY IT",
-    sector: "Information Technology",
-    weight: 15.0,
-    changePct: -0.65,
-    ltp: 41800.0,
-    advances: 3,
-    declines: 7,
-    unchanged: 0,
-    futuresBasis: -15.0,
-    oiChangePct: -1.2,
-    weightingSource: "OFFICIAL_NSE",
-  },
-  {
-    indexName: "NIFTY AUTO",
-    sector: "Automotive",
-    weight: 10.0,
-    changePct: 1.85,
-    ltp: 26400.0,
-    advances: 11,
-    declines: 4,
-    unchanged: 0,
-    futuresBasis: 30.0,
-    oiChangePct: 3.5,
-    weightingSource: "OFFICIAL_NSE",
-  },
-  {
-    indexName: "NIFTY PHARMA",
-    sector: "Pharmaceuticals",
-    weight: 8.0,
-    changePct: 0.35,
-    ltp: 22900.0,
-    advances: 12,
-    declines: 8,
-    unchanged: 0,
-    futuresBasis: 12.0,
-    oiChangePct: 0.8,
-    weightingSource: "OFFICIAL_NSE",
-  },
-  {
-    indexName: "NIFTY FMCG",
-    sector: "FMCG",
-    weight: 8.0,
-    changePct: -0.40,
-    ltp: 58300.0,
-    advances: 5,
-    declines: 10,
-    unchanged: 0,
-    futuresBasis: -5.0,
-    oiChangePct: -0.5,
-    weightingSource: "OFFICIAL_NSE",
-  },
-  {
-    indexName: "NIFTY METAL",
-    sector: "Metals & Mining",
-    weight: 7.0,
-    changePct: 2.45,
-    ltp: 9650.0,
-    advances: 12,
-    declines: 3,
-    unchanged: 0,
-    futuresBasis: 25.0,
-    oiChangePct: 5.2,
-    weightingSource: "OFFICIAL_NSE",
-  },
-  {
-    indexName: "NIFTY ENERGY",
-    sector: "Energy",
-    weight: 7.0,
-    changePct: 0.75,
-    ltp: 39100.0,
-    advances: 6,
-    declines: 4,
-    unchanged: 0,
-    futuresBasis: 18.0,
-    oiChangePct: 1.5,
-    weightingSource: "OFFICIAL_NSE",
-  },
+const CATEGORY_TABS: { key: IndexCategory; label: string; count: number }[] = [
+  { key: "BROAD_MARKET", label: "Broad Market Indices", count: BROAD_MARKET_INDICES.length },
+  { key: "SECTORAL", label: "Sectoral Indices", count: SECTORAL_INDICES.length },
+  { key: "THEMATIC", label: "Thematic Indices", count: THEMATIC_INDICES.length },
+  { key: "STRATEGY", label: "Strategy Indices", count: STRATEGY_INDICES.length },
 ];
 
-const RAW_MOCK_CONSTITUENTS: Record<string, Parameters<typeof handleMissingWeights>[0]> = {
-  "NIFTY 50": [
-    { symbol: "RELIANCE", sector: "Energy", weight: 9.8, changePct: 1.25, ltp: 2980.5, volume: 4250000 },
-    { symbol: "HDFCBANK", sector: "Banking", weight: 8.5, changePct: 0.80, ltp: 1640.2, volume: 6800000 },
-    { symbol: "ICICIBANK", sector: "Banking", weight: 7.9, changePct: 1.65, ltp: 1215.3, volume: 5400000 },
-    { symbol: "INFY", sector: "IT", weight: 5.6, changePct: -1.10, ltp: 1890.1, volume: 3100000 },
-    { symbol: "TCS", sector: "IT", weight: 4.2, changePct: -0.45, ltp: 4210.0, volume: 1850000 },
-    { symbol: "LT", sector: "Infrastructure", weight: 3.8, changePct: 1.15, ltp: 3650.0, volume: 1200000 },
-    { symbol: "BHARTIARTL", sector: "Telecom", weight: 3.5, changePct: 0.90, ltp: 1540.0, volume: 2900000 },
-    { symbol: "SBIN", sector: "Banking", weight: 3.1, changePct: 1.05, ltp: 815.4, volume: 7600000 },
-    // Missing weights to test deterministic assignment and visible labelling
-    { symbol: "TATASTEEL", sector: "Metals", weight: null, changePct: 2.85, ltp: 154.8, volume: 12400000 },
-    { symbol: "MARUTI", sector: "Automotive", weight: null, changePct: 1.40, ltp: 12450.0, volume: 650000 },
-  ],
-  "NIFTY BANK": [
-    { symbol: "HDFCBANK", sector: "Banking", weight: 29.4, changePct: 0.80, ltp: 1640.2, volume: 6800000 },
-    { symbol: "ICICIBANK", sector: "Banking", weight: 24.1, changePct: 1.65, ltp: 1215.3, volume: 5400000 },
-    { symbol: "SBIN", sector: "Banking", weight: 11.2, changePct: 1.15, ltp: 815.4, volume: 7600000 },
-    { symbol: "AXISBANK", sector: "Banking", weight: 10.5, changePct: -0.25, ltp: 1180.0, volume: 3800000 },
-    { symbol: "KOTAKBANK", sector: "Banking", weight: 9.8, changePct: 0.40, ltp: 1790.0, volume: 2100000 },
-    { symbol: "INDUSINDBK", sector: "Banking", weight: 5.2, changePct: 1.80, ltp: 1420.0, volume: 1900000 },
-    { symbol: "BANKBARODA", sector: "Banking", weight: null, changePct: 2.10, ltp: 245.0, volume: 8500000 },
-  ],
-  "NIFTY IT": [
-    { symbol: "TCS", sector: "IT", weight: 28.5, changePct: -0.45, ltp: 4210.0, volume: 1850000 },
-    { symbol: "INFY", sector: "IT", weight: 26.2, changePct: -1.10, ltp: 1890.1, volume: 3100000 },
-    { symbol: "HCLTECH", sector: "IT", weight: 12.8, changePct: 0.75, ltp: 1780.4, volume: 1400000 },
-    { symbol: "WIPRO", sector: "IT", weight: 8.5, changePct: 0.35, ltp: 540.2, volume: 2200000 },
-    { symbol: "LTIM", sector: "IT", weight: 7.2, changePct: -1.30, ltp: 5120.0, volume: 750000 },
-    { symbol: "TECHM", sector: "IT", weight: null, changePct: 0.90, ltp: 1610.0, volume: 1100000 },
-  ],
-};
+function formatNseTimestamp(date: Date): string {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+}
 
 export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>> = ({
   settings,
 }) => {
+  const [activeCategory, setActiveCategory] = useState<IndexCategory>(
+    settings.defaultCategory || "BROAD_MARKET"
+  );
   const [viewMode, setViewMode] = useState<"INDICES" | "CONSTITUENTS">(
     settings.defaultMode || "INDICES"
   );
@@ -166,402 +58,779 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
     settings.defaultIndexName || "NIFTY 50"
   );
 
-  const [indices, setIndices] = useState<IndexHeatmapItem[]>(DEFAULT_INDICES);
-  const [constituentData, setConstituentData] = useState<{
-    cellTotalWeight: number;
-    constituents: ConstituentHeatmapItem[];
-  }>(() => handleMissingWeights(RAW_MOCK_CONSTITUENTS["NIFTY 50"] || []));
+  const [categoryData, setCategoryData] = useState<Record<IndexCategory, IndexHeatmapItem[]>>({
+    BROAD_MARKET: BROAD_MARKET_INDICES,
+    SECTORAL: SECTORAL_INDICES,
+    THEMATIC: THEMATIC_INDICES,
+    STRATEGY: STRATEGY_INDICES,
+  });
 
+  const [constituentsCache, setConstituentsCache] = useState<Record<string, ConstituentHeatmapItem[]>>({
+    "NIFTY 50": NIFTY_50_AUTHENTIC_CONSTITUENTS,
+  });
+
+  const [isStreaming, setIsStreaming] = useState<boolean>(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  // Attempt backend fetch if API is reachable
   useEffect(() => {
-    // Try fetching from backend API if running
     fetch("/api/v1/heatmap/indices")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          setIndices(
-            data.map((d) => ({
-              indexName: d.index_name,
-              sector: d.sector,
-              weight: d.weight,
-              changePct: d.change_pct,
-              ltp: d.ltp,
-              advances: d.advances,
-              declines: d.declines,
-              unchanged: d.unchanged,
-              futuresBasis: d.futures_basis,
-              oiChangePct: d.oi_change_pct,
-              weightingSource: d.weighting_source,
-            }))
-          );
+          setCategoryData((prev) => {
+            const updated = { ...prev };
+            data.forEach((d) => {
+              const cat: IndexCategory = (d.category as IndexCategory) || "SECTORAL";
+              if (updated[cat]) {
+                const idx = updated[cat].findIndex((i) => i.indexName === d.index_name);
+                if (idx >= 0) {
+                  updated[cat][idx] = {
+                    ...updated[cat][idx],
+                    ltp: d.ltp,
+                    changePct: d.change_pct,
+                    advances: d.advances,
+                    declines: d.declines,
+                    unchanged: d.unchanged,
+                    futuresBasis: d.futures_basis,
+                    oiChangePct: d.oi_change_pct,
+                  };
+                }
+              }
+            });
+            return updated;
+          });
         }
       })
       .catch(() => {});
   }, []);
 
+  // Fetch or resolve constituents when selectedIndex changes
   useEffect(() => {
-    const raw = RAW_MOCK_CONSTITUENTS[selectedIndex] || RAW_MOCK_CONSTITUENTS["NIFTY 50"];
-    setConstituentData(handleMissingWeights(raw));
-  }, [selectedIndex]);
+    if (!constituentsCache[selectedIndex]) {
+      // First try backend API
+      fetch(`/api/v1/heatmap/${encodeURIComponent(selectedIndex)}/constituents`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && Array.isArray(data.constituents) && data.constituents.length > 0) {
+            setConstituentsCache((prev) => ({
+              ...prev,
+              [selectedIndex]: data.constituents.map((c: any) => ({
+                symbol: c.symbol,
+                sector: c.sector,
+                weight: c.weight,
+                isWeightFallback: c.is_weight_fallback,
+                weightingSource: c.weighting_source,
+                changePct: c.change_pct,
+                ltp: c.ltp,
+                volume: c.volume,
+              })),
+            }));
+          } else {
+            // Use authentic / realistic generated fallback
+            const generated = getConstituentsForIndex(selectedIndex);
+            setConstituentsCache((prev) => ({
+              ...prev,
+              [selectedIndex]: generated,
+            }));
+          }
+        })
+        .catch(() => {
+          const generated = getConstituentsForIndex(selectedIndex);
+          setConstituentsCache((prev) => ({
+            ...prev,
+            [selectedIndex]: generated,
+          }));
+        });
+    }
+  }, [selectedIndex, constituentsCache]);
+
+  // Live streaming simulation tick
+  useEffect(() => {
+    if (!isStreaming) return;
+
+    const interval = setInterval(() => {
+      setLastUpdated(new Date());
+
+      if (viewMode === "INDICES") {
+        setCategoryData((prev) => {
+          const list = prev[activeCategory];
+          if (!list || list.length === 0) return prev;
+
+          // Pick 3 random items to adjust tick
+          const updated = [...list];
+          for (let k = 0; k < Math.min(3, updated.length); k++) {
+            const randIdx = Math.floor(Math.random() * updated.length);
+            const item = { ...updated[randIdx] };
+            const delta = Number(((Math.random() - 0.5) * 0.08).toFixed(2));
+            item.changePct = Number((item.changePct + delta).toFixed(2));
+            item.ltp = Number((item.ltp * (1 + delta / 100)).toFixed(2));
+            updated[randIdx] = item;
+          }
+
+          return { ...prev, [activeCategory]: updated };
+        });
+      } else {
+        setConstituentsCache((prev) => {
+          const list = prev[selectedIndex];
+          if (!list || list.length === 0) return prev;
+
+          const updated = [...list];
+          for (let k = 0; k < Math.min(4, updated.length); k++) {
+            const randIdx = Math.floor(Math.random() * updated.length);
+            const item = { ...updated[randIdx] };
+            const delta = Number(((Math.random() - 0.5) * 0.12).toFixed(2));
+            item.changePct = Number((item.changePct + delta).toFixed(2));
+            item.ltp = Number((item.ltp * (1 + delta / 100)).toFixed(2));
+            updated[randIdx] = item;
+          }
+
+          return { ...prev, [selectedIndex]: updated };
+        });
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isStreaming, viewMode, activeCategory, selectedIndex]);
+
+  // Current active indices list
+  const currentIndicesList = useMemo(() => {
+    return categoryData[activeCategory] || ALL_INDICES_BY_CATEGORY[activeCategory];
+  }, [categoryData, activeCategory]);
+
+  // Current active constituents list
+  const currentConstituents = useMemo(() => {
+    const list = constituentsCache[selectedIndex] || getConstituentsForIndex(selectedIndex);
+    return handleMissingWeights(list).constituents;
+  }, [constituentsCache, selectedIndex]);
 
   // Compute active market breadth
   const activeBreadth: MarketBreadth = useMemo(() => {
     if (viewMode === "INDICES") {
-      return calculateMarketBreadth(indices);
+      return calculateMarketBreadth(currentIndicesList);
     }
-    return calculateMarketBreadth(constituentData.constituents);
-  }, [viewMode, indices, constituentData]);
+    return calculateMarketBreadth(currentConstituents);
+  }, [viewMode, currentIndicesList, currentConstituents]);
+
+  const handleCategorySelect = (category: IndexCategory) => {
+    setActiveCategory(category);
+    setViewMode("INDICES");
+  };
 
   const handleIndexClick = (indexName: string) => {
     setSelectedIndex(indexName);
     setViewMode("CONSTITUENTS");
   };
 
+  const handleBackToOverview = () => {
+    setViewMode("INDICES");
+  };
+
+  const handleStockClick = (symbol: string) => {
+    window.dispatchEvent(
+      new CustomEvent("shreenexa:select-symbol", { detail: { symbol } })
+    );
+  };
+
+  const handleManualRefresh = useCallback(() => {
+    setLastUpdated(new Date());
+    if (viewMode === "INDICES") {
+      setCategoryData((prev) => {
+        const list = prev[activeCategory];
+        if (!list) return prev;
+        const updated = list.map((item) => {
+          const delta = Number(((Math.random() - 0.5) * 0.05).toFixed(2));
+          return {
+            ...item,
+            changePct: Number((item.changePct + delta).toFixed(2)),
+            ltp: Number((item.ltp * (1 + delta / 100)).toFixed(2)),
+          };
+        });
+        return { ...prev, [activeCategory]: updated };
+      });
+    } else {
+      setConstituentsCache((prev) => {
+        const list = prev[selectedIndex];
+        if (!list) return prev;
+        const updated = list.map((item) => {
+          const delta = Number(((Math.random() - 0.5) * 0.06).toFixed(2));
+          return {
+            ...item,
+            changePct: Number((item.changePct + delta).toFixed(2)),
+            ltp: Number((item.ltp * (1 + delta / 100)).toFixed(2)),
+          };
+        });
+        return { ...prev, [selectedIndex]: updated };
+      });
+    }
+  }, [viewMode, activeCategory, selectedIndex]);
+
+  // Header Title calculation
+  const headerTitle = useMemo(() => {
+    if (viewMode === "CONSTITUENTS") {
+      return `${selectedIndex}(${currentConstituents.length})`;
+    }
+    const catTab = CATEGORY_TABS.find((t) => t.key === activeCategory);
+    return `${catTab?.label || "Indices"}(${currentIndicesList.length})`;
+  }, [viewMode, selectedIndex, currentConstituents.length, activeCategory, currentIndicesList.length]);
+
   return (
     <div
       style={{
         height: "100%",
         display: "flex",
-        flexDirection: "column",
+        flexDirection: "row",
         backgroundColor: "var(--bg-surface)",
         color: "var(--text-primary)",
         fontSize: "var(--font-size-sm)",
+        overflow: "hidden",
+        userSelect: "none",
       }}
     >
-      {/* 1. Control Toolbar */}
+      {/* =================================================================== */}
+      {/* Left Navigation Panel                                               */}
+      {/* =================================================================== */}
       <div
         style={{
+          width: "205px",
+          minWidth: "190px",
+          maxWidth: "240px",
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "var(--spacing-2)",
-          padding: "var(--spacing-2)",
+          flexDirection: "column",
           backgroundColor: "var(--bg-elevated)",
-          borderBottom: "1px solid var(--border-subtle)",
+          borderRight: "1px solid var(--border-subtle)",
+          overflowY: "auto",
         }}
       >
-        <div style={{ display: "flex", gap: "var(--spacing-1)" }}>
-          <button
-            type="button"
-            onClick={() => setViewMode("INDICES")}
-            style={{
-              padding: "4px 10px",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-subtle)",
-              backgroundColor: viewMode === "INDICES" ? "var(--color-brand)" : "transparent",
-              color: viewMode === "INDICES" ? "#fff" : "var(--text-muted)",
-              fontWeight: 600,
-              fontSize: "var(--font-size-xs)",
-              cursor: "pointer",
-            }}
-          >
-            Sectoral Indices
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("CONSTITUENTS")}
-            style={{
-              padding: "4px 10px",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-subtle)",
-              backgroundColor: viewMode === "CONSTITUENTS" ? "var(--color-brand)" : "transparent",
-              color: viewMode === "CONSTITUENTS" ? "#fff" : "var(--text-muted)",
-              fontWeight: 600,
-              fontSize: "var(--font-size-xs)",
-              cursor: "pointer",
-            }}
-          >
-            Constituents Drill-In
-          </button>
-        </div>
-
-        {viewMode === "CONSTITUENTS" && (
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-1)" }}>
-            <label style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-              Index:
-            </label>
-            <select
-              value={selectedIndex}
-              onChange={(e) => setSelectedIndex(e.target.value)}
+        {viewMode === "INDICES" ? (
+          // 1. Category Selector (Images 1, 2, 3)
+          <div style={{ display: "flex", flexDirection: "column", padding: "12px 8px" }}>
+            <div
               style={{
-                padding: "2px 8px",
-                borderRadius: "var(--radius-sm)",
                 border: "1px solid var(--border-subtle)",
-                backgroundColor: "var(--bg-input)",
-                color: "var(--text-primary)",
-                fontSize: "var(--font-size-xs)",
-                fontWeight: 600,
+                borderRadius: "6px",
+                overflow: "hidden",
+                backgroundColor: "var(--bg-surface)",
               }}
             >
-              {DEFAULT_INDICES.map((idx) => (
-                <option key={idx.indexName} value={idx.indexName}>
-                  {idx.indexName}
-                </option>
-              ))}
-            </select>
+              {CATEGORY_TABS.map((tab, idx) => {
+                const isActive = activeCategory === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => handleCategorySelect(tab.key)}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px 14px",
+                      background: isActive ? "rgba(216, 90, 56, 0.08)" : "transparent",
+                      border: "none",
+                      borderLeft: isActive ? "3px solid #d85a38" : "3px solid transparent",
+                      borderBottom:
+                        idx < CATEGORY_TABS.length - 1 ? "1px solid var(--border-subtle)" : "none",
+                      color: isActive ? "#d85a38" : "var(--text-primary)",
+                      fontWeight: isActive ? 700 : 500,
+                      fontSize: "12.5px",
+                      cursor: "pointer",
+                      transition: "background 0.15s ease",
+                      outline: "none",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+          </div>
+        ) : (
+          // 2. Index List for Drill-In Mode (Image 4)
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <div
+              style={{
+                padding: "10px 12px",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "var(--bg-surface)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleBackToOverview}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#d85a38",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "11px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: 0,
+                }}
+              >
+                ← Categories
+              </button>
+              <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 600 }}>
+                {CATEGORY_TABS.find((t) => t.key === activeCategory)?.label}
+              </span>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px 6px" }}>
+              <div
+                style={{
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                  backgroundColor: "var(--bg-surface)",
+                }}
+              >
+                {currentIndicesList.map((idxItem, i) => {
+                  const isSelected = selectedIndex === idxItem.indexName;
+                  return (
+                    <button
+                      key={idxItem.indexName}
+                      type="button"
+                      onClick={() => setSelectedIndex(idxItem.indexName)}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        background: isSelected ? "rgba(216, 90, 56, 0.08)" : "transparent",
+                        border: "none",
+                        borderLeft: isSelected ? "3px solid #d85a38" : "3px solid transparent",
+                        borderBottom:
+                          i < currentIndicesList.length - 1 ? "1px solid var(--border-subtle)" : "none",
+                        color: isSelected ? "#d85a38" : "var(--text-primary)",
+                        fontWeight: isSelected ? 700 : 500,
+                        fontSize: "11px",
+                        cursor: "pointer",
+                        outline: "none",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "block",
+                      }}
+                      title={idxItem.indexName}
+                    >
+                      {idxItem.indexName}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* 2. Sentiment & Market Breadth Bar */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "var(--spacing-2)",
-          padding: "var(--spacing-1) var(--spacing-2)",
-          backgroundColor: "var(--bg-surface)",
-          borderBottom: "1px solid var(--border-subtle)",
-          fontSize: "var(--font-size-xs)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)" }}>
-          <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Breadth:</span>
-          <span
-            style={{
-              padding: "1px 6px",
-              borderRadius: "var(--radius-sm)",
-              backgroundColor: "var(--color-up-bg)",
-              color: "var(--color-up)",
-              fontWeight: 700,
-            }}
-          >
-            ▲ {activeBreadth.advances} Adv
-          </span>
-          <span
-            style={{
-              padding: "1px 6px",
-              borderRadius: "var(--radius-sm)",
-              backgroundColor: "var(--color-down-bg)",
-              color: "var(--color-down)",
-              fontWeight: 700,
-            }}
-          >
-            ▼ {activeBreadth.declines} Dec
-          </span>
-          <span
-            style={{
-              padding: "1px 6px",
-              borderRadius: "var(--radius-sm)",
-              backgroundColor: "var(--bg-elevated)",
-              color: "var(--text-muted)",
-            }}
-          >
-            ● {activeBreadth.unchanged} Unch
-          </span>
-          <span style={{ color: "var(--text-muted)" }}>
-            A/D: <strong>{activeBreadth.advanceDeclineRatio.toFixed(2)}</strong>
-          </span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)" }}>
-          <span style={{ color: "var(--text-muted)" }}>
-            Above Prev Close: <strong>{activeBreadth.pctAbovePrevClose}%</strong>
-          </span>
-          <span style={{ color: "var(--text-muted)" }}>
-            Weighted:{" "}
-            <strong
-              style={{
-                color:
-                  activeBreadth.weightedBreadth >= 0
-                    ? "var(--color-up)"
-                    : "var(--color-down)",
-              }}
-            >
-              {activeBreadth.weightedBreadth >= 0 ? "+" : ""}
-              {activeBreadth.weightedBreadth.toFixed(2)}%
-            </strong>
-          </span>
-          <span
-            style={{
-              padding: "2px 8px",
-              borderRadius: "var(--radius-sm)",
-              backgroundColor:
-                activeBreadth.sentimentPosture.includes("Bullish")
-                  ? "var(--color-up-bg)"
-                  : activeBreadth.sentimentPosture.includes("Bearish")
-                  ? "var(--color-down-bg)"
-                  : "var(--bg-elevated)",
-              color:
-                activeBreadth.sentimentPosture.includes("Bullish")
-                  ? "var(--color-up)"
-                  : activeBreadth.sentimentPosture.includes("Bearish")
-                  ? "var(--color-down)"
-                  : "var(--text-primary)",
-              fontWeight: 700,
-            }}
-          >
-            {activeBreadth.sentimentPosture}
-          </span>
-        </div>
-      </div>
-
-      {/* 3. Heatmap Matrix */}
+      {/* =================================================================== */}
+      {/* Right Content Area                                                  */}
+      {/* =================================================================== */}
       <div
         style={{
           flex: 1,
-          overflowY: "auto",
-          padding: "var(--spacing-2)",
           display: "flex",
-          flexWrap: "wrap",
-          alignContent: "flex-start",
-          gap: "var(--spacing-1)",
+          flexDirection: "column",
+          minWidth: 0,
+          height: "100%",
+          overflow: "hidden",
         }}
       >
-        {viewMode === "INDICES" ? (
-          // Index Level View
-          indices.map((item) => {
-            const isUp = item.changePct >= 0;
-            const bgColor = getHeatmapTileColor(item.changePct);
-            const basisStr =
-              item.futuresBasis >= 0 ? `+${item.futuresBasis}` : `${item.futuresBasis}`;
-
-            return (
-              <div
-                key={item.indexName}
-                onClick={() => handleIndexClick(item.indexName)}
+        {/* 1. Header Toolbar (Images 1-4) */}
+        <div
+          style={{
+            padding: "8px 14px",
+            backgroundColor: "var(--bg-surface)",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "10px",
+          }}
+        >
+          {/* Left Title & Back Navigation */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {viewMode === "CONSTITUENTS" && (
+              <button
+                type="button"
+                onClick={handleBackToOverview}
                 style={{
-                  flexGrow: item.weight,
-                  flexBasis: `${Math.max(120, item.weight * 12)}px`,
-                  minHeight: "95px",
-                  padding: "var(--spacing-2)",
-                  borderRadius: "var(--radius-sm)",
-                  backgroundColor: bgColor,
-                  color: "#fff",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
+                  background: "none",
+                  border: "none",
+                  color: "#d85a38",
+                  fontSize: "12px",
+                  fontWeight: 700,
                   cursor: "pointer",
-                  transition: "transform 0.15s ease, box-shadow 0.15s ease",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                }}
-                title={`Click to drill down into ${item.indexName} constituents`}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span style={{ fontWeight: 700, fontSize: "var(--font-size-sm)" }}>
-                    {item.indexName}
-                  </span>
-                  <span style={{ fontSize: "11px", opacity: 0.9 }}>
-                    Wt: {item.weight}%
-                  </span>
-                </div>
-
-                <div style={{ textAlign: "center", margin: "4px 0" }}>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-family-mono)",
-                      fontSize: "var(--font-size-lg)",
-                      fontWeight: 800,
-                      textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-                    }}
-                  >
-                    {isUp ? "+" : ""}
-                    {item.changePct.toFixed(2)}%
-                  </div>
-                  <div style={{ fontSize: "10px", opacity: 0.85, fontFamily: "var(--font-family-mono)" }}>
-                    ₹{item.ltp.toLocaleString("en-IN")}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "10px",
-                    opacity: 0.85,
-                    borderTop: "1px solid rgba(255, 255, 255, 0.15)",
-                    paddingTop: "3px",
-                  }}
-                >
-                  <span>Basis: {basisStr}</span>
-                  <span>OI: {item.oiChangePct >= 0 ? "+" : ""}{item.oiChangePct}%</span>
-                  <span>{item.advances}A / {item.declines}D</span>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          // Constituent Drill-In View
-          constituentData.constituents.map((item) => {
-            const isUp = item.changePct >= 0;
-            const bgColor = getHeatmapTileColor(item.changePct);
-
-            return (
-              <div
-                key={item.symbol}
-                style={{
-                  flexGrow: item.weight,
-                  flexBasis: `${Math.max(100, item.weight * 14)}px`,
-                  minHeight: "85px",
-                  padding: "var(--spacing-2)",
-                  borderRadius: "var(--radius-sm)",
-                  backgroundColor: bgColor,
-                  color: "#fff",
                   display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span style={{ fontWeight: 700, fontSize: "var(--font-size-sm)" }}>
-                    {item.symbol}
-                  </span>
-                  <span style={{ fontSize: "11px", opacity: 0.9 }}>
-                    {item.weight}%
-                  </span>
-                </div>
+                ← Back
+              </button>
+            )}
 
-                <div style={{ textAlign: "center", margin: "2px 0" }}>
+            <span
+              style={{
+                fontSize: "16px",
+                fontWeight: 800,
+                color: "#2a225e",
+                letterSpacing: "0.2px",
+              }}
+            >
+              {headerTitle}
+            </span>
+
+            {/* View Mode icons */}
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "4px", opacity: 0.7 }}>
+              <span style={{ fontSize: "14px", cursor: "pointer" }} title="Grid View">▦</span>
+              <span style={{ fontSize: "14px", cursor: "pointer" }} title="Chart View">📊</span>
+            </div>
+          </div>
+
+          {/* Right Controls: Streaming toggle, Breadth Pills, As On Time, Refresh */}
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+            {/* Streaming Toggle */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" }}>
+              <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Streaming</span>
+              <button
+                type="button"
+                onClick={() => setIsStreaming(!isStreaming)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "2px 8px",
+                  borderRadius: "12px",
+                  border: isStreaming ? "1px solid #0b7a3e" : "1px solid var(--border-subtle)",
+                  backgroundColor: isStreaming ? "#0b7a3e" : "var(--bg-elevated)",
+                  color: isStreaming ? "#ffffff" : "var(--text-muted)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "10.5px",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {isStreaming ? "On" : "Off"}
+              </button>
+            </div>
+
+            {/* Official 7-tier NSE Legend Badges */}
+            <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+              <span style={{ backgroundColor: "#0b7a3e", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>5</span>
+              <span style={{ backgroundColor: "#28a745", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>3</span>
+              <span style={{ backgroundColor: "#58ba6d", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>1</span>
+              <span style={{ backgroundColor: "#8e99a8", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>0%</span>
+              <span style={{ backgroundColor: "#e87070", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>-1</span>
+              <span style={{ backgroundColor: "#c9302c", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>-3</span>
+              <span style={{ backgroundColor: "#8b0000", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>-5</span>
+            </div>
+
+            {/* Timestamp & Refresh */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "var(--text-muted)" }}>
+              <span>As on {formatNseTimestamp(lastUpdated)} IST</span>
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                title="Refresh market data"
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#d85a38",
+                  fontSize: "14px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  padding: "0 2px",
+                }}
+              >
+                ↻
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Sentiment & Market Breadth Bar */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "var(--spacing-2)",
+            padding: "4px 14px",
+            backgroundColor: "var(--bg-elevated)",
+            borderBottom: "1px solid var(--border-subtle)",
+            fontSize: "11px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Breadth:</span>
+            <span
+              style={{
+                padding: "1px 6px",
+                borderRadius: "var(--radius-sm)",
+                backgroundColor: "var(--color-up-bg)",
+                color: "var(--color-up)",
+                fontWeight: 700,
+              }}
+            >
+              ▲ {activeBreadth.advances} Adv
+            </span>
+            <span
+              style={{
+                padding: "1px 6px",
+                borderRadius: "var(--radius-sm)",
+                backgroundColor: "var(--color-down-bg)",
+                color: "var(--color-down)",
+                fontWeight: 700,
+              }}
+            >
+              ▼ {activeBreadth.declines} Dec
+            </span>
+            <span
+              style={{
+                padding: "1px 6px",
+                borderRadius: "var(--radius-sm)",
+                backgroundColor: "var(--bg-surface)",
+                color: "var(--text-muted)",
+              }}
+            >
+              ● {activeBreadth.unchanged} Unch
+            </span>
+            <span style={{ color: "var(--text-muted)" }}>
+              A/D: <strong>{activeBreadth.advanceDeclineRatio.toFixed(2)}</strong>
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ color: "var(--text-muted)" }}>
+              Above Prev Close: <strong>{activeBreadth.pctAbovePrevClose}%</strong>
+            </span>
+            <span style={{ color: "var(--text-muted)" }}>
+              Weighted:{" "}
+              <strong
+                style={{
+                  color:
+                    activeBreadth.weightedBreadth >= 0
+                      ? "var(--color-up)"
+                      : "var(--color-down)",
+                }}
+              >
+                {activeBreadth.weightedBreadth >= 0 ? "+" : ""}
+                {activeBreadth.weightedBreadth.toFixed(2)}%
+              </strong>
+            </span>
+            <span
+              style={{
+                padding: "2px 8px",
+                borderRadius: "var(--radius-sm)",
+                backgroundColor:
+                  activeBreadth.sentimentPosture.includes("Bullish")
+                    ? "var(--color-up-bg)"
+                    : activeBreadth.sentimentPosture.includes("Bearish")
+                    ? "var(--color-down-bg)"
+                    : "var(--bg-surface)",
+                color:
+                  activeBreadth.sentimentPosture.includes("Bullish")
+                    ? "var(--color-up)"
+                    : activeBreadth.sentimentPosture.includes("Bearish")
+                    ? "var(--color-down)"
+                    : "var(--text-primary)",
+                fontWeight: 700,
+              }}
+            >
+              {activeBreadth.sentimentPosture}
+            </span>
+          </div>
+        </div>
+
+        {/* 3. Heatmap Grid Matrix */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "12px",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+            gap: "8px",
+            alignContent: "flex-start",
+          }}
+        >
+          {viewMode === "INDICES" ? (
+            // Category Indices Heatmap (Images 1, 2, 3)
+            currentIndicesList.map((item) => {
+              const isUp = item.changePct >= 0;
+              const bgColor = getNseColorForPct(item.changePct);
+
+              return (
+                <div
+                  key={item.indexName}
+                  onClick={() => handleIndexClick(item.indexName)}
+                  style={{
+                    backgroundColor: bgColor,
+                    borderRadius: "6px",
+                    padding: "8px 10px",
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "72px",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+                    transition: "transform 0.12s ease, box-shadow 0.12s ease",
+                  }}
+                  title={`Click to view constituents of ${item.indexName}`}
+                >
                   <div
                     style={{
-                      fontFamily: "var(--font-family-mono)",
-                      fontSize: "var(--font-size-md)",
-                      fontWeight: 800,
-                      textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                      fontWeight: 700,
+                      fontSize: "11px",
+                      lineHeight: "1.25",
+                      letterSpacing: "0.1px",
+                      whiteSpace: "normal",
+                      wordBreak: "break-word",
                     }}
                   >
-                    {isUp ? "+" : ""}
-                    {item.changePct.toFixed(2)}%
+                    {item.indexName}
                   </div>
-                  <div style={{ fontSize: "10px", opacity: 0.85, fontFamily: "var(--font-family-mono)" }}>
-                    ₹{item.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                  </div>
-                </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    fontSize: "9px",
-                    borderTop: "1px solid rgba(255, 255, 255, 0.15)",
-                    paddingTop: "2px",
-                  }}
-                >
-                  <span style={{ opacity: 0.85 }}>{item.sector}</span>
-                  {item.isWeightFallback ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-end",
+                      marginTop: "8px",
+                    }}
+                  >
                     <span
                       style={{
-                        backgroundColor: "rgba(245, 158, 11, 0.8)",
-                        color: "#000",
-                        padding: "1px 3px",
-                        borderRadius: "2px",
+                        fontSize: "11.5px",
+                        fontFamily: "var(--font-family-mono)",
                         fontWeight: 700,
                       }}
-                      title="Missing Weight - Fallback Equal Share Assigned"
                     >
-                      Fallback Wt
+                      {item.ltp.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
-                  ) : (
-                    <span style={{ opacity: 0.75 }}>{item.weightingSource}</span>
-                  )}
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontFamily: "var(--font-family-mono)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {isUp ? "+" : ""}
+                      {item.changePct.toFixed(2)}%
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          ) : (
+            // Constituent Drill-In Heatmap (Image 4)
+            currentConstituents.map((stock) => {
+              const isUp = stock.changePct >= 0;
+              const bgColor = getNseColorForPct(stock.changePct);
+
+              return (
+                <div
+                  key={stock.symbol}
+                  onClick={() => handleStockClick(stock.symbol)}
+                  style={{
+                    backgroundColor: bgColor,
+                    borderRadius: "6px",
+                    padding: "8px 10px",
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "68px",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+                    position: "relative",
+                    transition: "transform 0.12s ease, box-shadow 0.12s ease",
+                  }}
+                  title={`${stock.name || stock.symbol} (${stock.sector}) - Click to select`}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "4px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: "11.5px",
+                        letterSpacing: "0.2px",
+                      }}
+                    >
+                      {stock.symbol}
+                    </span>
+                    {stock.isWeightFallback && (
+                      <span
+                        style={{
+                          backgroundColor: "rgba(245, 158, 11, 0.95)",
+                          color: "#000",
+                          padding: "1px 3px",
+                          borderRadius: "2px",
+                          fontSize: "8.5px",
+                          fontWeight: 700,
+                          lineHeight: "1",
+                        }}
+                        title="Missing Weight - Fallback Equal Share Assigned"
+                      >
+                        Fallback Wt
+                      </span>
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-end",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "11.5px",
+                        fontFamily: "var(--font-family-mono)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {stock.ltp.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontFamily: "var(--font-family-mono)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {isUp ? "+" : ""}
+                      {stock.changePct.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
@@ -570,7 +839,8 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
 export const marketHeatmapDefinition: WidgetDefinition<HeatmapSettings> = {
   id: "market-heatmap",
   title: "Market Heatmap & Breadth",
-  description: "Sectoral indices and constituent heatmaps with market breadth and transparent weighting.",
+  description:
+    "Sectoral indices and constituent heatmaps with market breadth and transparent weighting.",
   category: "analytics",
   icon: "🔥",
   defaultWidth: 540,
