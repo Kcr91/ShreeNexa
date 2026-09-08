@@ -3655,3 +3655,73 @@ a live branch indicator; run `git status --short --branch` for current state.
   - Static typing (`mypy backend --strict`): Success, 336 source files clean.
   - Manifest & fixtures validation (`validate_manifest.py`, `validate_fixtures.py`): Clean.
   - Live browser audit verified real constituent drill-ins for Nifty Auto, Nifty Defence, Nifty Bank, and Nifty Pharma.
+
+### 2026-09-07 — Index Constituent & Watchlist Data Correctness Audit
+
+Audited every heatmap index and standard watchlist against the exchange's own
+publications. Most lists were wrong: some were placeholders, some were copies of
+a different index, and the F&O master had drifted two years out of date.
+
+- **Root cause**: the constituent data was hand-assembled and had no way to be
+  re-derived, so it silently rotted through every NSE rebalance, rename and demerger.
+  Fixed by making all of it generated from the exchange's own files.
+
+- **New generator `scripts/fetch_nse_constituents.py`** (+ `scripts/_nse_sources.py`)
+  rebuilds all three data artefacts from public sources, prints a symbol-level diff,
+  and refuses to invent a symbol it cannot find in the live masters:
+  - `niftyindices.com/IndexConstituent/<index>.csv` — official constituents (83 indices)
+  - `nsearchives.nseindia.com/content/fo/fo_mktlots.csv` — F&O eligible equities
+  - `nsearchives.nseindia.com/content/equities/EQUITY_L.csv` — live NSE equity master
+  - `images.dhan.co/api-data/api-scrip-master-detailed.csv` — real Dhan security ids
+
+- **Heatmap indices fixed** (`frontend/src/heatmap/officialConstituents.ts`,
+  `config/nifty_official_constituents.json` — both now generated):
+  - 7 indices shipped a verbatim copy of a *different* index. NIFTY SHARIAH 25,
+    NIFTY50 SHARIAH and NIFTY500 SHARIAH were copies of Nifty 50/500 — banks,
+    ITC and liquor included, contradicting the index's own methodology.
+    NIFTY100 ESG / ENH ESG were copies of Nifty 100; NIFTY INTERNET was a copy of
+    NIFTY IND DIGITAL; NIFTY INFRALOG a copy of NIFTY MULTI INFRA.
+  - NIFTY CORP MARKET was the 10 largest Nifty 50 names; it is Nifty Capital
+    Markets (17 exchanges, AMCs and brokers).
+  - NIFTYCONGLOMERATES held 23 Tata companies instead of the 50 Nifty Conglomerate names.
+  - NIFTY TRANS LOGISTICS, NIFTY INFRALOG and others were stale by a full rebalance.
+  - Counts now match the index name exactly (Nifty 500 = 500, Total Market = 750,
+    Microcap 250 = 250); NSE's `DUMMY*` placeholder rows are filtered out.
+  - `NIFTY_50_AUTHENTIC_CONSTITUENTS` weights summed to 110.82%; rescaled to 100%.
+  - The 6 indices NSE publishes no constituent CSV for (Shariah ×3, ESG ×2, EV) are
+    now derived by documented methodology screens and flagged via the new
+    `DERIVED_INDICES` set and `DERIVED_SCREEN` weighting source, instead of being
+    mislabelled `OFFICIAL_NSE`.
+
+- **Standard watchlists fixed** (`frontend/src/watchlist/standardWatchlists.ts`):
+  - Nifty 100 / 200 / LargeMidcap 250 / Midcap 150 / Midcap Select / Smallcap 250 /
+    Microcap 250 were not index constituents at all — `getExpandedStockList()` took
+    the first N F&O stocks and padded the remainder with invented `STK001…` tickers
+    carrying random security ids. That function is deleted; all seven now use the
+    official NSE lists.
+  - Every remaining index list was stale: Bank Nifty missing 3 banks, Nifty IT had
+    `LTM`/`OFSS` wrong, and Auto/FMCG/Pharma/Metal/Realty/FinNifty each had 3-5
+    wrong names.
+  - `FNO_208_STOCKS` → `FNO_STOCKS` (alias kept): 8 delisted symbols
+    (TATAMOTORS, LTIM, ZOMATO, MCDOWELL-N, GMRINFRA, GUJGASLTD, PEL, BCON),
+    54 names no longer F&O eligible, and 56 missing ones. Now 210 from NSE's file.
+  - **39 of 208 F&O security ids were wrong**, plus 11 more in `storage.ts` — these
+    are what the Dhan API is called with, so they were silently unresolvable.
+  - New `frontend/src/watchlist/nseStockMaster.ts` (897 stocks) backs `findStock()`,
+    which previously synthesized `"<SYM> India Ltd"` at ₹500 with a random id.
+  - `itemCount` now derives from the list instead of a hardcoded number.
+  - Sensex 30 / BSE Bankex stay hand-maintained (BSE publishes no machine-readable
+    constituent feed); the delisted TATAMOTORS was corrected to TMPV and both are
+    now validated against the NSE equity master by test.
+
+- **Regression tests** (new `frontend/src/heatmap/indicesCatalog.test.ts`, extended
+  `standardWatchlists.test.ts`) lock the whole class of bug: every shipped symbol
+  must be a listed NSE stock with a matching Dhan security id, no synthetic
+  `STK###`, no duplicates, no two indices sharing a constituent list unless NSE
+  genuinely shares the universe, no heuristic fallback path, weights sum to 100%,
+  Shariah indices free of the businesses their methodology excludes, and every
+  index-backed watchlist equal to its official NSE list.
+
+- **Verification**: frontend 65/65 files, 266/266 tests; backend 675/675 tests;
+  `tsc --noEmit` clean; `vite build` clean; `ruff check .` clean;
+  `mypy backend --strict` clean over 336 files; generator re-run is idempotent.

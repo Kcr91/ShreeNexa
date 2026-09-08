@@ -1,6 +1,6 @@
 import { IndexCategory, IndexHeatmapItem, ConstituentHeatmapItem } from "./types";
 import { FNO_208_STOCKS } from "../watchlist/standardWatchlists";
-import { OFFICIAL_INDEX_CONSTITUENTS } from "./officialConstituents";
+import { OFFICIAL_INDEX_CONSTITUENTS, DERIVED_INDICES } from "./officialConstituents";
 
 // ---------------------------------------------------------------------------
 // 1. Broad Market Indices (21 indices - Image 1)
@@ -126,56 +126,56 @@ export const ALL_INDICES_BY_CATEGORY: Record<IndexCategory, IndexHeatmapItem[]> 
 // 5. Authentic Constituent Stocks (Matching Image 4 for NIFTY 50 and Sectors)
 // ---------------------------------------------------------------------------
 export const NIFTY_50_AUTHENTIC_CONSTITUENTS: ConstituentHeatmapItem[] = [
-  { symbol: "APOLLOHOSP", name: "Apollo Hospitals", sector: "Healthcare", weight: 0.95, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 8750.00, changePct: 1.27, volume: 850000 },
-  { symbol: "LT", name: "Larsen & Toubro Ltd", sector: "Construction", weight: 3.85, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3659.00, changePct: 0.89, volume: 1450000 },
-  { symbol: "COALINDIA", name: "Coal India Ltd", sector: "Mining", weight: 1.15, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 419.65, changePct: 0.84, volume: 6200000 },
-  { symbol: "BHARTIARTL", name: "Bharti Airtel Ltd", sector: "Telecommunication", weight: 3.65, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1654.00, changePct: 0.76, volume: 3800000 },
-  { symbol: "MAXHEALTH", name: "Max Healthcare Inst", sector: "Healthcare", weight: 0.75, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 992.00, changePct: 0.73, volume: 1100000 },
-  { symbol: "CIPLA", name: "Cipla Ltd", sector: "Pharmaceuticals", weight: 1.25, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1395.00, changePct: 0.72, volume: 1900000 },
-  { symbol: "EICHERMOT", name: "Eicher Motors Ltd", sector: "Automobile", weight: 1.45, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 7672.00, changePct: 0.54, volume: 620000 },
-  { symbol: "MARUTI", name: "Maruti Suzuki India", sector: "Automobile", weight: 1.85, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 12760.00, changePct: 0.52, volume: 740000 },
-  { symbol: "TATACONSUM", name: "Tata Consumer Products", sector: "FMCG", weight: 1.10, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1015.00, changePct: 0.50, volume: 1800000 },
-  { symbol: "INDIGO", name: "InterGlobe Aviation", sector: "Aviation", weight: 1.30, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 5001.00, changePct: 0.49, volume: 950000 },
-  { symbol: "ADANIENT", name: "Adani Enterprises Ltd", sector: "Metals & Mining", weight: 1.20, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 2950.00, changePct: 0.41, volume: 2200000 },
-  { symbol: "ICICIBANK", name: "ICICI Bank Ltd", sector: "Financial Services", weight: 7.92, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1427.50, changePct: 0.30, volume: 8900000 },
-  { symbol: "POWERGRID", name: "Power Grid Corp", sector: "Power", weight: 1.65, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 288.45, changePct: 0.17, volume: 7500000 },
-  { symbol: "BAJFINANCE", name: "Bajaj Finance Ltd", sector: "Financial Services", weight: 2.10, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 7090.00, changePct: -0.05, volume: 1100000 },
-  { symbol: "NTPC", name: "NTPC Ltd", sector: "Power", weight: 1.85, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 332.00, changePct: -0.15, volume: 9400000 },
-  { symbol: "SUNPHARMA", name: "Sun Pharma Ind", sector: "Pharmaceuticals", weight: 1.75, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1695.00, changePct: -0.21, volume: 2100000 },
-  { symbol: "HDFCBANK", name: "HDFC Bank Ltd", sector: "Financial Services", weight: 11.45, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1640.50, changePct: -0.22, volume: 11200000 },
-  { symbol: "ITC", name: "ITC Ltd", sector: "FMCG", weight: 4.35, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 493.50, changePct: -0.23, volume: 8600000 },
-  { symbol: "M&M", name: "Mahindra & Mahindra", sector: "Automobile", weight: 2.25, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3160.00, changePct: -0.32, volume: 1750000 },
-  { symbol: "BEL", name: "Bharat Electronics Ltd", sector: "Capital Goods", weight: 1.15, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 404.00, changePct: -0.33, volume: 5400000 },
-  { symbol: "SHRIRAMFIN", name: "Shriram Finance Ltd", sector: "Financial Services", weight: 1.35, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3237.00, changePct: -0.38, volume: 980000 },
-  { symbol: "ONGC", name: "Oil & Natural Gas Corp", sector: "Oil Gas & Petroleum", weight: 1.45, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 233.70, changePct: -0.40, volume: 7600000 },
-  { symbol: "HINDALCO", name: "Hindalco Industries", sector: "Metals & Mining", weight: 1.25, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1006.00, changePct: -0.49, volume: 3100000 },
-  { symbol: "TITAN", name: "Titan Company Ltd", sector: "Consumer Durables", weight: 1.55, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3495.00, changePct: -0.50, volume: 880000 },
-  { symbol: "AXISBANK", name: "Axis Bank Ltd", sector: "Financial Services", weight: 3.42, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1266.00, changePct: -0.55, volume: 4600000 },
-  { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank", sector: "Financial Services", weight: 2.85, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1822.10, changePct: -0.57, volume: 2900000 },
-  { symbol: "GRASIM", name: "Grasim Industries", sector: "Construction Materials", weight: 0.95, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3302.40, changePct: -0.59, volume: 720000 },
-  { symbol: "DRREDDY", name: "Dr Reddy's Labs", sector: "Pharmaceuticals", weight: 1.15, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1144.20, changePct: -0.59, volume: 850000 },
-  { symbol: "ETERNAL", name: "Eternal Life Science", sector: "Healthcare", weight: 0.65, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 320.00, changePct: -0.60, volume: 450000 },
-  { symbol: "HINDUNILVR", name: "Hindustan Unilever", sector: "FMCG", weight: 2.45, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1960.00, changePct: -0.69, volume: 2300000 },
-  { symbol: "ADANIPORTS", name: "Adani Ports & SEZ", sector: "Services", weight: 1.35, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1694.30, changePct: -0.76, volume: 2600000 },
-  { symbol: "HCLTECH", name: "HCL Technologies", sector: "Information Technology", weight: 1.85, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1292.00, changePct: -0.82, volume: 1900000 },
-  { symbol: "NESTLEIND", name: "Nestle India Ltd", sector: "FMCG", weight: 0.95, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1399.00, changePct: -0.89, volume: 640000 },
-  { symbol: "RELIANCE", name: "Reliance Industries", sector: "Oil Gas & Petroleum", weight: 9.85, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 2980.50, changePct: -0.95, volume: 6800000 },
-  { symbol: "BAJAJ-AUTO", name: "Bajaj Auto Ltd", sector: "Automobile", weight: 1.15, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 11800.00, changePct: -1.00, volume: 420000 },
-  { symbol: "SBIN", name: "State Bank of India", sector: "Financial Services", weight: 2.65, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 815.90, changePct: -1.00, volume: 9200000 },
-  { symbol: "ASIANPAINT", name: "Asian Paints Ltd", sector: "Consumer Durables", weight: 1.55, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 2500.90, changePct: -1.04, volume: 1100000 },
-  { symbol: "TRENT", name: "Trent Ltd", sector: "Consumer Services", weight: 1.45, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 2814.50, changePct: -1.35, volume: 1350000 },
-  { symbol: "TMPV", name: "Tata Motors Passenger", sector: "Automobile", weight: 0.75, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 307.00, changePct: -1.44, volume: 3200000 },
-  { symbol: "TCS", name: "Tata Consultancy Services", sector: "Information Technology", weight: 4.10, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 4210.00, changePct: -1.48, volume: 2400000 },
-  { symbol: "BAJAJFINSV", name: "Bajaj Finserv Ltd", sector: "Financial Services", weight: 1.25, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1939.60, changePct: -1.59, volume: 1200000 },
-  { symbol: "TATASTEEL", name: "Tata Steel Ltd", sector: "Metals & Mining", weight: 1.25, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 154.61, changePct: -1.68, volume: 12500000 },
-  { symbol: "JSWSTEEL", name: "JSW Steel Ltd", sector: "Metals & Mining", weight: 1.15, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1302.00, changePct: -1.74, volume: 2100000 },
-  { symbol: "ULTRACEMCO", name: "UltraTech Cement", sector: "Construction Materials", weight: 1.15, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 11175.00, changePct: -2.04, volume: 550000 },
-  { symbol: "WIPRO", name: "Wipro Ltd", sector: "Information Technology", weight: 0.95, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 540.90, changePct: -2.04, volume: 4100000 },
-  { symbol: "TECHM", name: "Tech Mahindra Ltd", sector: "Information Technology", weight: 1.05, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1564.00, changePct: -2.06, volume: 1600000 },
-  { symbol: "JIOFIN", name: "Jio Financial Services", sector: "Financial Services", weight: 0.85, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 334.40, changePct: -2.13, volume: 7800000 },
-  { symbol: "HDFCLIFE", name: "HDFC Life Insurance", sector: "Financial Services", weight: 0.95, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 533.20, changePct: -2.42, volume: 2200000 },
-  { symbol: "SBILIFE", name: "SBI Life Insurance", sector: "Financial Services", weight: 0.85, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1732.00, changePct: -2.42, volume: 1400000 },
-  { symbol: "INFY", name: "Infosys Ltd", sector: "Information Technology", weight: 5.68, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1887.50, changePct: -3.78, volume: 8200000 },
+  { symbol: "APOLLOHOSP", name: "Apollo Hospitals", sector: "Healthcare", weight: 0.80, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 8750.00, changePct: 1.27, volume: 850000 },
+  { symbol: "LT", name: "Larsen & Toubro Ltd", sector: "Construction", weight: 3.47, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3659.00, changePct: 0.89, volume: 1450000 },
+  { symbol: "COALINDIA", name: "Coal India Ltd", sector: "Mining", weight: 1.04, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 419.65, changePct: 0.84, volume: 6200000 },
+  { symbol: "BHARTIARTL", name: "Bharti Airtel Ltd", sector: "Telecommunication", weight: 3.29, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1654.00, changePct: 0.76, volume: 3800000 },
+  { symbol: "MAXHEALTH", name: "Max Healthcare Inst", sector: "Healthcare", weight: 0.68, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 992.00, changePct: 0.73, volume: 1100000 },
+  { symbol: "CIPLA", name: "Cipla Ltd", sector: "Pharmaceuticals", weight: 1.13, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1395.00, changePct: 0.72, volume: 1900000 },
+  { symbol: "EICHERMOT", name: "Eicher Motors Ltd", sector: "Automobile", weight: 1.31, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 7672.00, changePct: 0.54, volume: 620000 },
+  { symbol: "MARUTI", name: "Maruti Suzuki India", sector: "Automobile", weight: 1.67, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 12760.00, changePct: 0.52, volume: 740000 },
+  { symbol: "TATACONSUM", name: "Tata Consumer Products", sector: "FMCG", weight: 0.99, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1015.00, changePct: 0.50, volume: 1800000 },
+  { symbol: "INDIGO", name: "InterGlobe Aviation", sector: "Aviation", weight: 1.17, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 5001.00, changePct: 0.49, volume: 950000 },
+  { symbol: "ADANIENT", name: "Adani Enterprises Ltd", sector: "Metals & Mining", weight: 1.08, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 2950.00, changePct: 0.41, volume: 2200000 },
+  { symbol: "ICICIBANK", name: "ICICI Bank Ltd", sector: "Financial Services", weight: 7.15, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1427.50, changePct: 0.30, volume: 8900000 },
+  { symbol: "POWERGRID", name: "Power Grid Corp", sector: "Power", weight: 1.49, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 288.45, changePct: 0.17, volume: 7500000 },
+  { symbol: "BAJFINANCE", name: "Bajaj Finance Ltd", sector: "Financial Services", weight: 1.89, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 7090.00, changePct: -0.05, volume: 1100000 },
+  { symbol: "NTPC", name: "NTPC Ltd", sector: "Power", weight: 1.67, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 332.00, changePct: -0.15, volume: 9400000 },
+  { symbol: "SUNPHARMA", name: "Sun Pharma Ind", sector: "Pharmaceuticals", weight: 1.58, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1695.00, changePct: -0.21, volume: 2100000 },
+  { symbol: "HDFCBANK", name: "HDFC Bank Ltd", sector: "Financial Services", weight: 10.33, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1640.50, changePct: -0.22, volume: 11200000 },
+  { symbol: "ITC", name: "ITC Ltd", sector: "FMCG", weight: 3.93, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 493.50, changePct: -0.23, volume: 8600000 },
+  { symbol: "M&M", name: "Mahindra & Mahindra", sector: "Automobile", weight: 2.03, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3160.00, changePct: -0.32, volume: 1750000 },
+  { symbol: "BEL", name: "Bharat Electronics Ltd", sector: "Capital Goods", weight: 1.04, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 404.00, changePct: -0.33, volume: 5400000 },
+  { symbol: "SHRIRAMFIN", name: "Shriram Finance Ltd", sector: "Financial Services", weight: 1.22, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3237.00, changePct: -0.38, volume: 980000 },
+  { symbol: "ONGC", name: "Oil & Natural Gas Corp", sector: "Oil Gas & Petroleum", weight: 1.31, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 233.70, changePct: -0.40, volume: 7600000 },
+  { symbol: "HINDALCO", name: "Hindalco Industries", sector: "Metals & Mining", weight: 1.13, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1006.00, changePct: -0.49, volume: 3100000 },
+  { symbol: "TITAN", name: "Titan Company Ltd", sector: "Consumer Durables", weight: 1.40, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3495.00, changePct: -0.50, volume: 880000 },
+  { symbol: "AXISBANK", name: "Axis Bank Ltd", sector: "Financial Services", weight: 3.09, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1266.00, changePct: -0.55, volume: 4600000 },
+  { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank", sector: "Financial Services", weight: 2.57, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1822.10, changePct: -0.57, volume: 2900000 },
+  { symbol: "GRASIM", name: "Grasim Industries", sector: "Construction Materials", weight: 0.86, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 3302.40, changePct: -0.59, volume: 720000 },
+  { symbol: "DRREDDY", name: "Dr Reddy's Labs", sector: "Pharmaceuticals", weight: 1.04, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1144.20, changePct: -0.59, volume: 850000 },
+  { symbol: "ETERNAL", name: "Eternal Life Science", sector: "Healthcare", weight: 0.59, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 320.00, changePct: -0.60, volume: 450000 },
+  { symbol: "HINDUNILVR", name: "Hindustan Unilever", sector: "FMCG", weight: 2.21, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1960.00, changePct: -0.69, volume: 2300000 },
+  { symbol: "ADANIPORTS", name: "Adani Ports & SEZ", sector: "Services", weight: 1.22, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1694.30, changePct: -0.76, volume: 2600000 },
+  { symbol: "HCLTECH", name: "HCL Technologies", sector: "Information Technology", weight: 1.67, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1292.00, changePct: -0.82, volume: 1900000 },
+  { symbol: "NESTLEIND", name: "Nestle India Ltd", sector: "FMCG", weight: 0.86, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1399.00, changePct: -0.89, volume: 640000 },
+  { symbol: "RELIANCE", name: "Reliance Industries", sector: "Oil Gas & Petroleum", weight: 8.89, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 2980.50, changePct: -0.95, volume: 6800000 },
+  { symbol: "BAJAJ-AUTO", name: "Bajaj Auto Ltd", sector: "Automobile", weight: 1.04, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 11800.00, changePct: -1.00, volume: 420000 },
+  { symbol: "SBIN", name: "State Bank of India", sector: "Financial Services", weight: 2.39, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 815.90, changePct: -1.00, volume: 9200000 },
+  { symbol: "ASIANPAINT", name: "Asian Paints Ltd", sector: "Consumer Durables", weight: 1.40, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 2500.90, changePct: -1.04, volume: 1100000 },
+  { symbol: "TRENT", name: "Trent Ltd", sector: "Consumer Services", weight: 1.31, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 2814.50, changePct: -1.35, volume: 1350000 },
+  { symbol: "TMPV", name: "Tata Motors Passenger", sector: "Automobile", weight: 0.68, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 307.00, changePct: -1.44, volume: 3200000 },
+  { symbol: "TCS", name: "Tata Consultancy Services", sector: "Information Technology", weight: 3.70, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 4210.00, changePct: -1.48, volume: 2400000 },
+  { symbol: "BAJAJFINSV", name: "Bajaj Finserv Ltd", sector: "Financial Services", weight: 1.13, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1939.60, changePct: -1.59, volume: 1200000 },
+  { symbol: "TATASTEEL", name: "Tata Steel Ltd", sector: "Metals & Mining", weight: 1.13, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 154.61, changePct: -1.68, volume: 12500000 },
+  { symbol: "JSWSTEEL", name: "JSW Steel Ltd", sector: "Metals & Mining", weight: 1.04, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1302.00, changePct: -1.74, volume: 2100000 },
+  { symbol: "ULTRACEMCO", name: "UltraTech Cement", sector: "Construction Materials", weight: 1.04, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 11175.00, changePct: -2.04, volume: 550000 },
+  { symbol: "WIPRO", name: "Wipro Ltd", sector: "Information Technology", weight: 0.86, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 540.90, changePct: -2.04, volume: 4100000 },
+  { symbol: "TECHM", name: "Tech Mahindra Ltd", sector: "Information Technology", weight: 0.95, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1564.00, changePct: -2.06, volume: 1600000 },
+  { symbol: "JIOFIN", name: "Jio Financial Services", sector: "Financial Services", weight: 0.77, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 334.40, changePct: -2.13, volume: 7800000 },
+  { symbol: "HDFCLIFE", name: "HDFC Life Insurance", sector: "Financial Services", weight: 0.86, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 533.20, changePct: -2.42, volume: 2200000 },
+  { symbol: "SBILIFE", name: "SBI Life Insurance", sector: "Financial Services", weight: 0.77, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1732.00, changePct: -2.42, volume: 1400000 },
+  { symbol: "INFY", name: "Infosys Ltd", sector: "Information Technology", weight: 5.13, isWeightFallback: false, weightingSource: "OFFICIAL_NSE", ltp: 1887.50, changePct: -3.78, volume: 8200000 },
 ];
 
 // Map stock symbol -> FNO metadata for quick access to realistic market data
@@ -204,12 +204,16 @@ function getIndexSector(indexName: string): string {
   return "Diversified";
 }
 
-// Synchronize exact constituent counts from official NSE registry
+// Synchronize exact constituent counts from the official NSE registry, and downgrade
+// the weighting source for indices whose membership NSE does not publish.
 [BROAD_MARKET_INDICES, SECTORAL_INDICES, THEMATIC_INDICES, STRATEGY_INDICES].forEach((list) => {
   list.forEach((item) => {
     const official = OFFICIAL_INDEX_CONSTITUENTS[item.indexName];
     if (official && official.length > 0) {
       item.constituentCount = official.length;
+    }
+    if (DERIVED_INDICES.has(item.indexName)) {
+      item.weightingSource = "DERIVED_SCREEN";
     }
   });
 });
@@ -224,6 +228,7 @@ export function getConstituentsForIndex(indexName: string): ConstituentHeatmapIt
   // 1. Official NSE Constituent Registry
   const officialList = OFFICIAL_INDEX_CONSTITUENTS[clean];
   if (officialList && officialList.length > 0) {
+    const isDerived = DERIVED_INDICES.has(clean);
     const count = officialList.length;
     const defaultSector = getIndexSector(clean);
 
@@ -261,7 +266,7 @@ export function getConstituentsForIndex(indexName: string): ConstituentHeatmapIt
         sector,
         weight: calculatedWeights[idx],
         isWeightFallback: false,
-        weightingSource: "OFFICIAL_NSE",
+        weightingSource: isDerived ? "DERIVED_SCREEN" : "OFFICIAL_NSE",
         changePct,
         changeAbs: Number(((ltp * changePct) / 100).toFixed(2)),
         ltp,

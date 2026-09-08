@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { WatchlistWidget } from "./WatchlistWidget";
+import { FNO_STOCKS } from "../../watchlist/standardWatchlists";
 
 describe("WatchlistWidget Component", () => {
   beforeEach(() => {
@@ -434,8 +435,9 @@ describe("WatchlistWidget Component", () => {
     const groupedFnoBtn = screen.getByText("NSE F&O Stocks (Grouped by sector)");
     fireEvent.click(groupedFnoBtn);
 
-    // Verifies 208 stocks are loaded in active tab count
-    expect(screen.getByText("(208)")).toBeInTheDocument();
+    // The whole F&O universe is loaded in the active tab count. The size tracks
+    // NSE's derivatives list, so read it from the data rather than hardcoding it.
+    expect(screen.getByText(`(${FNO_STOCKS.length})`)).toBeInTheDocument();
 
     // Verify sector group headers are rendered in table
     expect(screen.getAllByText(/📂/i).length).toBeGreaterThan(0);
