@@ -298,6 +298,21 @@ export const builtinManifests: LazyWidgetManifest[] = [
         (module) => module.paperTradingDefinition,
       ),
   },
+  {
+    id: "historic-data",
+    title: "Historic Data Download",
+    description:
+      "Query, preview, and download historical OHLCV bar data for any script, timeframe, and date interval in CSV format.",
+    category: "analytics",
+    icon: "📥",
+    defaultWidth: 780,
+    defaultHeight: 520,
+    schema: builtinSchemas["historic-data"],
+    load: () =>
+      import("./HistoricDataWidget").then(
+        (module) => module.historicDataDefinition,
+      ),
+  },
 ];
 
 export function registerBuiltinWidgets(): void {

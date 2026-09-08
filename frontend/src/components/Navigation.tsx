@@ -25,6 +25,7 @@ export type ActiveRoute =
   | "strategy-marketplace"
   | "strategy-builder"
   | "market-heatmap"
+  | "historic-data"
   | (string & {});
 
 export interface NavItem {
@@ -54,6 +55,7 @@ export const navGroups: NavGroup[] = [
       { id: "sector-drill-in", label: "Sector & Index Drill-In", icon: "📊" },
       { id: "market-heatmap", label: "Market Heatmap & Breadth", icon: "🗺️" },
       { id: "screener", label: "PIT Screener", icon: "🔍" },
+      { id: "historic-data", label: "Historic Data Download", icon: "📥", badge: "CSV" },
     ],
   },
   {

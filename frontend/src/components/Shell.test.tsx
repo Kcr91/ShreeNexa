@@ -67,7 +67,13 @@ describe("Shell Navigation and Route Switching", () => {
 
     expect(await within(main).findByText("Positions & Orders Blotter")).toBeInTheDocument();
 
-    // 4. Return to Dashboard
+    // 4. Navigate to Historic Data Download full screen
+    const historicDataBtn = within(nav).getByRole("tab", { name: /Historic Data Download/i });
+    fireEvent.click(historicDataBtn);
+
+    expect(await within(main).findByText("Historic Data Download")).toBeInTheDocument();
+
+    // 5. Return to Dashboard
     const dashboardBtn = within(nav).getByRole("tab", { name: /Dashboard/i });
     fireEvent.click(dashboardBtn);
 

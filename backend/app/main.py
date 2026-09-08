@@ -26,6 +26,7 @@ from app.api.depth import router as depth_router
 from app.api.feature_builder import router as feature_builder_router
 from app.api.feed import router as feed_router
 from app.api.heatmap import router as heatmap_router
+from app.api.historical import router as historical_router
 from app.api.indicators import alias_router as indicators_alias_router
 from app.api.indicators import router as indicators_router
 from app.api.instruments import router as instruments_router
@@ -122,6 +123,7 @@ app.include_router(options_router, dependencies=_AUTH_DEPS)
 app.include_router(options_analytics_router, dependencies=_AUTH_DEPS)
 app.include_router(margin_router, dependencies=_AUTH_DEPS)
 app.include_router(monitoring_router, dependencies=_AUTH_DEPS)
+app.include_router(historical_router, dependencies=_AUTH_DEPS)
 
 # 3. Mutating / trading protected routers (require authenticated session + CSRF token)
 app.include_router(orders_router, dependencies=_STATE_MUTATING_DEPS)

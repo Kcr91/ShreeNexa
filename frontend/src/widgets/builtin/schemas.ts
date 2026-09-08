@@ -449,4 +449,48 @@ export const builtinSchemas = {
       },
     ],
   },
+  "historic-data": {
+    fields: [
+      {
+        name: "defaultSymbol",
+        label: "Default Symbol",
+        type: "select",
+        default: "RELIANCE",
+        options: [
+          { label: "RELIANCE", value: "RELIANCE" },
+          { label: "NIFTY 50", value: "NIFTY 50" },
+          { label: "BANKNIFTY", value: "BANKNIFTY" },
+          { label: "TCS", value: "TCS" },
+          { label: "HDFCBANK", value: "HDFCBANK" },
+          { label: "INFY", value: "INFY" },
+        ],
+      },
+      {
+        name: "defaultTimeframe",
+        label: "Default Timeframe",
+        type: "select",
+        default: "1d",
+        options: [
+          { label: "1 Minute (1m)", value: "1m" },
+          { label: "5 Minutes (5m)", value: "5m" },
+          { label: "15 Minutes (15m)", value: "15m" },
+          { label: "1 Hour (60m)", value: "60m" },
+          { label: "1 Day (1d)", value: "1d" },
+          { label: "1 Week (1w)", value: "1w" },
+        ],
+      },
+      {
+        name: "defaultSegment",
+        label: "Default Segment",
+        type: "select",
+        default: "NSE_EQ",
+        options: [
+          { label: "NSE Equity (Cash)", value: "NSE_EQ" },
+          { label: "NSE F&O", value: "NSE_FNO" },
+          { label: "Indices", value: "IDX_I" },
+          { label: "BSE Equity", value: "BSE_EQ" },
+        ],
+      },
+    ],
+  },
 } satisfies Record<string, WidgetSettingsSchema>;
