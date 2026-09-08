@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+import logging
+import time
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from app.config import mask_client_id
@@ -12,6 +14,8 @@ from app.dhan.exceptions import (
     DhanAuthenticationError,
     DhanMalformedResponseError,
     DhanRateLimitError,
+    DhanServerError,
+    DhanTimeoutError,
 )
 from app.dhan.limiter import TokenBucket, get_dhan_rate_limiter
 from app.dhan.limits_config import get_category_for_endpoint
@@ -37,11 +41,14 @@ from app.dhan.orders import (
     DhanOrderResponse,
     DhanSliceOrderRequest,
 )
+from app.dhan.retry import RetryPolicy, parse_retry_after
 from app.dhan.transport import (
     DhanTransport,
     HTTPTransport,
     raise_for_status,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DhanRestClient:
@@ -54,11 +61,15 @@ class DhanRestClient:
         limiter: TokenBucket | None = None,
         *,
         timeout: float = 10.0,
+        retry_policy: RetryPolicy | None = None,
+        sleep: Callable[[float], None] | None = None,
     ) -> None:
         self.credentials = credentials or resolve_dhan_credentials()
         self.transport: DhanTransport = transport or HTTPTransport()
         self.limiter: TokenBucket = limiter or get_dhan_rate_limiter()
         self.timeout = timeout
+        self.retry_policy = retry_policy or RetryPolicy.from_limits_config()
+        self._sleep: Callable[[float], None] = sleep or time.sleep
         self._order_modification_counts: dict[str, int] = {}
 
     def _get_headers(self) -> dict[str, str]:
@@ -70,6 +81,71 @@ class DhanRestClient:
             "access-token": self.credentials.get_token_value(),
             "dhanClientId": self.credentials.client_id,
         }
+
+    def _request_with_retry(
+        self,
+        method: str,
+        path: str,
+        *,
+        category: str,
+        params: dict[str, Any] | None = None,
+        json_data: dict[str, Any] | None = None,
+    ) -> tuple[int, bytes]:
+        """Send one request, retrying transient failures with backoff.
+
+        A limiter token is acquired for every attempt, including retries, so that
+        retried calls are counted against the documented per-day budgets rather than
+        silently overrunning them.
+        """
+        attempt = 1
+        while True:
+            self.limiter.acquire(category, timeout=self.timeout)
+            headers = self._get_headers()
+
+            try:
+                status_code, resp_headers, raw_body = self.transport.request(
+                    method,
+                    path,
+                    params=params,
+                    json_data=json_data,
+                    headers=headers,
+                    timeout=self.timeout,
+                )
+            except (DhanTimeoutError, DhanServerError) as err:
+                if attempt >= self.retry_policy.max_attempts:
+                    raise
+                delay = self.retry_policy.compute_delay(attempt)
+                logger.warning(
+                    "Dhan %s %s attempt %d/%d failed (%s); retrying in %.2fs",
+                    method.upper(),
+                    path,
+                    attempt,
+                    self.retry_policy.max_attempts,
+                    type(err).__name__,
+                    delay,
+                )
+                self._sleep(delay)
+                attempt += 1
+                continue
+
+            if not self.retry_policy.should_retry(attempt, status_code):
+                return status_code, raw_body
+
+            delay = self.retry_policy.compute_delay(
+                attempt,
+                parse_retry_after(resp_headers),
+            )
+            logger.warning(
+                "Dhan %s %s attempt %d/%d returned HTTP %d; retrying in %.2fs",
+                method.upper(),
+                path,
+                attempt,
+                self.retry_policy.max_attempts,
+                status_code,
+                delay,
+            )
+            self._sleep(delay)
+            attempt += 1
 
     def _request(
         self,
@@ -106,16 +182,12 @@ class DhanRestClient:
                 suffix = f"{underlying}:{expiry}" if expiry else str(underlying)
                 category = f"option_chain:{suffix}"
 
-        self.limiter.acquire(category, timeout=self.timeout)
-
-        headers = self._get_headers()
-        status_code, _resp_headers, raw_body = self.transport.request(
+        status_code, raw_body = self._request_with_retry(
             method,
             path,
+            category=category,
             params=params,
             json_data=json_data,
-            headers=headers,
-            timeout=self.timeout,
         )
 
         raise_for_status(status_code, raw_body)
