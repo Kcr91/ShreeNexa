@@ -3771,3 +3771,67 @@ institutional terminal builder with real-time WebSocket tick evaluation and inte
   - TypeScript: `tsc --noEmit` passed with 0 errors.
   - Production Build: `vite build` clean in 11.94s.
   - Fast-forward merged into `main` at `34bba8e` and pushed to `origin/main`.
+
+### 2026-09-08 — F0.4 gate repair and F0.5 retry layer (historical-warehouse unblock, step 1)
+
+Groundwork for the Dhan historical backfill engine. Before any backfill work could
+legitimately start, the two blocked root features it depends on had to be addressed:
+`F1.2`/`F1.3`/`F1.4` all declare `depends_on: [F0.5, ...]`, and both `F0.4` and `F0.5`
+were `blocked` in `build/state.json`.
+
+- **F0.4 — formatting gate (`295ffb2`)**:
+  - `ruff format` reported 8 unformatted files; `pre-commit`'s end-of-file-fixer found 2 more.
+  - Applied formatting only: exploded collection literals under the magic trailing comma,
+    joined over-split expressions, blank line after a module docstring, trailing newlines.
+  - No semantic change; set membership, control flow, and public signatures untouched.
+  - Gates on that SHA: ruff clean, `ruff format --check` 504 files clean, `mypy --strict`
+    clean (338 files), pytest 757 passed, manifest/fixture validators OK, pre-commit all
+    hooks passed, frontend typecheck clean, vitest 273 passed.
+
+- **F0.5 — bounded retry with Retry-After (`2341454`)**:
+  - `HTTPTransport.request` made exactly one attempt and no caller retried, despite F0.5's
+    acceptance requiring cassette coverage of a *retryable error*.
+  - Added `backend/app/dhan/retry.py`: `RetryPolicy` (bounded exponential backoff with
+    jitter) and `parse_retry_after` (delta-seconds and HTTP-date forms).
+  - **Retry is driven from `DhanRestClient._request_with_retry`, not from the transport.**
+    The limiter is acquired in the client, so retrying inside the transport would issue API
+    calls the token bucket never counted — silently overrunning the 7,000/day historical
+    budgets in `config/dhan_limits.yaml` that the backfill schedule depends on. Every
+    attempt now takes its own token.
+  - Retries 429 and 5xx plus `DhanTimeoutError`/`DhanServerError`; 401, 4xx and malformed
+    responses stay terminal so a dead token cannot burn budget. `Retry-After` clamped to
+    120 s so a worker can never park indefinitely.
+  - Replaced the name-pinned limiter architecture guard with a structural one: every
+    function calling `self.transport.request` must call `limiter.acquire`. The previous test
+    hardcoded the method name `_request` and would not have caught a new method calling the
+    transport directly. Proven non-vacuous by mutation — deleting the acquire call fails
+    both checks.
+
+- **F0.5 — sanitized cassette recorder (`ead662c`)**:
+  - `scripts/record_dhan_cassettes.py` replaces the seven synthetic fixtures (each declaring
+    `"classification": "synthetic"`, `"recorded_broker_response": false`) with real captures.
+  - Read-only endpoints only (`charts/historical`, `charts/intraday`, `fundlimit`), routed
+    through `DhanRestClient` so the rate limiter still governs every call.
+  - Recursive sanitization of any token / access-token / client-id / dhanClientId /
+    authorization / jwt / secret key before write; each cassette records its own provenance.
+  - The 401 cassette is captured genuinely via a deliberately invalid token.
+    `malformed_response`, `rate_limit_429` and `server_error_503` necessarily remain
+    constructed — a healthy server will not emit malformed JSON, a 429, or a 503 on demand.
+
+- **Verification**: ruff clean, `ruff format --check` 507 files clean, `mypy --strict` clean
+  (340 files), pytest **791 passed** (757 before; +33 retry tests, +1 architecture test),
+  pre-commit all hooks passed.
+
+- **Open blockers**:
+  - The cassette recorder has **not been executed**. The Dhan access token expired at
+    `2026-09-08T18:48:44Z`; recording requires a refreshed token
+    (`uv run python -m app.dhan.token set <NEW_TOKEN>`).
+  - `build/state.json` was deliberately **not** modified. F0.4's recorded blocker concerns a
+    *retrospective exact-SHA* gate against commit `96eab70`; formatting the tree now cleans
+    current `HEAD`, which cannot retroactively clean that historical SHA. Whether that
+    clears the blocker is a ledger-semantics decision, not an implementation detail.
+  - Manifest conflicts remain open for the backfill work itself: `F1.4`'s proof specifies
+    ATM±10/±3 while the agreed scope is ATM±5 for stock options, and `F1.4` is named
+    "Expired-option **30-day-window** backfill" while the API permits 45-day windows.
+    `F1.2`/`F1.3`/`F1.4` are also currently `status: review` despite no fetch orchestration
+    existing. These require manifest amendment before implementation proceeds.
