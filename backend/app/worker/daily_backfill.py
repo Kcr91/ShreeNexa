@@ -20,6 +20,29 @@ from app.warehouse.schema import BarRecord
 
 logger = logging.getLogger(__name__)
 
+
+def _timestamps_from(payload: dict[str, Any]) -> list[Any]:
+    """Read the bar timestamp array under any key the API has been seen to use.
+
+    Recorded cassettes show the live v2 API returns "timestamp"; the published docs
+    show "start_Time". Reading only one of them yields zero bars from real responses.
+    """
+    for key in ("timestamp", "start_Time", "start_time"):
+        values = payload.get(key)
+        if values:
+            return list(values)
+    return []
+
+
+def _open_interest_from(payload: dict[str, Any]) -> list[Any]:
+    """Read the open-interest array under either the documented or live key."""
+    for key in ("open_interest", "oi"):
+        values = payload.get(key)
+        if values:
+            return list(values)
+    return []
+
+
 REPO_ROOT = paths.REPO_ROOT
 # Re-exported for backwards compatibility; resolve_data_root is the real entry point.
 DEFAULT_DATA_ROOT = paths.DEFAULT_DATA_ROOT
@@ -100,8 +123,8 @@ def parse_dhan_daily_candles(
     lows = payload.get("low", [])
     closes = payload.get("close", [])
     volumes = payload.get("volume", [])
-    start_times = payload.get("start_Time", [])
-    open_interests = payload.get("open_interest", [])
+    start_times = _timestamps_from(payload)
+    open_interests = _open_interest_from(payload)
 
     count = min(len(opens), len(highs), len(lows), len(closes), len(start_times))
     bars: list[BarRecord] = []
