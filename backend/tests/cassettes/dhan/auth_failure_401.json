@@ -1,14 +1,16 @@
 {
   "_fixture": {
-    "classification": "synthetic",
-    "source": "generated_during_development",
-    "recorded_broker_response": false,
+    "classification": "recorded",
+    "source": "dhanhq_v2_live_api",
+    "recorded_broker_response": true,
+    "recorded_at": "2026-09-08T20:13:33.477805+00:00",
+    "endpoint": "charts/historical",
+    "http_status": 401,
+    "request": {},
     "account_id": "0000000000",
-    "credential_profile": "invalid_test_only"
+    "sanitized_keys": "token/client-id/authorization fields replaced"
   },
-  "status": "failure",
-  "remarks": "Invalid Token or Token Expired",
-  "errorType": "AuthenticationError",
-  "errorCode": "RS-9005",
-  "data": null
+  "errorType": "Invalid_Authentication",
+  "errorCode": "DH-901",
+  "errorMessage": "Client ID or user generated access token is invalid or expired."
 }

@@ -226,7 +226,8 @@ def raise_for_status(status_code: int, raw_body: bytes) -> None:
     try:
         data = json.loads(text)
         if isinstance(data, dict):
-            remarks = data.get("remarks") or data.get("message")
+            # Live v2 errors use "errorMessage"; other shapes use remarks/message.
+            remarks = data.get("remarks") or data.get("message") or data.get("errorMessage")
             if remarks:
                 message = str(remarks)
             error_code = data.get("errorCode")

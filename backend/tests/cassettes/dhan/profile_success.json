@@ -1,21 +1,23 @@
 {
   "_fixture": {
-    "classification": "synthetic",
-    "source": "generated_during_development",
-    "recorded_broker_response": false,
+    "classification": "recorded",
+    "source": "dhanhq_v2_live_api",
+    "recorded_broker_response": true,
+    "recorded_at": "2026-09-08T20:13:33.283965+00:00",
+    "endpoint": "fundlimit",
+    "http_status": 200,
+    "request": {},
     "account_id": "0000000000",
-    "credential_profile": "invalid_test_only"
+    "sanitized_keys": "token/client-id/authorization fields replaced",
+    "monetary_values_redacted": true,
+    "redaction_note": "Response shape and field names are as recorded; every monetary value is zeroed so no real account balance is committed."
   },
-  "status": "success",
-  "remarks": "",
-  "data": {
-    "dhanClientId": "0000000000",
-    "availabelBalance": 250000.5,
-    "sodLimit": 250000.5,
-    "collateralAmount": 50000.0,
-    "receiveableAmount": 0.0,
-    "utilizedAmount": 15000.25,
-    "blockedPayoutAmount": 0.0,
-    "withdrawableBalance": 235000.25
-  }
+  "dhanClientId": "0000000000",
+  "availabelBalance": 0.0,
+  "sodLimit": 0.0,
+  "collateralAmount": 0.0,
+  "receiveableAmount": 0.0,
+  "utilizedAmount": 0.0,
+  "blockedPayoutAmount": 0.0,
+  "withdrawableBalance": 0.0
 }

@@ -1,19 +1,61 @@
 {
   "_fixture": {
-    "classification": "synthetic",
-    "source": "generated_during_development",
-    "recorded_broker_response": false,
+    "classification": "recorded",
+    "source": "dhanhq_v2_live_api",
+    "recorded_broker_response": true,
+    "recorded_at": "2026-09-08T20:13:32.784006+00:00",
+    "endpoint": "charts/historical",
+    "http_status": 200,
+    "request": {
+      "securityId": "13",
+      "exchangeSegment": "IDX_I",
+      "instrument": "INDEX",
+      "fromDate": "2026-09-01",
+      "toDate": "2026-09-08"
+    },
     "account_id": "0000000000",
-    "credential_profile": "invalid_test_only"
+    "sanitized_keys": "token/client-id/authorization fields replaced"
   },
-  "status": "success",
-  "remarks": "",
-  "data": {
-    "open": [24500.0, 24550.0, 24600.0],
-    "high": [24650.0, 24700.0, 24750.0],
-    "low": [24450.0, 24500.0, 24550.0],
-    "close": [24600.0, 24650.0, 24700.0],
-    "volume": [150000, 180000, 210000],
-    "start_Time": [1725148800, 1725235200, 1725321600]
-  }
+  "open": [
+    24077.55,
+    23858.0,
+    23997.95,
+    23910.9,
+    23883.15
+  ],
+  "high": [
+    24143.15,
+    23914.45,
+    24025.4,
+    24005.75,
+    23890.0
+  ],
+  "low": [
+    23952.55,
+    23786.8,
+    23873.45,
+    23895.85,
+    23737.9
+  ],
+  "close": [
+    24055.8,
+    23914.45,
+    23873.45,
+    23897.7,
+    23779.15
+  ],
+  "volume": [
+    334207690.0,
+    318881826.0,
+    239174046.0,
+    231396362.0,
+    205864370.0
+  ],
+  "timestamp": [
+    1788201000.0,
+    1788287400.0,
+    1788373800.0,
+    1788460200.0,
+    1788719400.0
+  ]
 }

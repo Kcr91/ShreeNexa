@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class DhanFundLimit(BaseModel):
@@ -48,14 +48,19 @@ class DhanHistoricalBar(BaseModel):
 class DhanHistoricalData(BaseModel):
     """Collection of OHLCV bars returned by chart historical and intraday APIs."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     open: list[float] = Field(default_factory=list)
     high: list[float] = Field(default_factory=list)
     low: list[float] = Field(default_factory=list)
     close: list[float] = Field(default_factory=list)
     volume: list[int] = Field(default_factory=list)
-    start_time: list[int] = Field(alias="start_Time", default_factory=list)
+    # The live v2 API returns "timestamp"; the published docs show "start_Time".
+    # Recorded cassettes confirm "timestamp", so accept both or every bar is dropped.
+    start_time: list[int] = Field(
+        validation_alias=AliasChoices("timestamp", "start_Time", "start_time"),
+        default_factory=list,
+    )
 
     def to_bars(self) -> list[DhanHistoricalBar]:
         """Convert columnar arrays to row-oriented historical bar objects."""
