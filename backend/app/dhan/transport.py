@@ -284,4 +284,3 @@ def download_remote_file(
     with urllib.request.urlopen(req, timeout=timeout) as response:
         content: bytes = response.read()
     return content
-

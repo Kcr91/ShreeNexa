@@ -14,12 +14,8 @@ from app.dhan.transport import download_remote_file
 
 logger = logging.getLogger("app.dhan.sync_master")
 
-DHAN_DETAILED_SCRIP_MASTER_URL = (
-    "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
-)
-DHAN_COMPACT_SCRIP_MASTER_URL = (
-    "https://images.dhan.co/api-data/api-scrip-master.csv"
-)
+DHAN_DETAILED_SCRIP_MASTER_URL = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
+DHAN_COMPACT_SCRIP_MASTER_URL = "https://images.dhan.co/api-data/api-scrip-master.csv"
 
 
 def download_scrip_master(url: str = DHAN_DETAILED_SCRIP_MASTER_URL, timeout: int = 60) -> bytes:

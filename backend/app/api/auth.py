@@ -224,7 +224,6 @@ def demo_login(response: Response) -> AuthSuccessResponse:
     )
 
 
-
 @router.get("/audit", response_model=list[AuthAuditRecord])
 def get_audit_log(
     shreenexa_session: str | None = Cookie(default=None),

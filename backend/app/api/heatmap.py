@@ -63,6 +63,7 @@ def load_official_records_for_index(index_name: str) -> list[IndexConstituentRec
         )
     return records
 
+
 router = APIRouter(prefix="/api/v1/heatmap", tags=["heatmap"])
 
 
@@ -277,11 +278,7 @@ def get_index_heatmap(category: str | None = None) -> list[IndexHeatmapCell]:
         return INDEX_SEED_HEATMAP
 
     clean_cat = category.strip().upper()
-    filtered = [
-        c
-        for c in INDEX_SEED_HEATMAP
-        if c.category and c.category.upper() == clean_cat
-    ]
+    filtered = [c for c in INDEX_SEED_HEATMAP if c.category and c.category.upper() == clean_cat]
     return filtered if filtered else INDEX_SEED_HEATMAP
 
 

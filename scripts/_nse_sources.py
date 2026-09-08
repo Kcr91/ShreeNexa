@@ -20,7 +20,6 @@ publishes that is not in the live equity master and Dhan scrip master is
 reported and dropped rather than guessed at.
 """
 
-
 # ==========================================================================
 # from map.py
 # ==========================================================================
@@ -117,12 +116,12 @@ MAP = {
 # Indices for which NSE publishes NO constituent CSV -> derived from parent index by
 # documented methodology screens (see DERIVED below).
 DERIVED = {
- "NIFTY SHARIAH 25":  ("NIFTY 500", "shariah", 25),
- "NIFTY50 SHARIAH":   ("NIFTY 50",  "shariah", None),
- "NIFTY500 SHARIAH":  ("NIFTY 500", "shariah", None),
- "NIFTY100 ESG":      ("NIFTY 100", "esg",     None),
- "NIFTY100 ENH ESG":  ("NIFTY 100", "esg",     None),
- "NIFTY EV":          ("NIFTY 500", "ev",      None),
+    "NIFTY SHARIAH 25": ("NIFTY 500", "shariah", 25),
+    "NIFTY50 SHARIAH": ("NIFTY 50", "shariah", None),
+    "NIFTY500 SHARIAH": ("NIFTY 500", "shariah", None),
+    "NIFTY100 ESG": ("NIFTY 100", "esg", None),
+    "NIFTY100 ENH ESG": ("NIFTY 100", "esg", None),
+    "NIFTY EV": ("NIFTY 500", "ev", None),
 }
 
 
@@ -132,24 +131,29 @@ DERIVED = {
 # NSE publishes some constituent CSVs with stale rows. Normalize them against the
 # live NSE equity master (EQUITY_L.csv) and the Dhan scrip master.
 RENAMES = {
-    "AMARAJABAT": "ARE&M",        # Amara Raja renamed to Amara Raja Energy & Mobility
-    "MINDAIND":   "UNOMINDA",     # Minda Industries renamed to UNO Minda
-    "TATAMOTORS": "TMPV",         # demerger; TMPV carries the original ISIN INE155A01022
-    "IBULHSGFIN": "SAMMAANCAP",   # Indiabulls Housing Finance renamed to Sammaan Capital
-    "LTIM":       "LTM",          # LTIMindtree renamed; NSE symbol is now LTM
-    "MCDOWELL-N": "UNITDSPR",     # United Spirits symbol change
-    "ZOMATO":     "ETERNAL",      # Zomato renamed to Eternal
-    "GMRINFRA":   "GMRAIRPORT",   # GMR Infrastructure renamed to GMR Airports
-    "BCON":       "BIOCON",       # typo in the previous hand-maintained list
+    "AMARAJABAT": "ARE&M",  # Amara Raja renamed to Amara Raja Energy & Mobility
+    "MINDAIND": "UNOMINDA",  # Minda Industries renamed to UNO Minda
+    "TATAMOTORS": "TMPV",  # demerger; TMPV carries the original ISIN INE155A01022
+    "IBULHSGFIN": "SAMMAANCAP",  # Indiabulls Housing Finance renamed to Sammaan Capital
+    "LTIM": "LTM",  # LTIMindtree renamed; NSE symbol is now LTM
+    "MCDOWELL-N": "UNITDSPR",  # United Spirits symbol change
+    "ZOMATO": "ETERNAL",  # Zomato renamed to Eternal
+    "GMRINFRA": "GMRAIRPORT",  # GMR Infrastructure renamed to GMR Airports
+    "BCON": "BIOCON",  # typo in the previous hand-maintained list
 }
 # Rows in official CSVs that are no longer tradable and have no successor symbol.
 RETIRED = {
-    "HDFC",         # merged into HDFCBANK
-    "TATAMTRDVR",   # DVR class delisted
-    "JBCHEPHARM", "SABEVENTS", "SABTNL",  # no longer in NSE's equity master
-    "GUJGASLTD",    # merged
-    "PEL", "DELTACORP",
+    "HDFC",  # merged into HDFCBANK
+    "TATAMTRDVR",  # DVR class delisted
+    "JBCHEPHARM",
+    "SABEVENTS",
+    "SABTNL",  # no longer in NSE's equity master
+    "GUJGASLTD",  # merged
+    "PEL",
+    "DELTACORP",
 }
+
+
 def normalize(symbols):
     """Apply renames, drop NSE's DUMMY* placeholder rows and retired symbols."""
     out, seen = [], set()

@@ -457,4 +457,3 @@ describe("WatchlistWidget Component", () => {
     expect(screen.queryByText("Nifty Auto")).not.toBeInTheDocument();
   });
 });
-

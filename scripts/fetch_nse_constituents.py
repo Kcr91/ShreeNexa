@@ -6,6 +6,7 @@ See scripts/_nse_sources.py for the source list and the index -> CSV mapping.
     python scripts/fetch_nse_constituents.py                # refresh everything
     python scripts/fetch_nse_constituents.py --cache-dir X  # reuse downloads in X
 """
+
 from __future__ import annotations
 
 import argparse
@@ -34,17 +35,63 @@ DHAN_MASTER = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
 # Business-activity screens for the indices NSE publishes no constituent CSV for.
 SHARIAH_EXCLUDED_INDUSTRIES = {"Financial Services"}
 SHARIAH_EXCLUDED_SYMBOLS = {
-    "UBL", "UNITDSPR", "RADICO", "GLOBUSSPR", "SDBL", "ABDL",
-    "ITC", "GODFRYPHLP", "VSTIND", "ITCHOTELS",
-    "NAZARA", "PVRINOX", "ZEEL", "SUNTV", "NETWORK18", "TV18BRDCST", "SAREGAMA",
-    "TIPSMUSIC", "TIPSFILMS", "DBCORP", "HATHWAY", "DISHTV", "PFOCUS", "JAGRAN", "NDTV",
-    "INDHOTEL", "EIHOTEL", "CHALET", "LEMONTREE", "JUBLFOOD", "WESTLIFE", "DEVYANI",
-    "SAPPHIRE", "MHRIL", "TAJGVK", "SAMHI", "VENTIVE", "JUNIPER",
+    "UBL",
+    "UNITDSPR",
+    "RADICO",
+    "GLOBUSSPR",
+    "SDBL",
+    "ABDL",
+    "ITC",
+    "GODFRYPHLP",
+    "VSTIND",
+    "ITCHOTELS",
+    "NAZARA",
+    "PVRINOX",
+    "ZEEL",
+    "SUNTV",
+    "NETWORK18",
+    "TV18BRDCST",
+    "SAREGAMA",
+    "TIPSMUSIC",
+    "TIPSFILMS",
+    "DBCORP",
+    "HATHWAY",
+    "DISHTV",
+    "PFOCUS",
+    "JAGRAN",
+    "NDTV",
+    "INDHOTEL",
+    "EIHOTEL",
+    "CHALET",
+    "LEMONTREE",
+    "JUBLFOOD",
+    "WESTLIFE",
+    "DEVYANI",
+    "SAPPHIRE",
+    "MHRIL",
+    "TAJGVK",
+    "SAMHI",
+    "VENTIVE",
+    "JUNIPER",
 }
 ESG_EXCLUDED_SYMBOLS = {
-    "ITC", "GODFRYPHLP", "VSTIND", "UBL", "UNITDSPR", "RADICO", "NAZARA",
-    "COALINDIA", "NLCINDIA", "ADANIPOWER", "ADANIENT", "GMDCLTD",
-    "BEL", "BDL", "HAL", "MAZDOCK", "SOLARINDS",
+    "ITC",
+    "GODFRYPHLP",
+    "VSTIND",
+    "UBL",
+    "UNITDSPR",
+    "RADICO",
+    "NAZARA",
+    "COALINDIA",
+    "NLCINDIA",
+    "ADANIPOWER",
+    "ADANIENT",
+    "GMDCLTD",
+    "BEL",
+    "BDL",
+    "HAL",
+    "MAZDOCK",
+    "SOLARINDS",
 }
 
 CONSTITUENTS_TS = os.path.join(ROOT, "frontend", "src", "heatmap", "officialConstituents.ts")
@@ -59,7 +106,9 @@ def fetch(url: str, cache: str, name: str, retries: int = 3) -> bytes:
     last = None
     for _ in range(retries):
         try:
-            req = urllib.request.Request(url, headers={**UA, "Referer": "https://www.nseindia.com/"})
+            req = urllib.request.Request(
+                url, headers={**UA, "Referer": "https://www.nseindia.com/"}
+            )
             data = urllib.request.urlopen(req, timeout=90).read()
             open(path, "wb").write(data)
             time.sleep(0.3)
@@ -214,8 +263,7 @@ def main():
     unknown = sorted({s for v in official.values() for s in v} - set(dhan))
     if unknown:
         print(
-            f"WARNING: dropping {len(unknown)} symbols "
-            f"absent from the Dhan scrip master: {unknown}"
+            f"WARNING: dropping {len(unknown)} symbols absent from the Dhan scrip master: {unknown}"
         )
         official = {k: [s for s in v if s in dhan] for k, v in official.items()}
 

@@ -62,7 +62,6 @@ def sync_master_instruments(
     return sync_scrip_master(source_url=target_url)
 
 
-
 @router.get("/search", response_model=list[InstrumentRecord])
 def search(
     engine: DbEngineDep,

@@ -106,7 +106,6 @@ def test_official_nse_constituents_fallback() -> None:
     for r in records_auto:
         assert r.source == "OFFICIAL_NSE"
 
-
     # Test NIFTY BANK
     records_bank = load_official_records_for_index("NIFTY BANK")
     assert len(records_bank) == 14
