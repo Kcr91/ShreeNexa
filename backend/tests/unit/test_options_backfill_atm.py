@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 import tempfile
-from datetime import UTC, date
+from datetime import UTC, date, timedelta
 from pathlib import Path
 
 import pytest
 from app.worker.options_backfill import (
+    MAX_OPTIONS_WINDOW_DAYS,
     StrikeUnavailableError,
-    generate_30_day_windows,
+    generate_option_windows,
     parse_dhan_rolling_option_candles,
     save_raw_option_ingest,
     validate_strike_coverage,
@@ -52,42 +53,64 @@ def test_validate_strike_coverage_index_atm_limits() -> None:
 
 
 def test_validate_strike_coverage_stock_atm_limits() -> None:
-    """Verify ATM±3 strike limits for stock options (e.g. RELIANCE 20-pt step)."""
+    """Verify ATM±5 strike limits for stock options (e.g. RELIANCE 20-pt step)."""
     spot = 3000.0
     step = 20.0
 
-    # Within ATM±3: up to 3060 (+3) and 2940 (-3) must succeed
+    # Within ATM±5: up to 3100 (+5) and 2900 (-5) must succeed
     validate_strike_coverage(
         symbol="RELIANCE",
         spot_price=spot,
-        requested_strike=3060.0,
+        requested_strike=3100.0,
+        strike_step=step,
+        is_index=False,
+    )
+    validate_strike_coverage(
+        symbol="RELIANCE",
+        spot_price=spot,
+        requested_strike=2900.0,
         strike_step=step,
         is_index=False,
     )
 
-    # Beyond ATM±3: 3080 (+4) must raise StrikeUnavailableError
+    # Beyond ATM±5: 3120 (+6) must raise StrikeUnavailableError
     with pytest.raises(StrikeUnavailableError) as exc_info:
         validate_strike_coverage(
             symbol="RELIANCE",
             spot_price=spot,
-            requested_strike=3080.0,
+            requested_strike=3120.0,
             strike_step=step,
             is_index=False,
         )
     assert "strike_unavailable" in str(exc_info.value)
-    assert exc_info.value.max_strikes == 3
+    assert exc_info.value.max_strikes == 5
 
 
-def test_generate_30_day_windows_slicing() -> None:
-    """Verify slicing multi-month range into contiguous <= 30-day windows."""
+def test_generate_option_windows_slicing() -> None:
+    """Verify slicing a multi-month range into contiguous non-overlapping windows."""
     start = date(2026, 1, 1)
     end = date(2026, 3, 15)  # 74 days -> 30 + 30 + 14
 
-    windows = generate_30_day_windows(start, end, max_days=30)
+    windows = generate_option_windows(start, end, max_days=30)
     assert len(windows) == 3
     assert windows[0] == (date(2026, 1, 1), date(2026, 1, 30))
     assert windows[1] == (date(2026, 1, 31), date(2026, 3, 1))
     assert windows[2] == (date(2026, 3, 2), date(2026, 3, 15))
+
+
+def test_generate_option_windows_defaults_to_45_day_api_maximum() -> None:
+    """charts/rollingoption allows 45 days per call; a smaller default wastes budget."""
+    assert MAX_OPTIONS_WINDOW_DAYS == 45
+
+    start = date(2026, 1, 1)
+    end = date(2026, 3, 15)  # 74 days -> 45 + 29
+    windows = generate_option_windows(start, end)
+
+    assert len(windows) == 2
+    assert windows[0] == (date(2026, 1, 1), date(2026, 2, 14))
+    assert windows[1] == (date(2026, 2, 15), date(2026, 3, 15))
+    # Windows must be contiguous and non-overlapping.
+    assert windows[1][0] == windows[0][1] + timedelta(days=1)
 
 
 def test_parse_dhan_rolling_option_candles() -> None:

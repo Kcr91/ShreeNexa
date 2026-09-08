@@ -1,4 +1,4 @@
-"""Dhan expired-option historical backfill worker in 30-day windows with ATM coverage validation."""
+"""Dhan expired-option historical backfill worker with windowing and ATM coverage validation."""
 
 from __future__ import annotations
 
@@ -20,7 +20,12 @@ logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATA_ROOT = REPO_ROOT / "data"
-MAX_OPTIONS_WINDOW_DAYS = 30
+# charts/rollingoption accepts up to 45 days per call (dhan-api-docs.md, F1.4).
+MAX_OPTIONS_WINDOW_DAYS = 45
+
+# ATM offset coverage per F1.4: index chains are deeper than single-stock chains.
+INDEX_MAX_STRIKES = 10
+STOCK_MAX_STRIKES = 5
 
 
 class StrikeUnavailableError(ValueError):
@@ -53,11 +58,11 @@ def validate_strike_coverage(
     strike_step: float,
     is_index: bool,
 ) -> None:
-    """Validate that requested strike is within ATM±10 (index) or ATM±3 (stock) limits."""
+    """Validate that requested strike is within ATM±10 (index) or ATM±5 (stock) limits."""
     if strike_step <= 0:
         raise ValueError(f"strike_step must be positive, got {strike_step}")
 
-    max_strikes = 10 if is_index else 3
+    max_strikes = INDEX_MAX_STRIKES if is_index else STOCK_MAX_STRIKES
     offset_strikes = round(abs(requested_strike - spot_price) / strike_step)
 
     if offset_strikes > max_strikes:
@@ -70,12 +75,12 @@ def validate_strike_coverage(
         )
 
 
-def generate_30_day_windows(
+def generate_option_windows(
     start_date: date,
     end_date: date,
     max_days: int = MAX_OPTIONS_WINDOW_DAYS,
 ) -> list[tuple[date, date]]:
-    """Split date range into discrete non-overlapping <= 30-day windows."""
+    """Split date range into discrete non-overlapping windows of at most max_days."""
     if start_date > end_date:
         raise ValueError(f"start_date ({start_date}) cannot be after end_date ({end_date})")
 

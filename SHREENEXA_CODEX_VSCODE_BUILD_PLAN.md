@@ -280,10 +280,12 @@ The “proof” column is the minimum evidence required in addition to the globa
 | F1.1 | Implement immutable DuckDB/Parquet bar store with typed schema, partition manifest, atomic writes, correction workflow, and read API. | F0.1, M0.3 | Round-trip and partition-pruning tests; interrupted write cannot expose a partial partition. | SOL-XH |
 | F1.2 | Dhan daily backfill since inception with resumable windows, provenance, and corporate-action-adjustment investigation. | F0.5–F0.7, F1.1 | NIFTY sample reconciles independently; adjustment status is explicit; no equity backtest is marked trusted until resolved. | SOL-H |
 | F1.3 | Build resumable Dhan one-minute backfill in 90-day windows (intervals: 1, 5, 15, 30, 60m), writing only to the new warehouse. | F0.5–F0.7, F1.1, M0.3 | Per-symbol counts/date coverage/hashes and gap/duplicate report; kill/resume produces no duplicates. | SOL-XH |
-| F1.4 | Expired-option rolling backfill with ATM coverage metadata (up to 45-day window, `drvOptionType`, requiredData). | F0.5–F0.7, F1.1 | Outside ATM±10/±3 returns `strike_unavailable`; no substitution; restart-safe writes. | SOL-H |
+| F1.4 | Expired-option rolling backfill with ATM coverage metadata (up to 45-day window, `drvOptionType`, requiredData). | F0.5–F0.7, F1.1 | Outside ATM±10 (index) / ATM±5 (stock) returns `strike_unavailable`; no substitution; restart-safe writes. | SOL-H |
 | F1.5 | Per-segment trading sessions, holidays, timezone normalization, and calendar versions. | F0.7, M0.2 | Published-calendar fixtures; no bars outside valid session; IST handling is deterministic. | SOL-XH |
 | F1.6 | Session-aware resampling from 1m to 3/5/15/30/60/D/W, including partial-bar policy. | F1.1, F1.5 | OHLC/volume/OI invariants and parity with pandas on independent fixtures. | SOL-H |
 | F1.7 | Data-quality reporting for gaps, duplicates, outliers, zero volume, unexpected dates, stale partitions, and coverage by universe/date. | F1.1–F1.6 | Seeded defects are detected; report separates upstream source gaps from warehouse errors. | TER-H |
+| F1.10 | Backfill orchestration: universe expansion into tiered jobs, per-window Postgres checkpoints, resumable fetch driver, per-category budget accounting, and token auto-renewal on 401. | F0.5–F0.7, F1.1–F1.4 | Kill/resume mid-window replays no API call and duplicates no bar; per-day budgets are never exceeded; a 401 parks jobs recoverably instead of losing them. | SOL-XH |
+| F1.11 | Live one-minute capture sealed into the warehouse at session close, reconciled against a REST re-fetch, plus nightly incremental top-up of every covered series. | F1.1, F1.5–F1.7, F1.10, F7.7 | Sealed live bars match the REST re-fetch within tolerance; conflicts resolve to REST and are reported as upstream defects; a re-run is idempotent. | SOL-XH |
 
 ### Epic 2 — Indicators, StrategyIR, and screener
 
@@ -457,7 +459,7 @@ After F12.6, require a separate checklist and explicit user message authorizing 
 
 ## 7. How to split oversized features
 
-The manifest counts 102 product features, but some are too large for one safe code change. Split them into numbered tasks inside the same feature branch and review after each task commit.
+The manifest counts 104 product features, but some are too large for one safe code change. Split them into numbered tasks inside the same feature branch and review after each task commit.
 
 Examples:
 

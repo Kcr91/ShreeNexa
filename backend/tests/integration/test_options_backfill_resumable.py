@@ -13,7 +13,7 @@ from app.warehouse.reader import WarehouseReader
 from app.worker.options_backfill import (
     OptionsBackfillManager,
     OptionsBackfillTask,
-    generate_30_day_windows,
+    generate_option_windows,
 )
 
 
@@ -43,7 +43,7 @@ def test_options_backfill_execution_and_warehouse_read(temp_data_root: Path) -> 
         end_date=date(2026, 8, 27),
     )
 
-    windows = generate_30_day_windows(task.start_date, task.end_date, max_days=30)
+    windows = generate_option_windows(task.start_date, task.end_date, max_days=30)
     assert len(windows) == 1
 
     payload = {

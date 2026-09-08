@@ -37,11 +37,11 @@ def test_real_manifest_passes_validation(real_items: list[dict]) -> None:
     assert report.total == len(real_items)
 
 
-def test_generated_count_matches_approved_102_product_features(real_items: list[dict]) -> None:
+def test_generated_count_matches_approved_product_feature_total(real_items: list[dict]) -> None:
     report = validate(real_items)
     assert report.m0_count == 6
-    assert report.product_count == 102
-    assert report.total == 108
+    assert report.product_count == 104
+    assert report.total == 110
 
 
 def test_every_id_appears_in_topological_order_exactly_once(real_items: list[dict]) -> None:
@@ -62,9 +62,9 @@ def test_dependencies_precede_their_dependents(real_items: list[dict]) -> None:
             )
 
 
-def test_build_plan_names_102_product_features() -> None:
+def test_build_plan_names_the_product_feature_total() -> None:
     text = BUILD_PLAN_PATH.read_text(encoding="utf-8")
-    assert "The manifest counts 102 product features" in text
+    assert "The manifest counts 104 product features" in text
 
 
 def test_unresolved_dependency_reference_is_rejected(real_items: list[dict]) -> None:

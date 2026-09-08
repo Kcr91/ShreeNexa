@@ -124,9 +124,9 @@ items:
     model: SOL-XH
 
   - id: F1.4
-    name: 'Expired-option 30-day-window backfill with ATM coverage metadata.'
+    name: 'Expired-option rolling backfill with ATM coverage metadata (up to 45-day window, drvOptionType, requiredData).'
     depends_on: [F0.5, F0.6, F0.7, F1.1]
-    proof: 'Outside ATM±10/±3 returns strike_unavailable; no substitution; restart-safe writes.'
+    proof: 'Outside ATM±10 (index) / ATM±5 (stock) returns strike_unavailable; no substitution; restart-safe writes.'
     model: SOL-H
 
   - id: F1.5
@@ -146,6 +146,18 @@ items:
     depends_on: [F1.1, F1.2, F1.3, F1.4, F1.5, F1.6]
     proof: 'Seeded defects are detected; report separates upstream source gaps from warehouse errors.'
     model: TER-H
+
+  - id: F1.10
+    name: 'Backfill orchestration: universe expansion into tiered jobs, per-window Postgres checkpoints, resumable fetch driver, per-category budget accounting, and token auto-renewal on 401.'
+    depends_on: [F0.5, F0.6, F0.7, F1.1, F1.2, F1.3, F1.4]
+    proof: 'Kill/resume mid-window replays no API call and duplicates no bar; per-day budgets are never exceeded; a 401 parks jobs recoverably instead of losing them.'
+    model: SOL-XH
+
+  - id: F1.11
+    name: 'Live one-minute capture sealed into the warehouse at session close, reconciled against a REST re-fetch, plus nightly incremental top-up of every covered series.'
+    depends_on: [F1.1, F1.5, F1.6, F1.7, F1.10, F7.7]
+    proof: 'Sealed live bars match the REST re-fetch within tolerance; conflicts resolve to REST and are reported as upstream defects; a re-run is idempotent.'
+    model: SOL-XH
 
   # --- Epic 2: Indicators, StrategyIR, and screener --------------------------------
   - id: F2.1
