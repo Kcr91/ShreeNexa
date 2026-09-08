@@ -3750,3 +3750,25 @@ for any specific script across configurable timeframes and intervals in standard
   - Frontend Vitest tests (`HistoricDataWidget.test.tsx`, `Shell.test.tsx`): 8/8 passed.
   - `tsc --noEmit` (0 errors), `vite build` (clean bundle), `ruff check .` (all clean), `mypy backend --strict` (338 files clean).
 
+### 2026-09-08 — Sensibull-Grade Option Strategy Builder with Live Feed Integration
+
+Re-architected and upgraded **Options Desk > Option Strategy Builder** into a Sensibull-identical
+institutional terminal builder with real-time WebSocket tick evaluation and interactive payoff simulation.
+
+- **Modular Quantitative Options Engine (`frontend/src/optionstrategy/`)**:
+  - `types.ts`: Strictly typed contracts for legs, templates, scorecard KPIs, payoff curves, Greeks, and SD intervals.
+  - `templates.ts`: Library of 17+ ready-made strategies across Bullish, Bearish, Neutral, and Others, each with custom mini SVG payoff curve cards.
+  - `calculations.ts`: $O(1)$ client-side analytical Black-Scholes solver, dual-curve payoff generator (`On Expiry` intrinsic vs `On Target Date` theoretical with theta decay), lognormal POP %, hedged SPAN margins, and SD intervals.
+  - `PayoffGraph.tsx`: High-performance SVG payoff chart with dual payoff curves, Open Interest histogram bars (Call red / Put green), standard deviation boundaries, current spot price line, interactive target price line with dynamic projected profit tooltip badge, hover crosshair guide, and dual sliders (Target Price & Target Date/Time).
+
+- **Widget & Live Feed Integration (`OptionStrategyBuilderWidget.tsx`)**:
+  - 2-Column Sensibull layout: Left column with interactive legs table (steppers for strike and lots, buy/sell pills, CE/PE toggles, price editor), order summary bar (multiplier, price pay, premium pay), and ready-made strategy cards.
+  - Right column: Sensibull Scorecard (Max Profit, Max Loss, Breakeven with %, Reward/Risk, POP %, Time Value, Intrinsic Value, Standalone Funds/Margin), Payoff Graph, and Bottom 3-column matrix (Strikewise IVs editor with offset, Net Greeks with lot size toggles, Target Day Futures Price & SD table).
+  - Connected to `defaultWebSocketClient`: Automatically streams live quotes and recalculates all payoff curves, Greeks, and KPIs in real time.
+
+- **Verification**:
+  - Frontend Vitest: 7/7 strategy builder tests passed, 3/3 widget catalog tests passed.
+  - TypeScript: `tsc --noEmit` passed with 0 errors.
+  - Production Build: `vite build` clean in 11.94s.
+  - Fast-forward merged into `main` at `34bba8e` and pushed to `origin/main`.
+
