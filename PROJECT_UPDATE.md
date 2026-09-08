@@ -3725,3 +3725,28 @@ a different index, and the F&O master had drifted two years out of date.
 - **Verification**: frontend 65/65 files, 266/266 tests; backend 675/675 tests;
   `tsc --noEmit` clean; `vite build` clean; `ruff check .` clean;
   `mypy backend --strict` clean over 336 files; generator re-run is idempotent.
+
+### 2026-09-08 — Historic Data Download Panel & CSV Export API
+
+Added a dedicated Historic Data Download panel/palette to the terminal navigation panel
+and widget registry, enabling traders to inspect, preview, and download historical OHLCV data
+for any specific script across configurable timeframes and intervals in standardized CSV format.
+
+- **Backend REST API (`backend/app/api/historical.py`)**:
+  - `GET /api/v1/historical/info`: Reports DuckDB Parquet warehouse state, supported timeframes, and segments.
+  - `GET /api/v1/historical/bars`: Queries historical OHLCV bars using `WarehouseReader` and resamples via `BarResampler` (with session-aligned IST market hours fallback for unseeded local dev).
+  - `GET /api/v1/historical/export`: Streams downloadable `.csv` files with quantitative finance columns (`timestamp,symbol,open,high,low,close,volume,open_interest`).
+  - Read-only route protected via `_AUTH_DEPS` session enforcement.
+
+- **Frontend Navigation & Widget (`frontend/src/widgets/builtin/HistoricDataWidget.tsx`, `Navigation.tsx`)**:
+  - Added "Historic Data Download" with `CSV` badge under *Watchlist & Markets*.
+  - Scrip autocomplete and popular script chips (`RELIANCE`, `TCS`, `HDFCBANK`, `INFY`, `NIFTY 50`, `BANKNIFTY`, etc.).
+  - Segment selector (`NSE_EQ`, `NSE_FNO`, `IDX_I`, `BSE_EQ`), timeframe buttons (`1m` to `1w`), date range presets and pickers.
+  - Interactive data preview table with color-coded candles, scorecard summary metrics, clipboard copy, and 1-click CSV download.
+  - Registered in `builtinManifests` and `schemas.ts` for full-screen navigation and widget palette.
+
+- **Verification**:
+  - Backend unit tests (`test_historical_api.py`, `test_api_auth_enforcement.py`): 13/13 passed.
+  - Frontend Vitest tests (`HistoricDataWidget.test.tsx`, `Shell.test.tsx`): 8/8 passed.
+  - `tsc --noEmit` (0 errors), `vite build` (clean bundle), `ruff check .` (all clean), `mypy backend --strict` (338 files clean).
+
