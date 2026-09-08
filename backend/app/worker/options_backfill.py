@@ -12,14 +12,16 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from app.warehouse import paths
 from app.warehouse.manifest import CurrentPointer, PartitionMetadata
 from app.warehouse.publisher import WarehousePublisher
 from app.warehouse.schema import OptionBarRecord, option_bars_to_arrow_table
 
 logger = logging.getLogger(__name__)
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_DATA_ROOT = REPO_ROOT / "data"
+REPO_ROOT = paths.REPO_ROOT
+# Re-exported for backwards compatibility; resolve_data_root is the real entry point.
+DEFAULT_DATA_ROOT = paths.DEFAULT_DATA_ROOT
 # charts/rollingoption accepts up to 45 days per call (dhan-api-docs.md, F1.4).
 MAX_OPTIONS_WINDOW_DAYS = 45
 
@@ -234,7 +236,7 @@ class OptionsBackfillManager:
         data_root: Path | str | None = None,
         publisher: WarehousePublisher | None = None,
     ) -> None:
-        self.data_root = Path(data_root).resolve() if data_root else DEFAULT_DATA_ROOT.resolve()
+        self.data_root = paths.resolve_data_root(data_root)
         self.publisher = publisher or WarehousePublisher(data_root=self.data_root)
 
     def execute_options_backfill_from_payloads(

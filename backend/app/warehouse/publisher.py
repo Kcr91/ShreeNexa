@@ -14,6 +14,7 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from app.warehouse import paths
 from app.warehouse.manifest import (
     CorrectionMetadata,
     CurrentPointer,
@@ -24,15 +25,16 @@ from app.warehouse.schema import BarRecord, bars_to_arrow_table
 
 logger = logging.getLogger(__name__)
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_DATA_ROOT = REPO_ROOT / "data"
+REPO_ROOT = paths.REPO_ROOT
+# Re-exported for backwards compatibility; resolve_data_root is the real entry point.
+DEFAULT_DATA_ROOT = paths.DEFAULT_DATA_ROOT
 
 
 class WarehousePublisher:
     """Publishes versioned immutable Parquet partitions and maintains the atomic version pointer."""
 
     def __init__(self, data_root: Path | str | None = None) -> None:
-        self.data_root = Path(data_root).resolve() if data_root else DEFAULT_DATA_ROOT.resolve()
+        self.data_root = paths.resolve_data_root(data_root)
         self.ensure_data_root()
 
     def ensure_data_root(self) -> None:

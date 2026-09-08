@@ -31,6 +31,7 @@ from app.dhan.models import (
     DhanProfile,
     DhanQuote,
     DhanResponseEnvelope,
+    DhanRollingOptionData,
     DhanTokenRenewalResponse,
 )
 from app.dhan.orders import (
@@ -246,14 +247,16 @@ class DhanRestClient:
         instrument_type: str,
         from_date: str,
         to_date: str,
+        include_open_interest: bool = False,
     ) -> DhanHistoricalData:
-        """Fetch historical daily OHLCV bars."""
+        """Fetch historical daily OHLCV bars, optionally including open interest."""
         payload = {
             "securityId": str(security_id),
             "exchangeSegment": exchange_segment.upper(),
             "instrument": instrument_type.upper(),
             "fromDate": from_date,
             "toDate": to_date,
+            "oi": "true" if include_open_interest else "false",
         }
         data = self._request("POST", "charts/historical", json_data=payload)
         if not isinstance(data, dict):
@@ -268,8 +271,9 @@ class DhanRestClient:
         from_date: str,
         to_date: str,
         interval: int = 1,
+        include_open_interest: bool = False,
     ) -> DhanHistoricalData:
-        """Fetch historical minute intraday OHLCV bars."""
+        """Fetch minute intraday OHLCV bars, optionally including open interest."""
         payload = {
             "securityId": str(security_id),
             "exchangeSegment": exchange_segment.upper(),
@@ -277,11 +281,58 @@ class DhanRestClient:
             "fromDate": from_date,
             "toDate": to_date,
             "interval": str(interval),
+            "oi": "true" if include_open_interest else "false",
         }
         data = self._request("POST", "charts/intraday", json_data=payload)
         if not isinstance(data, dict):
             raise DhanMalformedResponseError("Expected dictionary payload for charts/intraday")
         return DhanHistoricalData.model_validate(data)
+
+    def get_rolling_option_history(
+        self,
+        security_id: str,
+        *,
+        from_date: str,
+        to_date: str,
+        exchange_segment: str = "NSE_FNO",
+        instrument: str = "OPTIDX",
+        expiry_flag: str = "WEEK",
+        expiry_code: int = 1,
+        strike: str = "ATM",
+        option_type: str | None = None,
+        interval: int = 1,
+        required_data: Sequence[str] | None = None,
+    ) -> DhanRollingOptionData:
+        """Fetch expired-option history on a rolling, ATM-relative basis.
+
+        Strikes are addressed relative to spot ("ATM", "ATM+3", "ATM-10") rather than by
+        absolute price, because expired contracts leave the scrip master. One call returns
+        both the CE and PE legs. The API accepts at most 45 days per call; windowing is the
+        caller's responsibility - see app.worker.options_backfill.generate_option_windows.
+        """
+        payload: dict[str, Any] = {
+            "exchangeSegment": exchange_segment.upper(),
+            "securityId": str(security_id),
+            "instrument": instrument.upper(),
+            "expiryFlag": expiry_flag.upper(),
+            "expiryCode": expiry_code,
+            "strike": strike.upper(),
+            "interval": str(interval),
+            "fromDate": from_date,
+            "toDate": to_date,
+            "requiredData": list(required_data)
+            if required_data is not None
+            else ["open", "high", "low", "close", "volume", "oi", "iv", "spot", "strike"],
+        }
+        if option_type is not None:
+            payload["drvOptionType"] = option_type.upper()
+
+        data = self._request("POST", "charts/rollingoption", json_data=payload)
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError("Expected dictionary payload for charts/rollingoption")
+        # Some responses nest the legs under "data"; accept either shape.
+        legs = data.get("data") if isinstance(data.get("data"), dict) else data
+        return DhanRollingOptionData.model_validate(legs)
 
     def get_quote(self, security_id: str, exchange_segment: str) -> DhanQuote:
         """Fetch snapshot quote for a security."""

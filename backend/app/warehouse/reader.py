@@ -11,13 +11,15 @@ from typing import Any
 import duckdb
 import pyarrow as pa
 
+from app.warehouse import paths
 from app.warehouse.manifest import CurrentPointer, PartitionMetadata, WarehouseManifest
 from app.warehouse.schema import BAR_SCHEMA_PYARROW
 
 logger = logging.getLogger(__name__)
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_DATA_ROOT = REPO_ROOT / "data"
+REPO_ROOT = paths.REPO_ROOT
+# Re-exported for backwards compatibility; resolve_data_root is the real entry point.
+DEFAULT_DATA_ROOT = paths.DEFAULT_DATA_ROOT
 
 
 def _normalize_iso(val: datetime | str | None) -> str | None:
@@ -33,7 +35,7 @@ class WarehouseReader:
     """Read-only query engine over published immutable Parquet partitions using DuckDB."""
 
     def __init__(self, data_root: Path | str | None = None) -> None:
-        self.data_root = Path(data_root).resolve() if data_root else DEFAULT_DATA_ROOT.resolve()
+        self.data_root = paths.resolve_data_root(data_root)
 
     def get_current_pointer(self) -> CurrentPointer | None:
         """Read and parse the current active version pointer."""

@@ -43,6 +43,7 @@ class DhanHistoricalBar(BaseModel):
     low: float
     close: float
     volume: int
+    open_interest: int = 0
 
 
 class DhanHistoricalData(BaseModel):
@@ -55,6 +56,10 @@ class DhanHistoricalData(BaseModel):
     low: list[float] = Field(default_factory=list)
     close: list[float] = Field(default_factory=list)
     volume: list[int] = Field(default_factory=list)
+    open_interest: list[int] = Field(
+        validation_alias=AliasChoices("open_interest", "oi"),
+        default_factory=list,
+    )
     # The live v2 API returns "timestamp"; the published docs show "start_Time".
     # Recorded cassettes confirm "timestamp", so accept both or every bar is dropped.
     start_time: list[int] = Field(
@@ -80,6 +85,8 @@ class DhanHistoricalData(BaseModel):
                 low=self.low[i],
                 close=self.close[i],
                 volume=self.volume[i],
+                # OI is only present when the caller requested it (F&O instruments).
+                open_interest=self.open_interest[i] if i < len(self.open_interest) else 0,
             )
             for i in range(n)
         ]
@@ -212,3 +219,48 @@ class DhanKillSwitchStatus(BaseModel):
 
     client_id: str = Field(alias="dhanClientId", default="")
     kill_switch_status: str = Field(alias="killSwitchStatus", default="")
+
+
+class DhanRollingOptionLeg(BaseModel):
+    """One option leg (CE or PE) of a rolling expired-option response."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    open: list[float] = Field(default_factory=list)
+    high: list[float] = Field(default_factory=list)
+    low: list[float] = Field(default_factory=list)
+    close: list[float] = Field(default_factory=list)
+    volume: list[int] = Field(default_factory=list)
+    open_interest: list[int] = Field(
+        validation_alias=AliasChoices("oi", "open_interest"),
+        default_factory=list,
+    )
+    implied_volatility: list[float] = Field(
+        validation_alias=AliasChoices("iv", "implied_volatility"),
+        default_factory=list,
+    )
+    spot: list[float] = Field(default_factory=list)
+    strike: list[float] = Field(default_factory=list)
+    timestamp: list[int] = Field(
+        validation_alias=AliasChoices("timestamp", "start_Time"),
+        default_factory=list,
+    )
+
+    def bar_count(self) -> int:
+        """Return the number of complete bars, bounded by the shortest required array."""
+        return min(
+            len(self.open),
+            len(self.high),
+            len(self.low),
+            len(self.close),
+            len(self.timestamp),
+        )
+
+
+class DhanRollingOptionData(BaseModel):
+    """Rolling expired-option response carrying both CE and PE legs."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    ce: DhanRollingOptionLeg = Field(default_factory=DhanRollingOptionLeg)
+    pe: DhanRollingOptionLeg = Field(default_factory=DhanRollingOptionLeg)
