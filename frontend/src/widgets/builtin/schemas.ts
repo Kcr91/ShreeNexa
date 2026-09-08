@@ -411,12 +411,25 @@ export const builtinSchemas = {
     fields: [
       {
         name: "defaultUnderlying",
-        label: "Underlying Index",
+        label: "Underlying Index / Stock",
         type: "select",
-        default: "NIFTY",
+        default: "RELIANCE",
         options: [
+          { label: "RELIANCE", value: "RELIANCE" },
           { label: "NIFTY", value: "NIFTY" },
           { label: "BANKNIFTY", value: "BANKNIFTY" },
+        ],
+      },
+      {
+        name: "defaultStrategyTemplate",
+        label: "Strategy Template",
+        type: "select",
+        default: "BUY_CALL",
+        options: [
+          { label: "Buy Call", value: "BUY_CALL" },
+          { label: "Bull Call Spread", value: "BULL_CALL_SPREAD" },
+          { label: "Iron Condor", value: "IRON_CONDOR" },
+          { label: "Short Straddle", value: "SHORT_STRADDLE" },
         ],
       },
     ],

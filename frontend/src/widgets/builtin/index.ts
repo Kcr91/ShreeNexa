@@ -272,11 +272,11 @@ export const builtinManifests: LazyWidgetManifest[] = [
     id: "option-strategy-builder",
     title: "Multi-Leg Option Strategy Builder",
     description:
-      "Interactive multi-leg option payoff builder, breakevens, extrema, and net Greeks.",
+      "Sensibull-grade option strategy builder, payoff analyzer, live feed linked with real-time Greek simulation.",
     category: "analytics",
     icon: "🧩",
-    defaultWidth: 600,
-    defaultHeight: 450,
+    defaultWidth: 1000,
+    defaultHeight: 650,
     schema: builtinSchemas["option-strategy-builder"],
     load: () =>
       import("./OptionStrategyBuilderWidget").then(
