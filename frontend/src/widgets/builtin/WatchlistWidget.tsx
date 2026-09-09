@@ -12,6 +12,7 @@ import {
 } from "../../depth/engine";
 import {
   loadWatchlists,
+  saveWatchlists,
   createWatchlist,
   deleteWatchlist,
   addSymbolToWatchlist,
@@ -26,6 +27,8 @@ import {
 import { SymbolSearchDropdown } from "./SymbolSearchDropdown";
 import { MarketDepthCard } from "../../depth/MarketDepthCard";
 import { DiscoverWatchlistsModal } from "./DiscoverWatchlistsModal";
+import { defaultWebSocketClient } from "../../websocket/client";
+import { TickData } from "../../websocket/types";
 
 export type WatchlistSortOption =
   | "default"
@@ -118,6 +121,129 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
   const activeWatchlist = useMemo(() => {
     return watchlists.find((w) => w.id === activeWatchlistId) || watchlists[0];
   }, [watchlists, activeWatchlistId]);
+
+  // Flash state map for dynamic tick animation
+  const [priceFlashes, setPriceFlashes] = useState<Record<string, "up" | "down">>({});
+
+  // Sync authentic Dhan live/closing quotes on mount and apply to all watchlist items
+  useEffect(() => {
+    fetch("/api/v1/feed/quotes", {
+      headers: { Authorization: "Bearer demo-session-token" },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data || !data.quotes) return;
+        const quotes = data.quotes;
+
+        setWatchlists((prev) => {
+          let updated = false;
+          const next = prev.map((wl) => {
+            const nextItems = wl.items.map((it) => {
+              const q =
+                quotes[it.symbol] ||
+                quotes[it.symbol.toUpperCase()] ||
+                (it.securityId ? quotes[it.securityId] : null);
+              if (!q) return it;
+              updated = true;
+              const ltp = Number(q.ltp);
+              const close = Number(q.close || ltp);
+              const open = Number(q.open || ltp);
+              const changeAbs =
+                close !== ltp
+                  ? Number((ltp - close).toFixed(2))
+                  : open > 0 && open !== ltp
+                  ? Number((ltp - open).toFixed(2))
+                  : 0;
+              const changePct =
+                close > 0 && close !== ltp
+                  ? Number(((changeAbs / close) * 100).toFixed(2))
+                  : open > 0 && open !== ltp
+                  ? Number((((ltp - open) / open) * 100).toFixed(2))
+                  : 0;
+              return {
+                ...it,
+                ltp,
+                changeAbs,
+                changePct,
+                volume: Number(q.volume || it.volume),
+              };
+            });
+            return { ...wl, items: nextItems };
+          });
+          if (updated) {
+            saveWatchlists(next);
+            return next;
+          }
+          return prev;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  // Real-time live feed subscription and quote tick processing
+  useEffect(() => {
+    if (activeWatchlist && activeWatchlist.items.length > 0) {
+      const symbols = activeWatchlist.items.map((i) => i.symbol);
+      defaultWebSocketClient.subscribeChannels(["quotes", "depth"], symbols);
+    }
+
+    const unsub = defaultWebSocketClient.onChannel("quotes", (data: unknown) => {
+      const tick = data as TickData;
+      if (!tick || !tick.symbol) return;
+
+      const sym = tick.symbol.toUpperCase();
+
+      setWatchlists((prevWatchlists) => {
+        let changed = false;
+        const next = prevWatchlists.map((wl) => {
+          const itemIdx = wl.items.findIndex((i) => {
+            const iSym = i.symbol.toUpperCase();
+            return (
+              iSym === sym ||
+              (sym === "NIFTY" && (iSym === "NIFTY 50" || iSym === "NIFTY50")) ||
+              (sym === "BANKNIFTY" && (iSym === "NIFTY BANK" || iSym === "BANK NIFTY")) ||
+              ((sym === "NIFTY 50" || sym === "NIFTY50") && iSym === "NIFTY") ||
+              ((sym === "NIFTY BANK" || sym === "BANK NIFTY") && iSym === "BANKNIFTY")
+            );
+          });
+          if (itemIdx === -1) return wl;
+
+          changed = true;
+          const updatedItems = [...wl.items];
+          const oldItem = updatedItems[itemIdx];
+          const oldLtp = oldItem.ltp ?? 0;
+          const newLtp = tick.ltp ?? oldLtp;
+
+          if (newLtp !== oldLtp) {
+            const flashDir = newLtp >= oldLtp ? "up" : "down";
+            setPriceFlashes((prev) => ({ ...prev, [oldItem.symbol]: flashDir }));
+            setTimeout(() => {
+              setPriceFlashes((prev) => {
+                const nextFlash = { ...prev };
+                delete nextFlash[oldItem.symbol];
+                return nextFlash;
+              });
+            }, 700);
+          }
+
+          updatedItems[itemIdx] = {
+            ...oldItem,
+            ltp: newLtp,
+            changeAbs: tick.change ?? oldItem.changeAbs,
+            changePct: tick.changePct ?? oldItem.changePct,
+            volume: tick.volume || oldItem.volume,
+          };
+          return { ...wl, items: updatedItems };
+        });
+
+        return changed ? next : prevWatchlists;
+      });
+    });
+
+    return () => {
+      unsub();
+    };
+  }, [activeWatchlistId, activeWatchlist?.items.length]);
 
   const [sortColumn, setSortColumn] = useState<WatchlistColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
@@ -543,6 +669,33 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
         </form>
 
         <div style={{ display: "flex", gap: "var(--spacing-1)", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              fontSize: "11px",
+              color: "var(--color-up, #3fb950)",
+              backgroundColor: "rgba(46, 160, 67, 0.15)",
+              padding: "2px 8px",
+              borderRadius: "12px",
+              border: "1px solid rgba(46, 160, 67, 0.3)",
+              fontWeight: 600,
+            }}
+            title="Connected to Dhan Live Feed WebSocket"
+          >
+            <span
+              style={{
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: "var(--color-up, #3fb950)",
+                boxShadow: "0 0 6px var(--color-up, #3fb950)",
+              }}
+            />
+            <span>LIVE FEED</span>
+          </div>
+
           <button
             type="button"
             onClick={() => setIsConfiguringColumns((prev) => !prev)}
@@ -1000,6 +1153,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                       }
 
                       if (col.id === "ltp") {
+                        const flash = priceFlashes[item.symbol];
                         return (
                           <td
                             key={col.id}
@@ -1008,6 +1162,14 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                               textAlign: "right",
                               fontFamily: "var(--font-family-mono)",
                               fontWeight: 600,
+                              backgroundColor:
+                                flash === "up"
+                                  ? "rgba(46, 160, 67, 0.28)"
+                                  : flash === "down"
+                                  ? "rgba(248, 81, 73, 0.28)"
+                                  : "transparent",
+                              borderRadius: "var(--radius-sm)",
+                              transition: "background-color 0.35s ease",
                             }}
                           >
                             ₹{ltp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}

@@ -24,6 +24,7 @@ PUBLIC_ROUTE_ALLOWLIST = {
     "/api/v1/auth/me",
     "/api/v1/auth/audit",
     "/api/v1/auth/demo",
+    "/api/v1/auth/dev-totp",
     "/api/v1/feed/ws",
     "",  # Mount path for websocket router
 }

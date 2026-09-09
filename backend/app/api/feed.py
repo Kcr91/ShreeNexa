@@ -38,3 +38,43 @@ def get_fanout_metrics() -> dict[str, Any]:
     """Retrieve browser WebSocket fan-out telemetry, session counts, and backpressure metrics."""
     manager = get_market_data_fanout_manager()
     return manager.get_metrics()
+
+
+@router.get("/status")
+def get_feed_status() -> dict[str, Any]:
+    """Retrieve Dhan live feed connection status and total packets received."""
+    from app.dhan.live_feed_service import get_dhan_live_feed_service
+
+    service = get_dhan_live_feed_service()
+    return {
+        "is_running": service.is_running,
+        "total_packets": service.total_packets,
+        "subscriptions_count": len(service.subscriptions),
+    }
+
+
+@router.get("/quotes")
+def get_feed_quotes() -> dict[str, Any]:
+    """Retrieve authentic Dhan real-time / today's closing OHLC quotes."""
+    from app.dhan.live_feed_service import get_dhan_live_feed_service
+
+    service = get_dhan_live_feed_service()
+    return {
+        "status": "success",
+        "updated_at": service.last_quote_sync_time,
+        "quotes": service.get_latest_quotes(),
+    }
+
+
+@router.post("/quotes/sync")
+async def trigger_quotes_sync() -> dict[str, Any]:
+    """Manually trigger immediate resync of quotes from Dhan REST API."""
+    from app.dhan.live_feed_service import get_dhan_live_feed_service
+
+    service = get_dhan_live_feed_service()
+    await service.sync_ohlc_quotes()
+    return {
+        "status": "success",
+        "updated_at": service.last_quote_sync_time,
+        "count": len(service.cached_quotes),
+    }

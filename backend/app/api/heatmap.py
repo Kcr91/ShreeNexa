@@ -274,12 +274,35 @@ INDEX_SEED_HEATMAP: list[IndexHeatmapCell] = [
 @router.get("/indices", response_model=list[IndexHeatmapCell])
 def get_index_heatmap(category: str | None = None) -> list[IndexHeatmapCell]:
     """Retrieve index-level heatmap across major Indian market sectors."""
+    from app.dhan.live_feed_service import get_dhan_live_feed_service
+
+    feed_service = get_dhan_live_feed_service()
+    cached = feed_service.cached_quotes
+
+    cells: list[IndexHeatmapCell] = []
+    for c in INDEX_SEED_HEATMAP:
+        cell_dict = c.model_dump()
+        q = cached.get(c.index_name) or cached.get(c.index_name.upper())
+        if q:
+            ltp = float(q["ltp"])
+            close_p = float(q.get("close", ltp))
+            open_p = float(q.get("open", ltp))
+            if close_p != ltp and close_p > 0:
+                chg = round((ltp - close_p) / close_p * 100, 2)
+            elif open_p != ltp and open_p > 0:
+                chg = round((ltp - open_p) / open_p * 100, 2)
+            else:
+                chg = 0.0
+            cell_dict["ltp"] = ltp
+            cell_dict["change_pct"] = chg
+        cells.append(IndexHeatmapCell(**cell_dict))
+
     if not category:
-        return INDEX_SEED_HEATMAP
+        return cells
 
     clean_cat = category.strip().upper()
-    filtered = [c for c in INDEX_SEED_HEATMAP if c.category and c.category.upper() == clean_cat]
-    return filtered if filtered else INDEX_SEED_HEATMAP
+    filtered = [c for c in cells if c.category and c.category.upper() == clean_cat]
+    return filtered if filtered else cells
 
 
 @router.get("/{index_name}/constituents", response_model=ConstituentHeatmapResponse)
@@ -313,7 +336,12 @@ def get_constituent_heatmap(
             else round(100.0 / len(records), 4)
         )
 
-    # Deterministic mock prices & returns for demonstration and testing
+    from app.dhan.live_feed_service import get_dhan_live_feed_service
+
+    feed_service = get_dhan_live_feed_service()
+    cached = feed_service.cached_quotes
+
+    # Authentic Dhan live/closing prices if available, else deterministic fallbacks
     cells: list[ConstituentHeatmapCell] = []
     for r in records:
         is_fallback = r.weight is None or float(r.weight) <= 0.0
@@ -324,11 +352,23 @@ def get_constituent_heatmap(
         )
         source = "FALLBACK_EQUAL_WEIGHT" if is_fallback else "OFFICIAL_NSE"
 
-        # Deterministic variation based on symbol hash
-        sym_hash = sum(ord(c) for c in r.symbol)
-        change_pct = round(((sym_hash % 600) - 280) / 100.0, 2)  # between -2.8% and +3.2%
-        ltp = round(100.0 + (sym_hash % 3000), 2)
-        vol = (sym_hash * 1234) % 10000000
+        q = cached.get(r.symbol.upper())
+        if q:
+            ltp = float(q["ltp"])
+            close_p = float(q.get("close", ltp))
+            open_p = float(q.get("open", ltp))
+            if close_p != ltp and close_p > 0:
+                change_pct = round((ltp - close_p) / close_p * 100, 2)
+            elif open_p != ltp and open_p > 0:
+                change_pct = round((ltp - open_p) / open_p * 100, 2)
+            else:
+                change_pct = 0.0
+            vol = int(q.get("volume", 1000))
+        else:
+            sym_hash = sum(ord(c) for c in r.symbol)
+            change_pct = round(((sym_hash % 600) - 280) / 100.0, 2)
+            ltp = round(100.0 + (sym_hash % 3000), 2)
+            vol = (sym_hash * 1234) % 10000000
 
         cells.append(
             ConstituentHeatmapCell(

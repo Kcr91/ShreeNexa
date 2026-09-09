@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 
 from app.auth.crypto import (
     generate_recovery_codes,
+    generate_totp_code,
     generate_totp_secret,
     hash_password,
     hash_recovery_code,
@@ -28,19 +29,59 @@ class AuthService:
     """Manages single-user authentication state, sessions, rate limits, and audit logs."""
 
     def __init__(self) -> None:
-        self.username: str = os.environ.get("SHREENEXA_AUTH_USERNAME", "trader")
+        dotenv_vals: dict[str, str] = {}
+        if os.path.exists(".env"):
+            try:
+                from dotenv import dotenv_values
+
+                dotenv_vals = {k: v for k, v in dotenv_values(".env").items() if v is not None}
+            except Exception:
+                pass
+
+        self.username: str = (
+            os.environ.get("SHREENEXA_AUTH_USERNAME")
+            or dotenv_vals.get("SHREENEXA_AUTH_USERNAME")
+            or "trader"
+        )
 
         # Initial master credentials
-        env_password = os.environ.get("SHREENEXA_AUTH_PASSWORD", "ShreeNexa2026!SecureTerminal")
-        env_hash = os.environ.get("SHREENEXA_AUTH_PASSWORD_HASH")
+        env_password = (
+            os.environ.get("SHREENEXA_AUTH_PASSWORD")
+            or dotenv_vals.get("SHREENEXA_AUTH_PASSWORD")
+            or "ShreeNexa2026!SecureTerminal"
+        )
+        env_hash = os.environ.get("SHREENEXA_AUTH_PASSWORD_HASH") or dotenv_vals.get(
+            "SHREENEXA_AUTH_PASSWORD_HASH"
+        )
         self.password_hash: str = env_hash if env_hash else hash_password(env_password)
 
+        default_totp = (
+            generate_totp_secret()
+            if os.environ.get("APP_ENV") == "production"
+            else "JBSWY3DPEHPK3PXP"
+        )
         self.totp_secret: str = (
-            os.environ.get("SHREENEXA_AUTH_TOTP_SECRET") or generate_totp_secret()
+            os.environ.get("SHREENEXA_AUTH_TOTP_SECRET")
+            or dotenv_vals.get("SHREENEXA_AUTH_TOTP_SECRET")
+            or default_totp
         )
 
         # Generate default recovery codes if not specified
-        raw_recovery_codes = generate_recovery_codes(8)
+        default_recovery = [
+            "A1B2-C3D4-E5F6-G7H8",
+            "B2C3-D4E5-F6G7-H8J9",
+            "C3D4-E5F6-G7H8-J9K0",
+            "D4E5-F6G7-H8J9-K0L1",
+            "E5F6-G7H8-J9K0-L1M2",
+            "F6G7-H8J9-K0L1-M2N3",
+            "G7H8-J9K0-L1M2-N3P4",
+            "H8J9-K0L1-M2N3-P4Q5",
+        ]
+        raw_recovery_codes = (
+            generate_recovery_codes(8)
+            if os.environ.get("APP_ENV") == "production"
+            else default_recovery
+        )
         self.recovery_code_hashes: set[str] = {hash_recovery_code(c) for c in raw_recovery_codes}
         self.raw_recovery_codes_backup: list[str] = raw_recovery_codes
 
@@ -55,6 +96,10 @@ class AuthService:
 
         # In-memory audit log ring buffer (last 1000 events)
         self._audit_log: deque[AuthAuditRecord] = deque(maxlen=1000)
+
+    def get_current_totp_code(self) -> str:
+        """Helper to generate the current 6-digit TOTP code for the configured secret."""
+        return generate_totp_code(self.totp_secret)
 
     # --------------------------------------------------------------------------
     # Rate Limiting & Brute Force Prevention

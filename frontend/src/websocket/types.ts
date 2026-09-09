@@ -1,6 +1,6 @@
 export type WebSocketState = "CONNECTING" | "CONNECTED" | "DISCONNECTED" | "RECONNECTING" | "ERROR";
 
-export type FeedChannel = "quotes" | "depth" | "orders" | "positions" | "pnl";
+export type FeedChannel = "quotes" | "depth" | "orders" | "positions" | "pnl" | "oi";
 
 export interface TickData {
   symbol: string;

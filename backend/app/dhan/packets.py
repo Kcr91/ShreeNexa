@@ -14,6 +14,7 @@ class FeedResponseCode(IntEnum):
     TICKER = 2
     QUOTE = 4
     OI = 5
+    PREV_CLOSE = 6
     FULL = 8
     DISCONNECT = 50
 
@@ -133,7 +134,24 @@ class DisconnectPacket:
     disconnect_code: int
 
 
-FeedPacket = IndexPacket | TickerPacket | QuotePacket | OIPacket | FullPacket | DisconnectPacket
+@dataclass(frozen=True, slots=True)
+class PrevClosePacket:
+    """Previous day closing price and open interest packet."""
+
+    header: PacketHeader
+    prev_close: float
+    prev_oi: int
+
+
+FeedPacket = (
+    IndexPacket
+    | TickerPacket
+    | QuotePacket
+    | OIPacket
+    | PrevClosePacket
+    | FullPacket
+    | DisconnectPacket
+)
 
 
 class DhanFeedParser:
@@ -160,6 +178,9 @@ class DhanFeedParser:
 
     DISCONNECT_PAYLOAD_FORMAT = "<H"
     DISCONNECT_PACKET_SIZE = 10
+
+    PREV_CLOSE_PAYLOAD_FORMAT = "<fi"
+    PREV_CLOSE_PACKET_SIZE = 16
 
     @classmethod
     def parse_header(cls, data: bytes) -> PacketHeader:
@@ -195,10 +216,24 @@ class DhanFeedParser:
             return cls._parse_oi(data, header)
         elif header.response_code == FeedResponseCode.FULL:
             return cls._parse_full(data, header)
+        elif header.response_code == FeedResponseCode.PREV_CLOSE:
+            return cls._parse_prev_close(data, header)
         elif header.response_code == FeedResponseCode.DISCONNECT:
             return cls._parse_disconnect(data, header)
         else:
             raise CorruptPacketError(f"Unknown feed response code: {header.response_code}")
+
+    @classmethod
+    def _parse_prev_close(cls, data: bytes, header: PacketHeader) -> PrevClosePacket:
+        if len(data) < cls.PREV_CLOSE_PACKET_SIZE:
+            raise CorruptPacketError(
+                f"Prev Close packet truncated: expected {cls.PREV_CLOSE_PACKET_SIZE} "
+                f"bytes, got {len(data)}"
+            )
+        prev_close, prev_oi = struct.unpack_from(
+            cls.PREV_CLOSE_PAYLOAD_FORMAT, data, cls.HEADER_SIZE
+        )
+        return PrevClosePacket(header=header, prev_close=round(prev_close, 2), prev_oi=prev_oi)
 
     @classmethod
     def _parse_index(cls, data: bytes, header: PacketHeader) -> IndexPacket:

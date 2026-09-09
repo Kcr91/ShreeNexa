@@ -15,7 +15,9 @@ from app.auth.service import auth_service
 from app.dhan.packets import (
     FeedPacket,
     FullPacket,
+    IndexPacket,
     OIPacket,
+    PrevClosePacket,
     QuotePacket,
     TickerPacket,
 )
@@ -213,7 +215,7 @@ class MarketDataFanoutManager:
 
         messages_to_dispatch: list[dict[str, Any]] = []
 
-        if isinstance(packet, (QuotePacket, FullPacket, TickerPacket)):
+        if isinstance(packet, (QuotePacket, FullPacket, TickerPacket, IndexPacket)):
             q_data: dict[str, Any] = {
                 "segment": seg,
                 "security_id": sec_id,
@@ -242,6 +244,23 @@ class MarketDataFanoutManager:
                     "segment": seg,
                     "security_id": sec_id,
                     "data": q_data,
+                }
+            )
+
+        elif isinstance(packet, PrevClosePacket):
+            messages_to_dispatch.append(
+                {
+                    "type": "delta",
+                    "channel": "quotes",
+                    "segment": seg,
+                    "security_id": sec_id,
+                    "data": {
+                        "segment": seg,
+                        "security_id": sec_id,
+                        "ltp": packet.prev_close,
+                        "close": packet.prev_close,
+                        "received_at": t,
+                    },
                 }
             )
 

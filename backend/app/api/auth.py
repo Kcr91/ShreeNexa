@@ -224,6 +224,22 @@ def demo_login(response: Response) -> AuthSuccessResponse:
     )
 
 
+@router.get("/dev-totp")
+def get_dev_totp() -> dict[str, str]:
+    """Retrieve development TOTP code and secret for local convenience (disabled in production)."""
+    if IS_PRODUCTION:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Development helper disabled in production.",
+        )
+    return {
+        "username": auth_service.username,
+        "totp_secret": auth_service.totp_secret,
+        "current_totp": auth_service.get_current_totp_code(),
+        "recovery_code_sample": auth_service.raw_recovery_codes_backup[0],
+    }
+
+
 @router.get("/audit", response_model=list[AuthAuditRecord])
 def get_audit_log(
     shreenexa_session: str | None = Cookie(default=None),

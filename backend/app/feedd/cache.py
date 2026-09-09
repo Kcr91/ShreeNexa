@@ -17,6 +17,7 @@ from app.dhan.packets import (
     FullPacket,
     IndexPacket,
     OIPacket,
+    PrevClosePacket,
     QuotePacket,
     TickerPacket,
 )
@@ -132,6 +133,8 @@ class HotCache(Protocol):
     def batch_update_packets(
         self, packets: Sequence[FeedPacket], now: float | None = None
     ) -> None: ...
+
+    def set_quote(self, quote: CachedQuote) -> None: ...
 
     def get_quote(
         self, segment: str, security_id: str, now: float | None = None
@@ -328,10 +331,50 @@ class InMemoryHotCache:
                     received_at=t,
                 )
 
+        elif isinstance(packet, PrevClosePacket):
+            existing = self._quotes.get((seg, sec_id))
+            if existing:
+                self._quotes[(seg, sec_id)] = CachedQuote(
+                    segment=seg,
+                    security_id=sec_id,
+                    ltp=existing.ltp,
+                    ltq=existing.ltq,
+                    ltt=existing.ltt,
+                    avg_price=existing.avg_price,
+                    volume=existing.volume,
+                    total_buy_qty=existing.total_buy_qty,
+                    total_sell_qty=existing.total_sell_qty,
+                    open=existing.open,
+                    high=existing.high,
+                    low=existing.low,
+                    close=packet.prev_close,
+                    received_at=t,
+                )
+            else:
+                self._quotes[(seg, sec_id)] = CachedQuote(
+                    segment=seg,
+                    security_id=sec_id,
+                    ltp=packet.prev_close,
+                    ltq=0,
+                    ltt=int(t),
+                    avg_price=packet.prev_close,
+                    volume=0,
+                    total_buy_qty=0.0,
+                    total_sell_qty=0.0,
+                    open=packet.prev_close,
+                    high=packet.prev_close,
+                    low=packet.prev_close,
+                    close=packet.prev_close,
+                    received_at=t,
+                )
+
     def batch_update_packets(self, packets: Sequence[FeedPacket], now: float | None = None) -> None:
         t = now if now is not None else time.time()
         for p in packets:
             self.update_from_packet(p, now=t)
+
+    def set_quote(self, quote: CachedQuote) -> None:
+        self._quotes[(quote.segment, quote.security_id)] = quote
 
     def get_quote(
         self, segment: str, security_id: str, now: float | None = None
@@ -474,6 +517,10 @@ class RedisHotCache:
                 pipe.set(d_key, json.dumps(depth_data), ex=self.ttl)
 
         pipe.execute()
+
+    def set_quote(self, quote: CachedQuote) -> None:
+        q_key = quote_key(quote.segment, quote.security_id)
+        self._client.set(q_key, quote.model_dump_json(), ex=self.ttl)
 
     def get_quote(
         self, segment: str, security_id: str, now: float | None = None

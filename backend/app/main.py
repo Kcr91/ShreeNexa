@@ -47,6 +47,7 @@ from app.contracts import heartbeat as hb
 from app.contracts.process_loop import HEARTBEAT_INTERVAL_S
 from app.dhan.credentials import resolve_dhan_credentials
 from app.dhan.health import DhanTokenHealth, check_token_health
+from app.dhan.live_feed_service import get_dhan_live_feed_service
 
 PROCESS_NAME = "api"
 
@@ -79,13 +80,17 @@ async def _heartbeat_task() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    task = asyncio.create_task(_heartbeat_task())
+    hb_task = asyncio.create_task(_heartbeat_task())
+    feed_service = get_dhan_live_feed_service()
+    feed_task = asyncio.create_task(feed_service.run())
     try:
         yield
     finally:
-        task.cancel()
+        feed_service.stop()
+        feed_task.cancel()
+        hb_task.cancel()
         try:
-            await task
+            await asyncio.gather(hb_task, feed_task, return_exceptions=True)
         except asyncio.CancelledError:
             pass
 

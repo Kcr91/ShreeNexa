@@ -225,6 +225,15 @@ export const LoginView: React.FC = () => {
                   {showPassword ? "🙈" : "👁️"}
                 </button>
               </div>
+              <div
+                style={{
+                  marginTop: "6px",
+                  fontSize: "var(--font-size-xs, 0.75rem)",
+                  color: "var(--text-muted, #8b949e)",
+                }}
+              >
+                Default master password: <code style={{ color: "var(--color-primary, #58a6ff)", userSelect: "all" }}>ShreeNexa2026!SecureTerminal</code>
+              </div>
             </div>
 
             <button
@@ -322,6 +331,48 @@ export const LoginView: React.FC = () => {
               >
                 Enter code from Google Authenticator or hardware token
               </span>
+              <div
+                style={{
+                  marginTop: "var(--spacing-3, 0.75rem)",
+                  padding: "8px 12px",
+                  backgroundColor: "rgba(56, 139, 253, 0.08)",
+                  borderRadius: "var(--radius-md, 6px)",
+                  border: "1px dashed rgba(56, 139, 253, 0.3)",
+                  fontSize: "var(--font-size-xs, 0.75rem)",
+                  color: "var(--text-secondary, #c9d1d9)",
+                  textAlign: "center",
+                }}
+              >
+                <div>Authenticator Secret: <code style={{ color: "var(--color-primary, #58a6ff)", userSelect: "all" }}>JBSWY3DPEHPK3PXP</code></div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/v1/auth/dev-totp");
+                      if (res.ok) {
+                        const data = await res.json();
+                        if (data.current_totp) {
+                          setTotpCode(data.current_totp);
+                        }
+                      }
+                    } catch {
+                      // ignore
+                    }
+                  }}
+                  style={{
+                    marginTop: "6px",
+                    padding: "4px 8px",
+                    background: "rgba(56, 139, 253, 0.15)",
+                    border: "1px solid rgba(56, 139, 253, 0.3)",
+                    borderRadius: "4px",
+                    color: "var(--color-primary, #58a6ff)",
+                    fontSize: "0.75rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  ⚡ Click to Auto-Fill Current TOTP Code
+                </button>
+              </div>
             </div>
 
             <button

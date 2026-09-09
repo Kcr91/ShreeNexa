@@ -9,6 +9,7 @@ import { NotificationProvider } from "./notifications/NotificationContext";
 import { ToastContainer } from "./notifications/ToastContainer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Shell } from "./components/Shell";
+import { WebSocketProvider } from "./websocket/WebSocketContext";
 
 export interface AppProps {
   initialUser?: UserSession;
@@ -20,10 +21,12 @@ export const App: React.FC<AppProps> = ({ initialUser, autoCheckAuth = true }) =
     <ErrorBoundary fallbackMessage="Critical terminal shell failure. Please refresh the browser.">
       <AuthProvider initialUser={initialUser} autoCheck={autoCheckAuth}>
         <NotificationProvider>
-          <AuthGuard>
-            <Shell />
-            <ToastContainer />
-          </AuthGuard>
+          <WebSocketProvider>
+            <AuthGuard>
+              <Shell />
+              <ToastContainer />
+            </AuthGuard>
+          </WebSocketProvider>
         </NotificationProvider>
       </AuthProvider>
     </ErrorBoundary>

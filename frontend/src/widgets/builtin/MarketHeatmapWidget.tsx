@@ -20,6 +20,8 @@ import {
   NIFTY_50_AUTHENTIC_CONSTITUENTS,
   getConstituentsForIndex,
 } from "../../heatmap/indicesCatalog";
+import { defaultWebSocketClient } from "../../websocket/client";
+import { TickData } from "../../websocket/types";
 
 export type ConstituentSortOption =
   | "WEIGHT_DESC"
@@ -170,53 +172,169 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
     }
   }, [selectedIndex, constituentsCache]);
 
-  // Live streaming simulation tick
+  // Connect to live WebSocket feed and update constituents and indices dynamically
   useEffect(() => {
-    if (!isStreaming) return;
+    // 1. Subscribe to active constituents and indices
+    const activeConstituents = constituentsCache[selectedIndex] || [];
+    const symbols = activeConstituents.map((c) => c.symbol);
+    defaultWebSocketClient.subscribeChannels(
+      ["quotes"],
+      [...symbols, "NIFTY", "BANKNIFTY", "NIFTY 50", "NIFTY BANK", "RELIANCE", "TCS", "HDFCBANK", "INFY"]
+    );
 
-    const interval = setInterval(() => {
+    // 2. Listen to quote ticks from live feed
+    const unsub = defaultWebSocketClient.onChannel("quotes", (data: unknown) => {
+      const tick = data as TickData;
+      if (!tick || !tick.symbol) return;
+
+      const sym = tick.symbol.toUpperCase();
       setLastUpdated(new Date());
 
-      if (viewMode === "INDICES") {
-        setCategoryData((prev) => {
-          const list = prev[activeCategory];
-          if (!list || list.length === 0) return prev;
+      // Update constituent items in cache if matched
+      setConstituentsCache((prevCache) => {
+        let matched = false;
+        const updatedCache = { ...prevCache };
 
-          // Pick 3 random items to adjust tick
-          const updated = [...list];
-          for (let k = 0; k < Math.min(3, updated.length); k++) {
-            const randIdx = Math.floor(Math.random() * updated.length);
-            const item = { ...updated[randIdx] };
-            const delta = Number(((Math.random() - 0.5) * 0.08).toFixed(2));
-            item.changePct = Number((item.changePct + delta).toFixed(2));
-            item.ltp = Number((item.ltp * (1 + delta / 100)).toFixed(2));
-            updated[randIdx] = item;
+        for (const indexName of Object.keys(updatedCache)) {
+          const list = updatedCache[indexName];
+          if (!list || list.length === 0) continue;
+
+          const itemIdx = list.findIndex((c) => c.symbol.toUpperCase() === sym);
+          if (itemIdx >= 0) {
+            matched = true;
+            const updatedList = [...list];
+            const old = updatedList[itemIdx];
+            updatedList[itemIdx] = {
+              ...old,
+              ltp: tick.ltp ?? old.ltp,
+              changePct: tick.changePct ?? old.changePct,
+              volume: tick.volume || old.volume,
+            };
+            updatedCache[indexName] = updatedList;
           }
+        }
 
-          return { ...prev, [activeCategory]: updated };
-        });
-      } else {
-        setConstituentsCache((prev) => {
-          const list = prev[selectedIndex];
-          if (!list || list.length === 0) return prev;
+        return matched ? updatedCache : prevCache;
+      });
 
-          const updated = [...list];
-          for (let k = 0; k < Math.min(4, updated.length); k++) {
-            const randIdx = Math.floor(Math.random() * updated.length);
-            const item = { ...updated[randIdx] };
-            const delta = Number(((Math.random() - 0.5) * 0.12).toFixed(2));
-            item.changePct = Number((item.changePct + delta).toFixed(2));
-            item.ltp = Number((item.ltp * (1 + delta / 100)).toFixed(2));
-            updated[randIdx] = item;
+      // Update index items in categoryData if matched
+      setCategoryData((prevCatData) => {
+        let matched = false;
+        const updatedCatData = { ...prevCatData };
+
+        for (const cat of Object.keys(updatedCatData) as IndexCategory[]) {
+          const list = updatedCatData[cat];
+          if (!list || list.length === 0) continue;
+
+          const itemIdx = list.findIndex((item) => {
+            const name = item.indexName.toUpperCase();
+            return (
+              name === sym ||
+              (sym === "NIFTY" && (name === "NIFTY 50" || name === "NIFTY50")) ||
+              (sym === "BANKNIFTY" && (name === "NIFTY BANK" || name === "BANK NIFTY")) ||
+              (sym === "NIFTY 50" && (name === "NIFTY 50" || name === "NIFTY")) ||
+              (sym === "NIFTY BANK" && (name === "NIFTY BANK" || name === "BANKNIFTY"))
+            );
+          });
+
+          if (itemIdx >= 0) {
+            matched = true;
+            const updatedList = [...list];
+            const old = updatedList[itemIdx];
+            updatedList[itemIdx] = {
+              ...old,
+              ltp: tick.ltp ?? old.ltp,
+              changePct: tick.changePct ?? old.changePct,
+            };
+            updatedCatData[cat] = updatedList;
           }
+        }
 
-          return { ...prev, [selectedIndex]: updated };
+        return matched ? updatedCatData : prevCatData;
+      });
+    });
+
+    return () => {
+      unsub();
+    };
+  }, [selectedIndex, constituentsCache[selectedIndex]?.length]);
+
+  // Fetch real Dhan live/closing quotes on mount and apply to heatmap
+  const syncDhanQuotes = useCallback(() => {
+    fetch("/api/v1/feed/quotes", {
+      headers: { Authorization: "Bearer demo-session-token" },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data || !data.quotes) return;
+        setLastUpdated(new Date());
+        const quotes = data.quotes;
+
+        // 1. Update constituents cache with authentic quotes
+        setConstituentsCache((prevCache) => {
+          const updatedCache = { ...prevCache };
+          for (const indexName of Object.keys(updatedCache)) {
+            const list = updatedCache[indexName];
+            if (!list || list.length === 0) continue;
+            updatedCache[indexName] = list.map((c) => {
+              const q = quotes[c.symbol] || quotes[c.symbol.toUpperCase()];
+              if (!q) return c;
+              const ltp = Number(q.ltp);
+              const close = Number(q.close || ltp);
+              const open = Number(q.open || ltp);
+              const change = close !== ltp ? ltp - close : open > 0 && open !== ltp ? ltp - open : 0;
+              const changePct =
+                close > 0 && close !== ltp
+                  ? Number(((change / close) * 100).toFixed(2))
+                  : open > 0 && open !== ltp
+                  ? Number((((ltp - open) / open) * 100).toFixed(2))
+                  : 0;
+              return {
+                ...c,
+                ltp,
+                changePct,
+                volume: Number(q.volume || c.volume),
+              };
+            });
+          }
+          return updatedCache;
         });
-      }
-    }, 3000);
 
-    return () => clearInterval(interval);
-  }, [isStreaming, viewMode, activeCategory, selectedIndex]);
+        // 2. Update category index items with authentic quotes
+        setCategoryData((prevCatData) => {
+          const updatedCatData = { ...prevCatData };
+          for (const cat of Object.keys(updatedCatData) as IndexCategory[]) {
+            const list = updatedCatData[cat];
+            if (!list || list.length === 0) continue;
+            updatedCatData[cat] = list.map((item) => {
+              const q = quotes[item.indexName] || quotes[item.indexName.toUpperCase()];
+              if (!q) return item;
+              const ltp = Number(q.ltp);
+              const close = Number(q.close || ltp);
+              const open = Number(q.open || ltp);
+              const change = close !== ltp ? ltp - close : open > 0 && open !== ltp ? ltp - open : 0;
+              const changePct =
+                close > 0 && close !== ltp
+                  ? Number(((change / close) * 100).toFixed(2))
+                  : open > 0 && open !== ltp
+                  ? Number((((ltp - open) / open) * 100).toFixed(2))
+                  : 0;
+              return {
+                ...item,
+                ltp,
+                changePct,
+              };
+            });
+          }
+          return updatedCatData;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    syncDhanQuotes();
+  }, [syncDhanQuotes]);
 
   // Toggle sort direction helper
   const toggleSortDirection = useCallback(() => {
@@ -317,36 +435,8 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
 
   const handleManualRefresh = useCallback(() => {
     setLastUpdated(new Date());
-    if (viewMode === "INDICES") {
-      setCategoryData((prev) => {
-        const list = prev[activeCategory];
-        if (!list) return prev;
-        const updated = list.map((item) => {
-          const delta = Number(((Math.random() - 0.5) * 0.05).toFixed(2));
-          return {
-            ...item,
-            changePct: Number((item.changePct + delta).toFixed(2)),
-            ltp: Number((item.ltp * (1 + delta / 100)).toFixed(2)),
-          };
-        });
-        return { ...prev, [activeCategory]: updated };
-      });
-    } else {
-      setConstituentsCache((prev) => {
-        const list = prev[selectedIndex];
-        if (!list) return prev;
-        const updated = list.map((item) => {
-          const delta = Number(((Math.random() - 0.5) * 0.06).toFixed(2));
-          return {
-            ...item,
-            changePct: Number((item.changePct + delta).toFixed(2)),
-            ltp: Number((item.ltp * (1 + delta / 100)).toFixed(2)),
-          };
-        });
-        return { ...prev, [selectedIndex]: updated };
-      });
-    }
-  }, [viewMode, activeCategory, selectedIndex]);
+    syncDhanQuotes();
+  }, [syncDhanQuotes]);
 
   // Header Title calculation
   const headerTitle = useMemo(() => {
@@ -656,8 +746,34 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
               </button>
             </div>
 
-            {/* Streaming Toggle */}
+            {/* Streaming Toggle & Live Feed Indicator */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "10.5px",
+                  color: "var(--color-up, #3fb950)",
+                  backgroundColor: "rgba(46, 160, 67, 0.15)",
+                  padding: "2px 7px",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(46, 160, 67, 0.3)",
+                  fontWeight: 700,
+                }}
+                title="Synchronized with Dhan HQ Live Feed API"
+              >
+                <span
+                  style={{
+                    width: "5px",
+                    height: "5px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--color-up, #3fb950)",
+                    boxShadow: "0 0 5px var(--color-up, #3fb950)",
+                  }}
+                />
+                <span>LIVE FEED</span>
+              </div>
               <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Streaming</span>
               <button
                 type="button"
