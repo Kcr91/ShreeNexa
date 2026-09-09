@@ -9,7 +9,6 @@ a restart, a 401, or an exhausted budget.
 from __future__ import annotations
 
 import json
-from collections.abc import Generator
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -24,24 +23,11 @@ from app.worker.backfill_queue import (
     backfill_window_table,
     bar_coverage_table,
     enqueue_jobs,
-    metadata,
 )
 from app.worker.backfill_runner import BackfillRunner, BudgetExhausted
 from pydantic import SecretStr
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.engine import Engine
-
-
-@pytest.fixture()
-def engine(postgres_or_skip: str) -> Generator[Engine]:
-    eng = create_engine(postgres_or_skip.replace("postgresql://", "postgresql+psycopg://"))
-    metadata.drop_all(eng, checkfirst=True)
-    metadata.create_all(eng)
-    try:
-        yield eng
-    finally:
-        metadata.drop_all(eng, checkfirst=True)
-        eng.dispose()
 
 
 class StubTransport:
@@ -103,7 +89,7 @@ class ExhaustedLimiter(PermissiveLimiter):
 
 
 def build_runner(
-    engine: Engine,
+    backfill_engine: Engine,
     tmp_path: Path,
     transport: StubTransport,
     limiter: Any | None = None,
@@ -113,7 +99,9 @@ def build_runner(
         transport=transport,
         limiter=limiter or PermissiveLimiter(),
     )
-    return BackfillRunner(engine, client=client, data_root=tmp_path, auto_renew_token=False)
+    return BackfillRunner(
+        backfill_engine, client=client, data_root=tmp_path, auto_renew_token=False
+    )
 
 
 def two_windows(spec: JobSpec) -> list[tuple[date, date]]:
@@ -137,42 +125,46 @@ def equity_spec(**kw: Any) -> JobSpec:
 
 
 class TestFetchAndCheckpoint:
-    def test_run_once_fetches_and_completes_a_window(self, engine: Engine, tmp_path: Path) -> None:
-        enqueue_jobs(engine, [equity_spec()], two_windows)
+    def test_run_once_fetches_and_completes_a_window(
+        self, backfill_engine: Engine, tmp_path: Path
+    ) -> None:
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
         transport = StubTransport()
-        runner = build_runner(engine, tmp_path, transport)
+        runner = build_runner(backfill_engine, tmp_path, transport)
 
         assert runner.run_once() is True
         assert len(transport.calls) == 1
         assert transport.calls[0]["path"] == "charts/intraday"
 
-        with engine.connect() as conn:
+        with backfill_engine.connect() as conn:
             states = sorted(r[0] for r in conn.execute(select(backfill_window_table.c.state)).all())
         assert states == ["done", "pending"]
 
-    def test_run_once_returns_false_on_empty_queue(self, engine: Engine, tmp_path: Path) -> None:
-        runner = build_runner(engine, tmp_path, StubTransport())
+    def test_run_once_returns_false_on_empty_queue(
+        self, backfill_engine: Engine, tmp_path: Path
+    ) -> None:
+        runner = build_runner(backfill_engine, tmp_path, StubTransport())
         assert runner.run_once() is False
 
     def test_daily_dataset_uses_the_separate_budget_endpoint(
-        self, engine: Engine, tmp_path: Path
+        self, backfill_engine: Engine, tmp_path: Path
     ) -> None:
         """charts/historical has its own 7,000/day; routing there is what makes the
         all-stock EOD tier free relative to the intraday grind."""
-        enqueue_jobs(engine, [equity_spec(dataset="daily", interval="D")], two_windows)
+        enqueue_jobs(backfill_engine, [equity_spec(dataset="daily", interval="D")], two_windows)
         transport = StubTransport()
-        runner = build_runner(engine, tmp_path, transport)
+        runner = build_runner(backfill_engine, tmp_path, transport)
 
         runner.run_once()
 
         assert transport.calls[0]["path"] == "charts/historical"
 
     def test_drain_processes_every_window_exactly_once(
-        self, engine: Engine, tmp_path: Path
+        self, backfill_engine: Engine, tmp_path: Path
     ) -> None:
-        enqueue_jobs(engine, [equity_spec()], two_windows)
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
         transport = StubTransport()
-        runner = build_runner(engine, tmp_path, transport)
+        runner = build_runner(backfill_engine, tmp_path, transport)
 
         stats = runner.drain()
 
@@ -181,12 +173,12 @@ class TestFetchAndCheckpoint:
         assert len(transport.calls) == 2
 
     def test_coverage_is_recorded_after_a_successful_window(
-        self, engine: Engine, tmp_path: Path
+        self, backfill_engine: Engine, tmp_path: Path
     ) -> None:
-        enqueue_jobs(engine, [equity_spec()], two_windows)
-        build_runner(engine, tmp_path, StubTransport()).run_once()
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
+        build_runner(backfill_engine, tmp_path, StubTransport()).run_once()
 
-        with engine.connect() as conn:
+        with backfill_engine.connect() as conn:
             row = conn.execute(select(bar_coverage_table)).mappings().one()
 
         assert row["symbol"] == "RELIANCE"
@@ -195,17 +187,19 @@ class TestFetchAndCheckpoint:
 
 
 class TestResumeAfterRestart:
-    def test_completed_windows_are_never_re_fetched(self, engine: Engine, tmp_path: Path) -> None:
+    def test_completed_windows_are_never_re_fetched(
+        self, backfill_engine: Engine, tmp_path: Path
+    ) -> None:
         """The property the whole multi-week download depends on."""
-        enqueue_jobs(engine, [equity_spec()], two_windows)
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
 
         first = StubTransport()
-        build_runner(engine, tmp_path, first).run_once()
+        build_runner(backfill_engine, tmp_path, first).run_once()
         assert len(first.calls) == 1
 
         # A brand-new runner, as after a crash or reboot.
         second = StubTransport()
-        stats = build_runner(engine, tmp_path, second).drain()
+        stats = build_runner(backfill_engine, tmp_path, second).drain()
 
         assert stats.windows_attempted == 1, "only the outstanding window should remain"
         assert len(second.calls) == 1
@@ -214,31 +208,37 @@ class TestResumeAfterRestart:
 
 class TestBudgetExhaustion:
     def test_budget_exhaustion_stops_the_run_without_losing_the_window(
-        self, engine: Engine, tmp_path: Path
+        self, backfill_engine: Engine, tmp_path: Path
     ) -> None:
-        enqueue_jobs(engine, [equity_spec()], two_windows)
-        runner = build_runner(engine, tmp_path, StubTransport(), limiter=ExhaustedLimiter())
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
+        runner = build_runner(
+            backfill_engine, tmp_path, StubTransport(), limiter=ExhaustedLimiter()
+        )
 
         stats = runner.drain()
 
         assert stats.stopped_reason == "budget_exhausted"
-        with engine.connect() as conn:
+        with backfill_engine.connect() as conn:
             states = sorted(r[0] for r in conn.execute(select(backfill_window_table.c.state)).all())
         assert states == ["pending", "pending"], "leases must be returned, not lost"
 
     def test_budget_exhaustion_does_not_consume_an_attempt(
-        self, engine: Engine, tmp_path: Path
+        self, backfill_engine: Engine, tmp_path: Path
     ) -> None:
-        enqueue_jobs(engine, [equity_spec()], two_windows)
-        build_runner(engine, tmp_path, StubTransport(), limiter=ExhaustedLimiter()).drain()
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
+        build_runner(backfill_engine, tmp_path, StubTransport(), limiter=ExhaustedLimiter()).drain()
 
-        with engine.connect() as conn:
+        with backfill_engine.connect() as conn:
             attempts = [r[0] for r in conn.execute(select(backfill_window_table.c.attempts)).all()]
         assert max(attempts) == 0, "an exhausted budget is not the window's fault"
 
-    def test_run_once_raises_budget_exhausted(self, engine: Engine, tmp_path: Path) -> None:
-        enqueue_jobs(engine, [equity_spec()], two_windows)
-        runner = build_runner(engine, tmp_path, StubTransport(), limiter=ExhaustedLimiter())
+    def test_run_once_raises_budget_exhausted(
+        self, backfill_engine: Engine, tmp_path: Path
+    ) -> None:
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
+        runner = build_runner(
+            backfill_engine, tmp_path, StubTransport(), limiter=ExhaustedLimiter()
+        )
 
         with pytest.raises(BudgetExhausted):
             runner.run_once()
@@ -246,19 +246,19 @@ class TestBudgetExhaustion:
 
 class TestAuthFailure:
     def test_auth_failure_parks_jobs_and_keeps_progress(
-        self, engine: Engine, tmp_path: Path
+        self, backfill_engine: Engine, tmp_path: Path
     ) -> None:
-        enqueue_jobs(engine, [equity_spec()], two_windows)
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
 
         good = StubTransport()
-        build_runner(engine, tmp_path, good).run_once()
+        build_runner(backfill_engine, tmp_path, good).run_once()
 
         bad = StubTransport()
         bad.raise_next = DhanAuthenticationError("token expired", status_code=401)
-        stats = build_runner(engine, tmp_path, bad).drain()
+        stats = build_runner(backfill_engine, tmp_path, bad).drain()
 
         assert stats.stopped_reason == "paused_auth"
-        with engine.connect() as conn:
+        with backfill_engine.connect() as conn:
             job_state = conn.execute(select(backfill_job_table.c.state)).scalar_one()
             window_states = sorted(
                 r[0] for r in conn.execute(select(backfill_window_table.c.state)).all()
@@ -267,29 +267,31 @@ class TestAuthFailure:
         assert job_state == "paused_auth"
         assert window_states == ["done", "pending"], "finished work must survive the pause"
 
-    def test_auth_failure_does_not_consume_an_attempt(self, engine: Engine, tmp_path: Path) -> None:
-        enqueue_jobs(engine, [equity_spec()], two_windows)
+    def test_auth_failure_does_not_consume_an_attempt(
+        self, backfill_engine: Engine, tmp_path: Path
+    ) -> None:
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
         bad = StubTransport()
         bad.raise_next = DhanAuthenticationError("token expired", status_code=401)
 
-        build_runner(engine, tmp_path, bad).drain()
+        build_runner(backfill_engine, tmp_path, bad).drain()
 
-        with engine.connect() as conn:
+        with backfill_engine.connect() as conn:
             attempts = [r[0] for r in conn.execute(select(backfill_window_table.c.attempts)).all()]
         assert max(attempts) == 0
 
 
 class TestRawProvenance:
     def test_raw_payload_is_persisted_for_every_window(
-        self, engine: Engine, tmp_path: Path
+        self, backfill_engine: Engine, tmp_path: Path
     ) -> None:
-        enqueue_jobs(engine, [equity_spec()], two_windows)
-        build_runner(engine, tmp_path, StubTransport()).run_once()
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
+        build_runner(backfill_engine, tmp_path, StubTransport()).run_once()
 
         raw_files = list((tmp_path / "raw").rglob("payload.json"))
         assert raw_files, "immutable raw ingest must be written before parsing"
 
-        with engine.connect() as conn:
+        with backfill_engine.connect() as conn:
             ingest_id = conn.execute(
                 select(backfill_window_table.c.raw_ingest_id).where(
                     backfill_window_table.c.state == "done"
@@ -298,12 +300,12 @@ class TestRawProvenance:
         assert ingest_id, "checkpoint must reference the raw ingest for provenance"
 
 
-def test_empty_response_is_terminal_not_retried(engine: Engine, tmp_path: Path) -> None:
-    enqueue_jobs(engine, [equity_spec()], two_windows)
-    runner = build_runner(engine, tmp_path, StubTransport(bars_per_call=0))
+def test_empty_response_is_terminal_not_retried(backfill_engine: Engine, tmp_path: Path) -> None:
+    enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
+    runner = build_runner(backfill_engine, tmp_path, StubTransport(bars_per_call=0))
 
     runner.run_once()
 
-    with engine.connect() as conn:
+    with backfill_engine.connect() as conn:
         states = sorted(r[0] for r in conn.execute(select(backfill_window_table.c.state)).all())
     assert "empty" in states

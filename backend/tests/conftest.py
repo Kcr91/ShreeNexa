@@ -7,6 +7,7 @@ and session/CSRF authentication dependency overrides for API endpoint suites.
 from __future__ import annotations
 
 import os
+import uuid
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 
@@ -16,7 +17,8 @@ import redis
 from app.api.deps import require_csrf, require_session
 from app.auth.models import SessionInfo
 from app.main import app
-from sqlalchemy.engine import make_url
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine, make_url
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
@@ -102,3 +104,30 @@ def default_auth_dependency_overrides(
             app.dependency_overrides[require_csrf] = orig_csrf
         else:
             app.dependency_overrides.pop(require_csrf, None)
+
+
+@pytest.fixture()
+def backfill_engine(postgres_or_skip: str) -> Generator[Engine]:
+    """Engine bound to a throwaway schema for backfill-queue integration tests.
+
+    These tests need real Postgres semantics (SKIP LOCKED, ON CONFLICT, LEAST/GREATEST),
+    so they create the queue tables for real. Creating them in `public` and dropping them
+    afterwards would delete the tables Alembic owns in the developer's own database,
+    leaving alembic_version claiming a migration that is no longer applied. Each test
+    therefore gets its own schema, dropped wholesale at teardown.
+    """
+    from app.worker.backfill_queue import metadata as backfill_metadata
+
+    schema = f"test_backfill_{uuid.uuid4().hex[:8]}"
+    url = postgres_or_skip.replace("postgresql://", "postgresql+psycopg://")
+    engine = create_engine(url, connect_args={"options": f"-csearch_path={schema}"})
+
+    with engine.begin() as conn:
+        conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+    backfill_metadata.create_all(engine)
+    try:
+        yield engine
+    finally:
+        with engine.begin() as conn:
+            conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
+        engine.dispose()
