@@ -462,6 +462,16 @@ export const builtinSchemas = {
       },
     ],
   },
+  "historic-data-report": {
+    fields: [
+      {
+        name: "symbol",
+        label: "Default Symbol Filter",
+        type: "string",
+        default: "",
+      },
+    ],
+  },
   "historic-data": {
     fields: [
       {

@@ -300,3 +300,121 @@ class TestCoverageOutage:
         res = client.get("/api/v1/historical/bars", params={"symbol": "RELIANCE"})
         assert res.status_code == 404
         assert "could not be read" in res.json()["detail"]
+
+
+SAMPLE_REPORT = {
+    "generated_at": "2026-09-09T12:00:00+05:30",
+    "totals": {
+        "windows": 6,
+        "bars": 87479,
+        "done": 6,
+        "empty": 0,
+        "pending": 0,
+        "failed": 0,
+        "suspect": 6,
+        "settled": 6,
+        "percent_complete": 100.0,
+    },
+    "series_returned": 1,
+    "series": [
+        {
+            "symbol": "NIFTY",
+            "label": "NIFTY [1]",
+            "dataset": "intraday",
+            "exchange_segment": "IDX_I",
+            "interval": "1",
+            "underlying_symbol": None,
+            "expiry_flag": None,
+            "expiry_code": None,
+            "strike_offset": None,
+            "option_type": None,
+            "tier": 1,
+            "downloaded_months": 6,
+            "pending_months": 0,
+            "failed_months": 0,
+            "suspect_months": 6,
+            "total_rows": 87479,
+            "first_month": "2021-09",
+            "last_month": "2022-02",
+            "months": [
+                {
+                    "month": "2021-10",
+                    "state": "done",
+                    "rows": 14987,
+                    "suspect": True,
+                    "reasons": ["only 50% of bars inside regular market hours"],
+                    "in_hours": 7500,
+                    "out_of_hours": 7487,
+                    "distinct_days": 21,
+                    "unexpected_dates": [],
+                    "attempts": 1,
+                    "last_error": None,
+                }
+            ],
+        }
+    ],
+}
+
+
+class TestHistoricDataReport:
+    def test_report_returns_month_by_month_status(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(historical, "build_report", lambda *a, **k: SAMPLE_REPORT)
+        res = client.get("/api/v1/historical/report", params={"symbol": "NIFTY"})
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["totals"]["bars"] == 87479
+        assert data["series"][0]["months"][0]["month"] == "2021-10"
+
+    def test_report_surfaces_anomalies_without_hiding_the_data(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Unusual months are flagged and still counted as downloaded."""
+        monkeypatch.setattr(historical, "build_report", lambda *a, **k: SAMPLE_REPORT)
+        month = client.get("/api/v1/historical/report").json()["series"][0]["months"][0]
+
+        assert month["state"] == "done"
+        assert month["rows"] > 0
+        assert month["suspect"] is True
+        assert month["reasons"], "a flagged month must explain itself"
+
+    def test_report_filters_are_passed_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        captured: dict[str, object] = {}
+
+        def fake(engine: object, **kwargs: object) -> dict[str, object]:
+            captured.update(kwargs)
+            return SAMPLE_REPORT
+
+        monkeypatch.setattr(historical, "build_report", fake)
+        client.get(
+            "/api/v1/historical/report",
+            params={"symbol": "nifty", "dataset": "options", "tier": 2, "suspect_only": "true"},
+        )
+
+        assert captured["symbol"] == "nifty"
+        assert captured["dataset"] == "options"
+        assert captured["tier"] == 2
+        assert captured["suspect_only"] is True
+
+    def test_report_reports_503_when_the_ledger_is_unreachable(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from sqlalchemy.exc import OperationalError
+
+        def unavailable(*a: object, **k: object) -> dict[str, object]:
+            raise OperationalError("select 1", {}, Exception("connection refused"))
+
+        monkeypatch.setattr(historical, "build_report", unavailable)
+        res = client.get("/api/v1/historical/report")
+
+        assert res.status_code == 503
+        assert "unavailable" in res.json()["detail"].lower()
+
+    def test_missing_months_endpoint(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(historical, "missing_months", lambda *a, **k: ["2022-03", "2022-04"])
+        res = client.get("/api/v1/historical/report/missing", params={"symbol": "nifty"})
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["symbol"] == "NIFTY"
+        assert body["missing_months"] == ["2022-03", "2022-04"]

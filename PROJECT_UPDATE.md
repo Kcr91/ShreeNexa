@@ -3932,3 +3932,39 @@ quarantined, matching the corrupt band exactly.
 **Not a regression.** `test_process_independence::test_supervisor_restarts_a_killed_child`
 is flaky and pre-existing: 3 failures in 6 runs at `2435b30` (before the worker
 scheduler) versus 2 in 6 on current `main`. It needs its own fix.
+
+### 2026-09-09 — Historic Data Report, and download-everything policy
+
+**Policy change, at the user's direction.** The runner no longer decides whether data
+is keepable. Exchange calendars are not something this system can adjudicate: holidays
+differ per exchange, holiday dates move, Muhurat and other special sessions exist, and
+sessions are sometimes shortened or run outside the usual window. The previous guard
+made that call and got it wrong, discarding a whole month of NIFTY because
+`nse_calendar.yaml` wrongly lists 2026-05-27 as a holiday. Everything fetched is now
+stored; anomalies are recorded and surfaced. Cleaning is a separate later task against
+stored data rather than an irreversible decision made at download time.
+
+Each window records bars inside versus outside regular market hours, dates absent from
+our calendar, weekend days, distinct days, busiest day, and the observed span
+(migration `b2c3d4e5f6a7`: `quality` JSONB, `suspect`, `distinct_days`, `min_ts`,
+`max_ts`, plus a partial index on `suspect`).
+
+**Historic Data Report** (`backend/app/warehouse/report.py`, `GET /api/v1/historical/report`,
+`/report/missing`, and the `historic-data-report` widget under Navigation).
+
+Built on the window ledger rather than the Parquet files, because one window is exactly
+one API call for exactly one calendar month. That makes "2022-03 downloaded, 2022-04
+never fetched" a stored fact instead of something inferred from gaps in a bar series -
+which matters when a gap could equally mean not-fetched, fetched-and-empty, or
+exchange-closed. Three distinct states, not one ambiguous absence.
+
+The panel shows overall progress, and per series a month-by-month grid where
+downloaded-but-odd is visually distinct from both clean and missing. Clicking a month
+explains why it was flagged and lists the dates our calendar does not recognise. A
+ledger outage renders as an error rather than as "nothing downloaded".
+
+Verified live over 2021-09 to 2022-02, spanning Dhan's corrupt band: 6/6 months stored,
+87,479 bars written and queryable, every month flagged with its own reason.
+
+**Gates:** ruff clean, `mypy --strict` clean (354 files), 861 backend tests, frontend
+typecheck clean, 285 vitest across 67 files, `vite build` clean.

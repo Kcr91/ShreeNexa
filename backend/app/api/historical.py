@@ -33,6 +33,7 @@ from app.marketdata.resampler import (
     parse_timeframe,
 )
 from app.warehouse.reader import WarehouseReader
+from app.warehouse.report import build_report, missing_months
 from app.worker.backfill_queue import bar_coverage_table
 
 logger = logging.getLogger(__name__)
@@ -479,3 +480,53 @@ def export_historical_csv(
     # Declares provenance on the download itself, which the previous CSV did not.
     response.headers["X-ShreeNexa-Data-Source"] = "warehouse"
     return response
+
+
+class ReportResponse(BaseModel):
+    """Per-series, per-month download report."""
+
+    generated_at: str
+    totals: dict[str, Any]
+    series_returned: int
+    series: list[dict[str, Any]]
+
+
+@router.get("/report", response_model=ReportResponse)
+def get_historic_data_report(
+    symbol: Annotated[str | None, Query(description="Filter to one symbol")] = None,
+    dataset: Annotated[str | None, Query(description="equity/index/futures/options/daily")] = None,
+    tier: Annotated[int | None, Query(ge=1, le=8, description="Backfill tier")] = None,
+    suspect_only: Annotated[bool, Query(description="Only months flagged as unusual")] = False,
+    limit_series: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> ReportResponse:
+    """Report what has been downloaded month by month, and what looked unusual.
+
+    Read from the backfill window ledger, so a month is reported as never fetched,
+    fetched-and-empty, or fetched-with-anomalies as three distinct facts rather than
+    being guessed from gaps in the bars.
+    """
+    try:
+        data = build_report(
+            get_db_engine(),
+            symbol=symbol,
+            dataset=dataset,
+            tier=tier,
+            suspect_only=suspect_only,
+            limit_series=limit_series,
+        )
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail=f"Backfill ledger unavailable: {exc}") from exc
+    return ReportResponse(**data)
+
+
+@router.get("/report/missing")
+def get_missing_months(
+    symbol: Annotated[str, Query(description="Symbol to inspect")],
+    dataset: Annotated[str | None, Query(description="Restrict to one dataset")] = None,
+) -> dict[str, Any]:
+    """List the months of a symbol that have not been settled yet."""
+    try:
+        months = missing_months(get_db_engine(), symbol=symbol, dataset=dataset)
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail=f"Backfill ledger unavailable: {exc}") from exc
+    return {"symbol": symbol.upper(), "dataset": dataset, "missing_months": months}

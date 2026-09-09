@@ -313,6 +313,21 @@ export const builtinManifests: LazyWidgetManifest[] = [
         (module) => module.historicDataDefinition,
       ),
   },
+  {
+    id: "historic-data-report",
+    title: "Historic Data Report",
+    description:
+      "Month-by-month record of what has been downloaded for each series, what is still missing, and which months returned data that needs a closer look.",
+    category: "analytics",
+    icon: "🧾",
+    defaultWidth: 900,
+    defaultHeight: 560,
+    schema: builtinSchemas["historic-data-report"],
+    load: () =>
+      import("./HistoricDataReportWidget").then(
+        (module) => module.historicDataReportDefinition,
+      ),
+  },
 ];
 
 export function registerBuiltinWidgets(): void {

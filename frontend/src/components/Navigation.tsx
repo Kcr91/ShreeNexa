@@ -26,6 +26,7 @@ export type ActiveRoute =
   | "strategy-builder"
   | "market-heatmap"
   | "historic-data"
+  | "historic-data-report"
   | (string & {});
 
 export interface NavItem {
@@ -56,6 +57,12 @@ export const navGroups: NavGroup[] = [
       { id: "market-heatmap", label: "Market Heatmap & Breadth", icon: "🗺️" },
       { id: "screener", label: "PIT Screener", icon: "🔍" },
       { id: "historic-data", label: "Historic Data Download", icon: "📥", badge: "CSV" },
+      {
+        id: "historic-data-report",
+        label: "Historic Data Report",
+        icon: "🧾",
+        badge: "COVERAGE",
+      },
     ],
   },
   {
