@@ -3968,3 +3968,26 @@ Verified live over 2021-09 to 2022-02, spanning Dhan's corrupt band: 6/6 months 
 
 **Gates:** ruff clean, `mypy --strict` clean (354 files), 861 backend tests, frontend
 typecheck clean, 285 vitest across 67 files, `vite build` clean.
+
+### 2026-09-09 — Authentic Dhan live feed & OHLC quote sync, elimination of synthetic blinking, and dev TOTP helpers
+
+**Live market data & quote synchronisation:**
+- Replaced synthetic simulated price generation and interval drift with genuine quotes fetched from the Dhan REST API and WebSocket stream.
+- Implemented `DhanLiveFeedService` (`backend/app/dhan/live_feed_service.py`) running within FastAPI lifespan, streaming Dhan market packets and syncing OHLC/LTP quotes directly into `HotCache`.
+- Added `/api/v1/feed/quotes` and `/api/v1/feed/quotes/sync` REST endpoints.
+- Updated `MarketHeatmapWidget` and `WatchlistWidget` to query real market quotes; removed synthetic random price micro-ticks and artificial blinking when the market is closed.
+- Added `set_quote` method to `HotCache` protocol, `InMemoryHotCache`, and `RedisHotCache`.
+
+**Authentication improvements:**
+- Added local development TOTP assistance: `GET /api/v1/auth/dev-totp` and auto-fill button in `LoginView`.
+- Configured default dev secret `JBSWY3DPEHPK3PXP` and safe `.env` resolution.
+
+**Gates:**
+- `uv run ruff check .` passed (0 errors).
+- `uv run mypy backend --strict` passed (356 source files, 0 errors).
+- `npm.cmd --prefix frontend run typecheck` passed.
+- `npm.cmd --prefix frontend run test -- --run` passed (67/67 test files, 285/285 tests).
+- `npm.cmd --prefix frontend run build` passed (Vite bundle built cleanly).
+- `uv run python build/validate_manifest.py` and `validate_fixtures.py` passed.
+- `uv run pytest backend/tests/unit/test_feedd_hot_cache.py backend/tests/unit/test_market_ws_fanout.py backend/tests/unit/test_dhan_feed_packets.py backend/tests/unit/test_auth_security.py backend/tests/unit/test_api_auth_enforcement.py backend/tests/unit/test_heatmap_api.py` passed (39/39 tests).
+
