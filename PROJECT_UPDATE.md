@@ -3888,3 +3888,47 @@ to almost nothing — run `python -m app.dhan.sync_master` before any real backf
 (live capture sealing and nightly incremental top-up) is not started. `build/state.json`
 remains untouched for F0.4/F0.5, and its pre-existing drift (F1.8, F1.9, F4.9-F4.14 exist
 in state but not the manifest) is unresolved.
+
+### 2026-09-09 — Tier-1 live smoke test: NO-GO for bulk tiers
+
+First run of the backfill against the live Dhan API. The pipeline works end to end,
+but the test surfaced four issues, two of them blocking.
+
+**Worked.** Scrip master synced (201,666 instruments, 9 segments). Tier 1 expanded to
+380 jobs / 4,180 windows. NIFTY drained 22 windows: 18 published, 389,559 bars. Stored
+Parquet is correct — `2026-05-18 03:45:00+00:00` is exactly 09:15 IST, 60s spacing,
+`timestamp[ms, tz=UTC]`, no duplicates, no weekend days.
+
+**BLOCKER 1 — published versions do not accumulate.** Each window mints a new
+warehouse version and `current.json` points only at the newest, so `WarehouseReader`
+sees one partition. 527,758 rows sit on disk across 41 partitions; a query returns
+23,663. About 96% of everything downloaded is unreachable. This is the
+`append_to_current` gap recorded in the F1.10 plan and not yet implemented. **A bulk
+download must not start until this is fixed**, or seventeen days of traffic will
+retain only the final window.
+
+**BLOCKER 2 — Dhan's own 1-minute archive is corrupt for part of the range.** NIFTY
+(securityId 13) returns exactly 375 bars/session, 09:15-15:30 IST, for 2023-2026 and
+for April 2021 and June 2022 onward. But roughly **October 2021 to May 2022** returns
+~700 bars/day spanning IST hours 00:00-23:00 including Saturdays, only ~52-58% of bars
+inside any session. Thinly-followed indices are worse: ESG100 was 60.7% in-session
+across a ten-hour daily span. No timezone shift explains a 17-hour span; the data is
+simply malformed upstream. The five-year 1-minute horizon is therefore not uniformly
+trustworthy, and the usable intraday history is closer to three and a half years.
+
+Mitigated by the new session guard (`980bb09`): `BackfillRunner` validates fetched
+intraday bars against `TradingCalendar.validate_bar_session` and quarantines any window
+under 95% in-session rather than publishing it. Four of NIFTY's 22 windows were
+quarantined, matching the corrupt band exactly.
+
+**Fixed along the way.**
+- `5a75ee6` — the queue integration tests created their tables in `public` and dropped
+  them at teardown, deleting the tables Alembic owns from the developer's database while
+  `alembic_version` still claimed the migration was applied. Found when the smoke test
+  failed with `relation "backfill_job" does not exist`. Tests now use throwaway schemas.
+- `980bb09` — `RunStats` only incremented `windows_attempted`; every other counter was
+  permanently zero, so a multi-week run would have reported nothing about its progress.
+
+**Not a regression.** `test_process_independence::test_supervisor_restarts_a_killed_child`
+is flaky and pre-existing: 3 failures in 6 runs at `2435b30` (before the worker
+scheduler) versus 2 in 6 on current `main`. It needs its own fix.
