@@ -53,6 +53,27 @@ describe("HistoricDataWidget Component", () => {
           }),
         });
       }
+      if (url.includes("/api/v1/historical/coverage")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            symbol: "RELIANCE",
+            total_series: 1,
+            items: [
+              {
+                dataset: "intraday",
+                symbol: "RELIANCE",
+                exchange_segment: "NSE_EQ",
+                interval: "1",
+                first_date: "2021-09-01",
+                last_date: "2026-09-01",
+                rows: 469000,
+              },
+            ],
+          }),
+        });
+      }
       return Promise.resolve({
         ok: false,
         status: 404,
@@ -133,5 +154,83 @@ describe("HistoricDataWidget Component", () => {
 
     expect(appendChildSpy).toHaveBeenCalled();
     expect(removeChildSpy).toHaveBeenCalled();
+  });
+
+  it("shows what the warehouse actually holds for the scrip", async () => {
+    render(<HistoricDataWidget instanceId="inst-test-hist" settings={{}} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("coverage-readout")).toBeInTheDocument();
+    });
+    // Text spans several JSX nodes, so assert on the rendered container content.
+    const readout = screen.getByTestId("coverage-readout").textContent ?? "";
+    expect(readout).toContain("intraday/1");
+    expect(readout).toContain("2021-09-01 to 2026-09-01");
+    // toLocaleString picks the runtime locale, so normalise digit separators.
+    expect(readout.replace(/[.,\s]/g, "")).toContain("469000bars");
+  });
+
+  it("requests the max available range when the toggle is on", async () => {
+    render(<HistoricDataWidget instanceId="inst-test-hist" settings={{}} />);
+
+    const maxBtn = screen.getByRole("button", { name: /Max available/i });
+    expect(maxBtn).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(maxBtn);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("range_mode=max")
+      );
+    });
+    expect(maxBtn).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("carries the range mode into the CSV export URL", async () => {
+    render(<HistoricDataWidget instanceId="inst-test-hist" settings={{}} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Max available/i }));
+
+    const createdLinks: HTMLAnchorElement[] = [];
+    const originalCreate = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const el = originalCreate(tag);
+      if (tag === "a") {
+        createdLinks.push(el as HTMLAnchorElement);
+        (el as HTMLAnchorElement).click = vi.fn();
+      }
+      return el;
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Download CSV/i }));
+
+    expect(createdLinks.length).toBeGreaterThan(0);
+    expect(createdLinks[0].href).toContain("range_mode=max");
+  });
+
+  it("says nothing is downloaded rather than implying data exists", async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/api/v1/historical/coverage")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ symbol: "GHOST", total_series: 0, items: [] }),
+        });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        json: async () => ({ detail: "No warehouse data for GHOST" }),
+      });
+    });
+
+    render(<HistoricDataWidget instanceId="inst-test-hist" settings={{}} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Nothing has been downloaded for this scrip yet/i)
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText(/no data is ever simulated/i)).toBeInTheDocument();
   });
 });

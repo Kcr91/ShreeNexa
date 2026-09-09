@@ -3835,3 +3835,56 @@ were `blocked` in `build/state.json`.
     "Expired-option **30-day-window** backfill" while the API permits 45-day windows.
     `F1.2`/`F1.3`/`F1.4` are also currently `status: review` despite no fetch orchestration
     existing. These require manifest amendment before implementation proceeds.
+
+### 2026-09-09 — F1.10 backfill orchestration and F1.12 Historic Data engine
+
+**F1.10 — the fetch layer that never existed.** `DhanRestClient.get_historical_daily` and
+its siblings were never called from `app/`; the three backfill managers only accepted
+already-fetched payloads. Merged to `main` across four commits:
+
+- `2435b30` — `warehouse/paths.py` centralises the data root, so the documented
+  `SHREENEXA_DATA_ROOT` override finally takes effect (it was previously defeated by
+  `DEFAULT_DATA_ROOT` being redefined in five modules). Adds the documented capacity
+  alarm, `get_rolling_option_history` for `charts/rollingoption`, and open-interest
+  plumbing end to end.
+- `1654b6d` — `backfill_job` / `backfill_window` / `bar_coverage` in Postgres, claimed
+  with `FOR UPDATE SKIP LOCKED`. Job identity hashes only the addressing fields, so
+  re-enqueueing cannot reset completed windows. `release_window` refunds the attempt when
+  the interruption is not the window's fault. Counts use `RETURNING`, because psycopg3
+  reports `rowcount` `-1` for executemany and it is unreliable for `ON CONFLICT DO NOTHING`.
+- `66d2c98` — `BackfillRunner`: claim, fetch, publish, checkpoint, one window per pass.
+- `a025e76` — tier expansion and a bounded per-heartbeat drain with distinct backoffs.
+
+**A defect class found three times.** Recording real cassettes showed the live API returns
+`timestamp` while the published docs say `start_Time`. The same assumption was wired into
+three places, each of which returned **zero bars from any real response**:
+`DhanHistoricalData` (fixed in `9ebbc58`), then `parse_dhan_daily_candles` and
+`parse_dhan_minute_candles` (both fixed in `66d2c98`). All three backfill managers are
+marked `review` in `build/state.json`, yet none could have ingested a real bar.
+
+**F1.12 — Historic Data engine.** The panel shipped in `4cbd160` queried the warehouse and,
+on a miss, fell through to `_generate_synthetic_bars` seeded from a hardcoded price table.
+The response said `data_source: "simulated"`, but the CSV download carried no marker at
+all, so an empty warehouse produced fabricated candles indistinguishable from real data
+once downloaded.
+
+- The synthetic generator and its price table are deleted. An empty warehouse now returns
+  **404 naming what coverage exists**, and a test asserts the generator cannot come back.
+- New `GET /api/v1/historical/coverage` reads `bar_coverage`; `range_mode=max` resolves the
+  true held range instead of silently defaulting to the last 30 days.
+- `/export` streams in 5,000-row chunks. It previously built the entire CSV in one
+  `StringIO`; a five-year 1-minute export is ~470,000 rows.
+- Downloads now declare provenance via `X-ShreeNexa-Data-Source`.
+- The widget shows a coverage readout, a **Max available** toggle, and an empty state that
+  distinguishes "nothing downloaded yet" from "no rows in this range".
+
+**Environment fixes:** `.env` `DATABASE_URL` carried the wrong password (`shreenexa_dev`
+against a container provisioned with `shreenexa_local_dev_only`), so the worker could not
+have connected. Docker is installed but not on the Bash `PATH`; the compose Postgres and
+Valkey containers were running throughout.
+
+**Still outstanding:** the scrip master has only 19 rows, so `UniverseBuilder` would expand
+to almost nothing — run `python -m app.dhan.sync_master` before any real backfill. F1.11
+(live capture sealing and nightly incremental top-up) is not started. `build/state.json`
+remains untouched for F0.4/F0.5, and its pre-existing drift (F1.8, F1.9, F4.9-F4.14 exist
+in state but not the manifest) is unresolved.

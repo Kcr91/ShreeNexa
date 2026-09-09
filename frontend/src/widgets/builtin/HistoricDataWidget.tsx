@@ -20,6 +20,16 @@ export interface BarRecordItem {
   open_interest: number;
 }
 
+export interface CoverageItem {
+  dataset: string;
+  symbol: string;
+  exchange_segment: string;
+  interval: string;
+  first_date: string | null;
+  last_date: string | null;
+  rows: number;
+}
+
 export interface SummaryStats {
   total_bars: number;
   first_timestamp?: string | null;
@@ -91,6 +101,8 @@ export const HistoricDataWidget: React.FC<WidgetComponentProps<HistoricDataSetti
   const [summary, setSummary] = useState<SummaryStats | null>(null);
   const [bars, setBars] = useState<BarRecordItem[]>([]);
   const [copied, setCopied] = useState(false);
+  const [coverage, setCoverage] = useState<CoverageItem[]>([]);
+  const [useMaxRange, setUseMaxRange] = useState(false);
 
   // Apply preset date range
   const handlePresetSelect = (days: number) => {
@@ -100,6 +112,34 @@ export const HistoricDataWidget: React.FC<WidgetComponentProps<HistoricDataSetti
     setEndDate(formatDate(end));
     setStartDate(formatDate(start));
   };
+
+  // What the warehouse actually holds for this symbol. Drives the range controls
+  // and the empty state, so the UI can say "nothing downloaded yet" rather than
+  // silently showing whatever the last query returned.
+  const fetchCoverage = useCallback(async () => {
+    const clean = symbol.trim().toUpperCase();
+    if (!clean) {
+      setCoverage([]);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/v1/historical/coverage?symbol=${encodeURIComponent(clean)}`
+      );
+      if (!res.ok) {
+        setCoverage([]);
+        return;
+      }
+      const data = await res.json();
+      setCoverage(data.items || []);
+    } catch {
+      setCoverage([]);
+    }
+  }, [symbol]);
+
+  useEffect(() => {
+    fetchCoverage();
+  }, [fetchCoverage]);
 
   // Fetch preview bars
   const fetchBars = useCallback(async () => {
@@ -114,6 +154,7 @@ export const HistoricDataWidget: React.FC<WidgetComponentProps<HistoricDataSetti
         timeframe,
         start_time: startDate,
         end_time: endDate,
+        range_mode: useMaxRange ? "max" : "explicit",
         limit: "500",
       });
 
@@ -135,7 +176,7 @@ export const HistoricDataWidget: React.FC<WidgetComponentProps<HistoricDataSetti
     } finally {
       setLoading(false);
     }
-  }, [symbol, segment, timeframe, startDate, endDate]);
+  }, [symbol, segment, timeframe, startDate, endDate, useMaxRange]);
 
   // Initial load
   useEffect(() => {
@@ -151,6 +192,7 @@ export const HistoricDataWidget: React.FC<WidgetComponentProps<HistoricDataSetti
       timeframe,
       start_time: startDate,
       end_time: endDate,
+      range_mode: useMaxRange ? "max" : "explicit",
     });
 
     const exportUrl = `/api/v1/historical/export?${queryParams.toString()}`;
@@ -165,11 +207,12 @@ export const HistoricDataWidget: React.FC<WidgetComponentProps<HistoricDataSetti
   // Copy CSV to clipboard
   const handleCopyCsv = () => {
     if (bars.length === 0) return;
-    const header = "timestamp,symbol,open,high,low,close,volume,open_interest\n";
+    const header =
+      "timestamp,symbol,exchange_segment,open,high,low,close,volume,open_interest\n";
     const rows = bars
       .map(
         (b) =>
-          `${b.timestamp},${b.symbol},${b.open.toFixed(2)},${b.high.toFixed(2)},${b.low.toFixed(2)},${b.close.toFixed(2)},${b.volume},${b.open_interest}`
+          `${b.timestamp},${b.symbol},${b.exchange_segment ?? ""},${b.open.toFixed(2)},${b.high.toFixed(2)},${b.low.toFixed(2)},${b.close.toFixed(2)},${b.volume},${b.open_interest}`
       )
       .join("\n");
     navigator.clipboard.writeText(header + rows);
@@ -402,6 +445,30 @@ export const HistoricDataWidget: React.FC<WidgetComponentProps<HistoricDataSetti
             </div>
           </div>
 
+          {/* What the warehouse actually holds for this scrip */}
+          {coverage.length > 0 && (
+            <div
+              data-testid="coverage-readout"
+              style={{
+                width: "100%",
+                fontSize: "11px",
+                color: "var(--text-muted)",
+                display: "flex",
+                gap: "var(--spacing-3)",
+                flexWrap: "wrap",
+              }}
+            >
+              {coverage.map((c) => (
+                <span key={`${c.dataset}-${c.interval}`}>
+                  <strong style={{ color: "var(--text-secondary)" }}>
+                    {c.dataset}/{c.interval}
+                  </strong>{" "}
+                  {c.first_date ?? "?"} to {c.last_date ?? "?"} ({c.rows.toLocaleString()} bars)
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Date Range Interval */}
           <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", flexWrap: "wrap" }}>
             <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", fontWeight: 500 }}>
@@ -426,6 +493,24 @@ export const HistoricDataWidget: React.FC<WidgetComponentProps<HistoricDataSetti
                   {preset.label}
                 </button>
               ))}
+              <button
+                type="button"
+                aria-pressed={useMaxRange}
+                onClick={() => setUseMaxRange((v) => !v)}
+                title="Use the full range held in the warehouse for this scrip"
+                style={{
+                  backgroundColor: useMaxRange ? "var(--accent-primary)" : "var(--bg-primary)",
+                  color: useMaxRange ? "#fff" : "var(--text-muted)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "3px",
+                  padding: "3px 6px",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  fontWeight: useMaxRange ? 600 : 400,
+                }}
+              >
+                Max available
+              </button>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -660,7 +745,18 @@ export const HistoricDataWidget: React.FC<WidgetComponentProps<HistoricDataSetti
             {bars.length === 0 && !loading && (
               <tr>
                 <td colSpan={9} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)" }}>
-                  No historical data found for the selected scrip and date range. Click &quot;Preview Data&quot; or check symbols.
+                  {coverage.length === 0 ? (
+                    <>
+                      Nothing has been downloaded for this scrip yet. Run the backfill
+                      before exporting &mdash; no data is ever simulated.
+                    </>
+                  ) : (
+                    <>
+                      No bars in the selected range. This scrip holds data from{" "}
+                      {coverage[0].first_date ?? "?"} to {coverage[0].last_date ?? "?"};
+                      try &quot;Max available&quot;.
+                    </>
+                  )}
                 </td>
               </tr>
             )}
