@@ -83,6 +83,7 @@ def test_atomic_publication_and_duckdb_reads(temp_data_root: Path) -> None:
         code_commit="commit1",
     )
 
+    assert pointer1 is not None
     assert pointer1.warehouse_version == v1
     assert pointer1.pointer_generation == 1
 
@@ -230,11 +231,13 @@ def test_correction_publication_and_rollback(temp_data_root: Path) -> None:
         corrections=[correction],
         reason="correction",
     )
+    assert pointer2 is not None
     assert pointer2.pointer_generation == 2
     assert reader.query_bars().column("close")[0].as_py() == 1655.0
 
     # Execute rollback to version 1
     pointer3 = publisher.rollback_to(target_version=v1, reason="rollback to v1")
+    assert pointer3 is not None
     assert pointer3.warehouse_version == v1
     assert pointer3.pointer_generation == 3
 
@@ -265,9 +268,11 @@ class TestVersionAccumulation:
         ]
         rel = f"bars/segment=IDX_I/year=2026/month={month}/{symbol.lower()}_1m.parquet"
         meta = publisher.stage_partition(version, bars, rel)
-        return publisher.publish_version(
+        pointer = publisher.publish_version(
             version, [meta], merge_with_current=True, reason="test_append"
         )
+        assert pointer is not None, "a non-batched publish always returns a pointer"
+        return pointer
 
     def test_each_publish_accumulates_rather_than_supersedes(self, tmp_path: Path) -> None:
         publisher = WarehousePublisher(tmp_path)

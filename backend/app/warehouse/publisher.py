@@ -36,6 +36,9 @@ class WarehousePublisher:
 
     def __init__(self, data_root: Path | str | None = None) -> None:
         self.data_root = paths.resolve_data_root(data_root)
+        self._batch_version: str | None = None
+        self._batch_partitions: list[PartitionMetadata] = []
+        self._batch_ingest_ids: list[str] = []
         self.ensure_data_root()
 
     def ensure_data_root(self) -> None:
@@ -115,6 +118,59 @@ class WarehousePublisher:
             symbols=symbols,
         )
 
+    def begin_batch(self, warehouse_version: str) -> None:
+        """Collect subsequent publishes into one version instead of publishing each.
+
+        Publishing once per window rewrites the whole manifest every time, which is
+        quadratic in the number of partitions. Batching turns N manifest rewrites into
+        one. Nothing is durable until flush_batch succeeds, so callers must not
+        checkpoint work until then.
+        """
+        self._batch_version = warehouse_version
+        self._batch_partitions = []
+        self._batch_ingest_ids = []
+
+    def batch_is_open(self) -> bool:
+        """Whether publishes are currently being accumulated."""
+        return self._batch_version is not None
+
+    def batch_size(self) -> int:
+        """Partitions staged into the open batch so far."""
+        return len(self._batch_partitions)
+
+    def flush_batch(
+        self,
+        actor: str = "worker",
+        reason: str = "batched_append",
+        code_commit: str | None = None,
+    ) -> CurrentPointer | None:
+        """Publish everything accumulated since begin_batch, then close the batch."""
+        version = self._batch_version
+        partitions = list(self._batch_partitions)
+        ingest_ids = list(self._batch_ingest_ids)
+        self._batch_version = None
+        self._batch_partitions = []
+        self._batch_ingest_ids = []
+
+        if version is None or not partitions:
+            return None
+
+        return self.publish_version(
+            warehouse_version=version,
+            partitions=partitions,
+            source_ingest_ids=ingest_ids,
+            code_commit=code_commit,
+            merge_with_current=True,
+            actor=actor,
+            reason=reason,
+        )
+
+    def abandon_batch(self) -> None:
+        """Drop an open batch without publishing. Staged files are left for cleanup."""
+        self._batch_version = None
+        self._batch_partitions = []
+        self._batch_ingest_ids = []
+
     def _merge_with_current(
         self,
         new_version: str,
@@ -163,8 +219,12 @@ class WarehousePublisher:
         warehouse_version: str,
         partitions: list[PartitionMetadata],
         **kwargs: Any,
-    ) -> CurrentPointer:
-        """Publish a version that accumulates on top of the current one."""
+    ) -> CurrentPointer | None:
+        """Publish a version that accumulates on top of the current one.
+
+        Returns None while a batch is open, in which case the partitions are recorded
+        for the eventual flush_batch rather than published immediately.
+        """
         kwargs.setdefault("reason", "append")
         return self.publish_version(
             warehouse_version, partitions, merge_with_current=True, **kwargs
@@ -181,7 +241,7 @@ class WarehousePublisher:
         actor: str = "worker",
         reason: str = "initial_publish",
         merge_with_current: bool = False,
-    ) -> CurrentPointer:
+    ) -> CurrentPointer | None:
         """Promote staging atomically, write the manifest, and replace the active pointer.
 
         With ``merge_with_current`` the new manifest also carries forward every partition
@@ -194,6 +254,12 @@ class WarehousePublisher:
         is copied. A new partition sharing a relative path with an old one supersedes it,
         so re-fetching a corrected window replaces rather than duplicates it.
         """
+        if self._batch_version is not None:
+            # A batch is open: record the partitions and defer the manifest rewrite.
+            self._batch_partitions.extend(partitions)
+            self._batch_ingest_ids.extend(source_ingest_ids or [])
+            return None
+
         staging_dir = self.data_root / "staging" / warehouse_version
         version_dir = self.data_root / "warehouse" / "versions" / warehouse_version
 

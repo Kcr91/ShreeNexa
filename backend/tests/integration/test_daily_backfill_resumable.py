@@ -54,6 +54,7 @@ def test_daily_backfill_execution_and_warehouse_query(temp_data_root: Path) -> N
         code_commit="commit_f1_2",
     )
 
+    assert pointer is not None
     assert pointer.pointer_generation == 1
     assert len(ingest_ids) == 1
 

@@ -67,6 +67,7 @@ def test_minute_backfill_kill_resume_deduplication(temp_data_root: Path) -> None
         window_payloads=[(task, windows[0], w1_payload)],
         warehouse_version="wv-1m-run1",
     )
+    assert pointer1 is not None
     assert pointer1.pointer_generation == 1
     assert reports1[0].total_bars == 3
     assert reports1[0].duplicate_count == 0
@@ -79,6 +80,7 @@ def test_minute_backfill_kill_resume_deduplication(temp_data_root: Path) -> None
         ],
         warehouse_version="wv-1m-run2",
     )
+    assert pointer2 is not None
     assert pointer2.pointer_generation == 2
     # Total unique bars must be 5 (3 from w1 + 2 new from w2)
     assert reports2[0].total_bars == 5

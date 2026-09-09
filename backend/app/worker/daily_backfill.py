@@ -190,7 +190,7 @@ class DailyBackfillManager:
         tasks_and_payloads: list[tuple[DailyBackfillTask, dict[str, Any]]],
         warehouse_version: str | None = None,
         code_commit: str | None = None,
-    ) -> tuple[CurrentPointer, list[str]]:
+    ) -> tuple[CurrentPointer | None, list[str]]:
         """Execute daily backfill given tasks and raw payloads (supports offline testing)."""
         now = datetime.now(UTC)
         w_ver = warehouse_version or f"wv-{now.strftime('%Y%m%dT%H%M%SZ')}-{uuid.uuid4().hex[:8]}"

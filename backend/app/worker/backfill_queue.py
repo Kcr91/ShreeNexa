@@ -19,7 +19,7 @@ import hashlib
 import logging
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 
 from sqlalchemy import (
@@ -250,6 +250,28 @@ def enqueue_jobs(
 
     logger.info("Enqueued %d new job(s) and %d new window(s)", jobs_inserted, windows_inserted)
     return jobs_inserted, windows_inserted
+
+
+def reclaim_stale_leases(engine: Engine, older_than_minutes: int = 30) -> int:
+    """Return windows leased by a worker that died before finishing them.
+
+    A process killed mid-window leaves its lease in "running", and claim_next_window
+    only ever hands out "pending" rows - so without this those windows are stranded
+    forever. The attempt already counted against them stands, so a window that
+    repeatedly kills its worker still retires eventually.
+    """
+    w = backfill_window_table
+    cutoff = _now() - timedelta(minutes=older_than_minutes)
+    with engine.begin() as conn:
+        result = conn.execute(
+            update(w)
+            .where(and_(w.c.state == "running", w.c.claimed_at < cutoff))
+            .values(state="pending", claimed_at=None)
+        )
+    count = result.rowcount or 0
+    if count:
+        logger.warning("Reclaimed %d stale window lease(s)", count)
+    return count
 
 
 def claim_next_window(

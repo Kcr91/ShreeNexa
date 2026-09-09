@@ -64,6 +64,7 @@ def test_options_backfill_execution_and_warehouse_read(temp_data_root: Path) -> 
         warehouse_version="wv-opt-test1",
     )
 
+    assert pointer is not None
     assert pointer.pointer_generation == 1
     assert len(ingest_ids) == 1
 

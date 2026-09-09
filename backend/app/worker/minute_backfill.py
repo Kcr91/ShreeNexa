@@ -271,7 +271,7 @@ class MinuteBackfillManager:
         window_payloads: list[tuple[MinuteBackfillTask, tuple[date, date], dict[str, Any]]],
         warehouse_version: str | None = None,
         code_commit: str | None = None,
-    ) -> tuple[CurrentPointer, list[MinuteCoverageReport], list[str]]:
+    ) -> tuple[CurrentPointer | None, list[MinuteCoverageReport], list[str]]:
         """Execute multi-window backfill with deduplication and quality reporting."""
         now = datetime.now(UTC)
         suffix = uuid.uuid4().hex[:8]

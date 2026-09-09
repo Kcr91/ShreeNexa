@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -46,6 +47,7 @@ from app.worker.backfill_queue import (
     complete_window,
     fail_window,
     pause_all_for_auth,
+    reclaim_stale_leases,
     release_window,
     upsert_coverage,
 )
@@ -79,6 +81,14 @@ OPTION_DATASETS = frozenset({"options"})
 # because nse_calendar.yaml wrongly lists 2026-05-27 as a holiday. Everything fetched is
 # now stored; anomalies are recorded for a later, separate cleaning task.
 SUSPECT_IN_HOURS_RATIO = 0.95
+
+# Windows published together as one warehouse version. Publishing per window rewrites
+# the whole manifest each time, which is quadratic in partition count: measured on the
+# real run at 475 bytes per entry, 137,423 partitions would mean a 65 MB manifest
+# rewritten 137,423 times - roughly 4.5 TB of writes - with throughput already down to
+# 0.30 windows/sec and still falling. Nothing in a batch is checkpointed until the
+# batch is published, so a crash re-fetches at most one batch.
+PUBLISH_BATCH_SIZE = 250
 
 # Rough upper bound on the disk one window can add, used for write admission.
 WINDOW_WRITE_HEADROOM_BYTES = 256 * 1024 * 1024
@@ -122,6 +132,7 @@ class BackfillRunner:
         max_attempts: int = 5,
         auto_renew_token: bool = True,
         calendar: TradingCalendar | None = None,
+        publish_batch_size: int = PUBLISH_BATCH_SIZE,
     ) -> None:
         self.engine = engine
         self.client = client or DhanRestClient()
@@ -129,21 +140,34 @@ class BackfillRunner:
         self.max_attempts = max_attempts
         self.auto_renew_token = auto_renew_token
         self.calendar = calendar or TradingCalendar()
+        self.publish_batch_size = publish_batch_size
+        # Windows fetched and staged but not yet published, and therefore not yet
+        # checkpointed. Losing these to a crash costs a re-fetch, never wrong data.
+        self._pending: list[tuple[ClaimedWindow, int, Any, str | None, dict[str, Any]]] = []
+        self._batch_version: str | None = None
         # Outcome of the most recent run_once, so drain() can report real totals.
         self.last_outcome: str = "none"
         self.last_rows: int = 0
         self.last_quality: dict[str, Any] = {}
-        # The managers stage into staging/ and warehouse/; a first run against a fresh
-        # data root would otherwise fail with a missing staging directory.
-        WarehousePublisher(self.data_root).ensure_data_root()
+        # One publisher shared with every manager, so an open batch captures their
+        # publishes instead of each one rewriting the manifest.
+        self.publisher = WarehousePublisher(self.data_root)
+        self.publisher.ensure_data_root()
 
     # ---------------------------------------------------------------- driving
 
-    def run_once(self, datasets: list[str] | None = None) -> bool:
-        """Process exactly one window. Returns False when there is nothing to do."""
+    def run_once(self, datasets: list[str] | None = None, flush_after: bool = True) -> bool:
+        """Process exactly one window. Returns False when there is nothing to do.
+
+        Publishes and checkpoints before returning unless ``flush_after`` is False,
+        which drain() uses to batch many windows into one warehouse version. A single
+        call is durable on return, so callers do not have to know about batching.
+        """
         window = claim_next_window(self.engine, datasets=datasets, max_attempts=self.max_attempts)
         if window is None:
             return False
+
+        self._open_batch_if_needed()
 
         try:
             check_write_admission(self.data_root, WINDOW_WRITE_HEADROOM_BYTES)
@@ -190,29 +214,70 @@ class BackfillRunner:
 
         self.last_outcome = "completed" if rows else "empty"
         self.last_rows = rows
-        complete_window(
-            self.engine,
-            window.job_id,
-            window.window_start,
-            rows=rows,
-            raw_ingest_id=payload,
-            quality=self.last_quality,
-            span=span,
-        )
-        if rows and span is not None:
-            upsert_coverage(
-                self.engine,
-                dataset=window.dataset,
-                exchange_segment=window.exchange_segment,
-                symbol=window.symbol,
-                interval=window.interval,
-                security_id=window.security_id,
-                underlying_symbol=window.underlying_symbol,
-                min_ts=span[0],
-                max_ts=span[1],
-                rows=rows,
-            )
+        self._pending.append((window, rows, span, payload, self.last_quality))
+        if flush_after or len(self._pending) >= self.publish_batch_size:
+            self.flush()
         return True
+
+    def flush(self) -> None:
+        """Publish the open batch, then checkpoint every window it contained.
+
+        Ordering matters: the data has to be durably published before its windows are
+        marked done, otherwise a crash between the two would leave the ledger claiming
+        months that are not in the warehouse.
+        """
+        if not self._pending:
+            self._close_batch()
+            return
+
+        try:
+            self.publisher.flush_batch(reason="backfill_batch")
+        except OSError, RuntimeError, ValueError:
+            # Nothing was checkpointed, so every window in the batch stays claimable.
+            logger.exception("Batch publish failed; releasing %d window(s)", len(self._pending))
+            for window, _rows, _span, _ingest, _quality in self._pending:
+                release_window(self.engine, window.job_id, window.window_start)
+            self._pending = []
+            self._batch_version = None
+            return
+
+        for window, rows, span, ingest_id, quality in self._pending:
+            complete_window(
+                self.engine,
+                window.job_id,
+                window.window_start,
+                rows=rows,
+                raw_ingest_id=ingest_id,
+                quality=quality,
+                span=span,
+            )
+            if rows and span is not None:
+                upsert_coverage(
+                    self.engine,
+                    dataset=window.dataset,
+                    exchange_segment=window.exchange_segment,
+                    symbol=window.symbol,
+                    interval=window.interval,
+                    security_id=window.security_id,
+                    underlying_symbol=window.underlying_symbol,
+                    min_ts=span[0],
+                    max_ts=span[1],
+                    rows=rows,
+                )
+        logger.info("Published batch of %d window(s)", len(self._pending))
+        self._pending = []
+        self._batch_version = None
+
+    def _open_batch_if_needed(self) -> None:
+        """Start a warehouse version for the batch about to be accumulated."""
+        if self._batch_version is None:
+            stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+            self._batch_version = f"wv-batch-{stamp}-{uuid.uuid4().hex[:8]}"
+            self.publisher.begin_batch(self._batch_version)
+
+    def _close_batch(self) -> None:
+        self.publisher.abandon_batch()
+        self._batch_version = None
 
     def drain(
         self,
@@ -222,26 +287,32 @@ class BackfillRunner:
     ) -> RunStats:
         """Process windows until the queue empties, a limit is hit, or budget runs out."""
         stats = RunStats()
+        reclaim_stale_leases(self.engine)
 
         while max_windows is None or stats.windows_attempted < max_windows:
             if should_continue is not None and not should_continue():
                 stats.stopped_reason = "cancelled"
+                self.flush()
                 return stats
 
             try:
-                progressed = self.run_once(datasets=datasets)
+                progressed = self.run_once(datasets=datasets, flush_after=False)
             except BudgetExhausted:
                 stats.stopped_reason = "budget_exhausted"
+                self.flush()
                 return stats
             except DhanAuthenticationError:
                 stats.stopped_reason = "paused_auth"
+                self.flush()
                 return stats
             except DataRootCapacityError:
                 stats.stopped_reason = "disk_full"
+                self.flush()
                 return stats
 
             if not progressed:
                 stats.stopped_reason = "drained"
+                self.flush()
                 return stats
 
             stats.windows_attempted += 1
@@ -254,6 +325,7 @@ class BackfillRunner:
                 stats.windows_failed += 1
 
         stats.stopped_reason = "max_windows"
+        self.flush()
         return stats
 
     # ---------------------------------------------------------------- fetching
@@ -300,7 +372,9 @@ class BackfillRunner:
             from_date=window.window_start,
             to_date=window.window_end,
         )
-        DailyBackfillManager(self.data_root).execute_backfill_from_payloads([(task, payload)])
+        DailyBackfillManager(
+            self.data_root, publisher=self.publisher
+        ).execute_backfill_from_payloads([(task, payload)], warehouse_version=self._batch_version)
         return ingest_id, len(bars), _span(bars)
 
     def _fetch_intraday(
@@ -336,8 +410,11 @@ class BackfillRunner:
             start_date=window.window_start,
             end_date=window.window_end,
         )
-        MinuteBackfillManager(self.data_root).execute_minute_backfill_from_payloads(
-            [(task, (window.window_start, window.window_end), payload)]
+        MinuteBackfillManager(
+            self.data_root, publisher=self.publisher
+        ).execute_minute_backfill_from_payloads(
+            [(task, (window.window_start, window.window_end), payload)],
+            warehouse_version=self._batch_version,
         )
         return ingest_id, len(bars), _span(bars)
 
@@ -382,33 +459,34 @@ class BackfillRunner:
         # series by the rolling descriptor that actually addressed it.
         expiry_label = f"{(window.expiry_flag or 'WEEK').upper()}-{window.expiry_code or 1}"
 
-        batch = []
-        for option_type, leg in (("CALL", data.ce), ("PUT", data.pe)):
-            if leg.bar_count() == 0:
-                continue
-            strike_price = leg.strike[0] if leg.strike else 0.0
-            spot_price = leg.spot[0] if leg.spot else strike_price
-            task = OptionsBackfillTask(
-                symbol=f"{window.symbol}{expiry_label}{strike_price:g}{option_type[0]}E",
-                security_id=window.security_id,
-                underlying_symbol=window.underlying_symbol or window.symbol,
-                expiry_date=expiry_label,
-                strike_price=strike_price,
-                option_type=option_type,
-                strike_step=_infer_strike_step(strike_price, spot_price, offset),
-                is_index=is_index,
-                start_date=window.window_start,
-                end_date=window.window_end,
-            )
-            leg_payload = leg.model_dump(by_alias=True)
-            leg_payload["oi"] = leg.open_interest
-            leg_payload["iv"] = leg.implied_volatility
-            batch.append((task, (window.window_start, window.window_end), spot_price, leg_payload))
+        # Exactly the leg that was requested. Iterating both would rebind option_type
+        # and could publish one leg's bars under the other leg's identity; it only ever
+        # appeared to work because the unrequested leg comes back null.
+        strike_price = leg.strike[0] if leg.strike else 0.0
+        spot_price = leg.spot[0] if leg.spot else strike_price
+        task = OptionsBackfillTask(
+            symbol=f"{window.symbol}{expiry_label}{strike_price:g}{option_type[0]}E",
+            security_id=window.security_id,
+            underlying_symbol=window.underlying_symbol or window.symbol,
+            expiry_date=expiry_label,
+            strike_price=strike_price,
+            option_type=option_type,
+            strike_step=_infer_strike_step(strike_price, spot_price, offset),
+            is_index=is_index,
+            start_date=window.window_start,
+            end_date=window.window_end,
+        )
+        leg_payload = leg.model_dump(by_alias=True)
+        leg_payload["oi"] = leg.open_interest
+        leg_payload["iv"] = leg.implied_volatility
+        OptionsBackfillManager(
+            self.data_root, publisher=self.publisher
+        ).execute_options_backfill_from_payloads(
+            [(task, (window.window_start, window.window_end), spot_price, leg_payload)],
+            warehouse_version=self._batch_version,
+        )
 
-        if batch:
-            OptionsBackfillManager(self.data_root).execute_options_backfill_from_payloads(batch)
-
-        timestamps = [*data.ce.timestamp, *data.pe.timestamp]
+        timestamps = list(leg.timestamp)
         span = (
             datetime.fromtimestamp(min(timestamps), tz=UTC),
             datetime.fromtimestamp(max(timestamps), tz=UTC),

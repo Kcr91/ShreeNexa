@@ -246,7 +246,7 @@ class OptionsBackfillManager:
         ],
         warehouse_version: str | None = None,
         code_commit: str | None = None,
-    ) -> tuple[CurrentPointer, list[str]]:
+    ) -> tuple[CurrentPointer | None, list[str]]:
         """Execute options backfill with ATM boundary verification and atomic promotion."""
         now = datetime.now(UTC)
         suffix = uuid.uuid4().hex[:8]
