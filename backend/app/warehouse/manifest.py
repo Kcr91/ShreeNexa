@@ -22,6 +22,11 @@ class PartitionMetadata(BaseModel):
     max_ts: str
     exchange_segment: str
     symbols: list[str] = Field(default_factory=list)
+    # Version whose directory physically holds this file. None means the manifest's
+    # own version, which is how every pre-accumulation manifest was written. Carried
+    # forward so an appended manifest can reference partitions published earlier
+    # without copying gigabytes on every append.
+    source_version: str | None = None
 
 
 class CorrectionMetadata(BaseModel):

@@ -24,6 +24,7 @@ at all. Both gaps are filled going forward by live capture (F1.11).
 
 from __future__ import annotations
 
+import calendar
 import logging
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
@@ -91,14 +92,47 @@ def default_history_start(today: date | None = None) -> date:
     return ref - timedelta(days=365 * HISTORY_YEARS)
 
 
+def month_windows(start: date, end: date) -> list[tuple[date, date]]:
+    """Split a range into calendar months, clipped to the requested bounds.
+
+    Calendar months rather than maximal 90/45-day windows, for two reasons.
+
+    The warehouse managers write one Parquet file per (symbol, year, month). Two
+    windows landing in the same month therefore collide on the same partition path,
+    and the later one supersedes the earlier - silently losing bars. A month-sized
+    window maps to exactly one file, so that cannot happen.
+
+    It also makes coverage reportable: "2022-03 downloaded, 2022-04 missing" is a
+    fact about a window, not an interval that has to be reconstructed. Dhan's own
+    archive is corrupt for roughly 2021-10 to 2022-05, so per-month status is how a
+    usable range gets established at all.
+
+    The cost is more calls - a month is under both the 90-day intraday and 45-day
+    rolling-option maxima - which the 100,000/day Data API budget absorbs.
+    """
+    if start > end:
+        raise ValueError(f"start_date ({start}) cannot be after end_date ({end})")
+
+    windows: list[tuple[date, date]] = []
+    cursor = date(start.year, start.month, 1)
+    while cursor <= end:
+        last_day = calendar.monthrange(cursor.year, cursor.month)[1]
+        month_end = date(cursor.year, cursor.month, last_day)
+        windows.append((max(cursor, start), min(month_end, end)))
+        cursor = month_end + timedelta(days=1)
+    return windows
+
+
 def intraday_windows(spec: JobSpec) -> list[tuple[date, date]]:
-    """Split a job into <= 90-day windows, the charts/intraday maximum."""
-    return _split(spec.start_date, spec.end_date, MAX_INTRADAY_WINDOW_DAYS)
+    """One window per calendar month; well inside the 90-day API maximum."""
+    assert MAX_INTRADAY_WINDOW_DAYS >= 31
+    return month_windows(spec.start_date, spec.end_date)
 
 
 def option_windows(spec: JobSpec) -> list[tuple[date, date]]:
-    """Split a job into <= 45-day windows, the charts/rollingoption maximum."""
-    return _split(spec.start_date, spec.end_date, MAX_OPTIONS_WINDOW_DAYS)
+    """One window per calendar month; well inside the 45-day API maximum."""
+    assert MAX_OPTIONS_WINDOW_DAYS >= 31
+    return month_windows(spec.start_date, spec.end_date)
 
 
 def daily_windows(spec: JobSpec) -> list[tuple[date, date]]:

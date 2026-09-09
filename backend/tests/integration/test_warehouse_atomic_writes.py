@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from app.warehouse.manifest import CorrectionMetadata
+from app.warehouse.manifest import CorrectionMetadata, CurrentPointer
 from app.warehouse.publisher import WarehousePublisher
 from app.warehouse.reader import WarehouseReader
 from app.warehouse.schema import BarRecord
@@ -240,3 +240,102 @@ def test_correction_publication_and_rollback(temp_data_root: Path) -> None:
 
     # Verification: query returns original close 1650.0
     assert reader.query_bars().column("close")[0].as_py() == 1650.0
+
+
+class TestVersionAccumulation:
+    """Publishing once per window must not leave only the final window readable."""
+
+    def stage_and_publish(
+        self, publisher: WarehousePublisher, version: str, symbol: str, month: str, rows: int
+    ) -> CurrentPointer:
+        bars = [
+            BarRecord(
+                timestamp=datetime(2026, int(month), 1, 4, i % 60, tzinfo=UTC),
+                exchange_segment="IDX_I",
+                security_id="13",
+                symbol=symbol,
+                open=1.0,
+                high=2.0,
+                low=0.5,
+                close=1.5,
+                volume=10,
+                open_interest=0,
+            )
+            for i in range(rows)
+        ]
+        rel = f"bars/segment=IDX_I/year=2026/month={month}/{symbol.lower()}_1m.parquet"
+        meta = publisher.stage_partition(version, bars, rel)
+        return publisher.publish_version(
+            version, [meta], merge_with_current=True, reason="test_append"
+        )
+
+    def test_each_publish_accumulates_rather_than_supersedes(self, tmp_path: Path) -> None:
+        publisher = WarehousePublisher(tmp_path)
+        publisher.ensure_data_root()
+
+        self.stage_and_publish(publisher, "wv-a", "NIFTY", "03", 5)
+        self.stage_and_publish(publisher, "wv-b", "NIFTY", "04", 7)
+        self.stage_and_publish(publisher, "wv-c", "NIFTY", "05", 9)
+
+        table = WarehouseReader(tmp_path).query_bars(symbols=["NIFTY"], segment="IDX_I")
+        assert table.num_rows == 21, "all three months must remain queryable"
+
+    def test_carried_partitions_record_their_owning_version(self, tmp_path: Path) -> None:
+        publisher = WarehousePublisher(tmp_path)
+        publisher.ensure_data_root()
+        self.stage_and_publish(publisher, "wv-a", "NIFTY", "03", 5)
+        self.stage_and_publish(publisher, "wv-b", "NIFTY", "04", 7)
+
+        manifest = WarehouseReader(tmp_path).get_manifest()
+        by_path = {p.relative_path: p for p in manifest.partitions}
+        older = next(p for k, p in by_path.items() if "month=03" in k)
+        newer = next(p for k, p in by_path.items() if "month=04" in k)
+
+        assert older.source_version == "wv-a", "carried partition must name its own version"
+        assert newer.source_version is None, "newly staged partition lives in this version"
+
+    def test_same_path_supersedes_rather_than_duplicates(self, tmp_path: Path) -> None:
+        """Re-fetching a corrected month must replace it, not double-count it."""
+        publisher = WarehousePublisher(tmp_path)
+        publisher.ensure_data_root()
+        self.stage_and_publish(publisher, "wv-a", "NIFTY", "03", 5)
+        self.stage_and_publish(publisher, "wv-b", "NIFTY", "03", 8)
+
+        table = WarehouseReader(tmp_path).query_bars(symbols=["NIFTY"], segment="IDX_I")
+        assert table.num_rows == 8
+
+    def test_parent_version_is_recorded(self, tmp_path: Path) -> None:
+        publisher = WarehousePublisher(tmp_path)
+        publisher.ensure_data_root()
+        self.stage_and_publish(publisher, "wv-a", "NIFTY", "03", 5)
+        self.stage_and_publish(publisher, "wv-b", "NIFTY", "04", 5)
+
+        assert WarehouseReader(tmp_path).get_manifest().parent_version == "wv-a"
+
+    def test_without_merge_the_previous_version_is_dropped(self, tmp_path: Path) -> None:
+        """Documents the non-accumulating default that caused the original data loss."""
+        publisher = WarehousePublisher(tmp_path)
+        publisher.ensure_data_root()
+        self.stage_and_publish(publisher, "wv-a", "NIFTY", "03", 5)
+
+        bars = [
+            BarRecord(
+                timestamp=datetime(2026, 4, 1, 4, i, tzinfo=UTC),
+                exchange_segment="IDX_I",
+                security_id="13",
+                symbol="NIFTY",
+                open=1.0,
+                high=2.0,
+                low=0.5,
+                close=1.5,
+                volume=10,
+                open_interest=0,
+            )
+            for i in range(6)
+        ]
+        rel = "bars/segment=IDX_I/year=2026/month=04/nifty_1m.parquet"
+        meta = publisher.stage_partition("wv-b", bars, rel)
+        publisher.publish_version("wv-b", [meta], reason="no_merge")
+
+        table = WarehouseReader(tmp_path).query_bars(symbols=["NIFTY"], segment="IDX_I")
+        assert table.num_rows == 6, "without merge only the newest version is visible"

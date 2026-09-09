@@ -345,6 +345,7 @@ class MinuteBackfillManager:
             partitions=staged_partitions,
             source_ingest_ids=ingest_ids,
             code_commit=code_commit or "dev_local",
+            merge_with_current=True,
             reason="minute_backfill",
         )
 

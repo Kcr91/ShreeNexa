@@ -25,6 +25,7 @@ from app.worker.universe_builder import (
     daily_windows,
     default_history_start,
     intraday_windows,
+    month_windows,
     option_windows,
     strike_offsets,
     windows_for,
@@ -45,15 +46,16 @@ def spec(dataset: str, start: date, end: date) -> JobSpec:
 
 
 class TestWindowSizing:
-    def test_intraday_uses_the_90_day_api_maximum(self) -> None:
+    def test_intraday_uses_month_windows_within_the_api_maximum(self) -> None:
+        """Months, not maximal 90-day spans: one window, one partition file."""
         windows = intraday_windows(spec("intraday", date(2026, 1, 1), date(2026, 12, 31)))
-        spans = {(w[1] - w[0]).days + 1 for w in windows}
-        assert max(spans) == MAX_INTRADAY_WINDOW_DAYS
+        assert len(windows) == 12
+        assert max((w[1] - w[0]).days + 1 for w in windows) <= MAX_INTRADAY_WINDOW_DAYS
 
-    def test_options_use_the_45_day_api_maximum(self) -> None:
+    def test_options_use_month_windows_within_the_api_maximum(self) -> None:
         windows = option_windows(spec("options", date(2026, 1, 1), date(2026, 12, 31)))
-        spans = {(w[1] - w[0]).days + 1 for w in windows}
-        assert max(spans) == MAX_OPTIONS_WINDOW_DAYS
+        assert len(windows) == 12
+        assert max((w[1] - w[0]).days + 1 for w in windows) <= MAX_OPTIONS_WINDOW_DAYS
 
     def test_daily_is_a_single_unwindowed_call(self) -> None:
         """charts/historical serves since inception, so splitting it wastes calls."""
@@ -81,10 +83,10 @@ class TestWindowSizing:
 
     def test_windows_for_dispatches_on_dataset(self) -> None:
         start, end = date(2026, 1, 1), date(2026, 12, 31)
+        # Daily history is unwindowed; intraday and options are both monthly.
         assert len(windows_for(spec("daily", start, end))) == 1
-        assert len(windows_for(spec("options", start, end))) > len(
-            windows_for(spec("intraday", start, end))
-        ), "45-day option windows must be more numerous than 90-day intraday ones"
+        assert len(windows_for(spec("options", start, end))) == 12
+        assert len(windows_for(spec("intraday", start, end))) == 12
 
 
 class TestStrikeCoverage:
@@ -208,3 +210,48 @@ class TestEnableFlag:
     def test_can_be_disabled(self, monkeypatch: pytest.MonkeyPatch, value: str) -> None:
         monkeypatch.setenv(ENABLE_ENV_VAR, value)
         assert backfill_enabled() is False
+
+
+class TestMonthWindows:
+    """Month windows exist so each window maps to exactly one partition file."""
+
+    def test_full_months_are_whole(self) -> None:
+        w = month_windows(date(2026, 2, 1), date(2026, 4, 30))
+        assert w == [
+            (date(2026, 2, 1), date(2026, 2, 28)),
+            (date(2026, 3, 1), date(2026, 3, 31)),
+            (date(2026, 4, 1), date(2026, 4, 30)),
+        ]
+
+    def test_partial_months_are_clipped_at_both_ends(self) -> None:
+        w = month_windows(date(2026, 1, 15), date(2026, 3, 10))
+        assert w[0] == (date(2026, 1, 15), date(2026, 1, 31))
+        assert w[-1] == (date(2026, 3, 1), date(2026, 3, 10))
+
+    def test_leap_february_is_handled(self) -> None:
+        w = month_windows(date(2028, 2, 1), date(2028, 2, 29))
+        assert w == [(date(2028, 2, 1), date(2028, 2, 29))]
+
+    def test_no_window_ever_spans_two_months(self) -> None:
+        """A window spanning months would collide on one partition path and lose bars."""
+        for start, end in month_windows(date(2021, 9, 10), date(2026, 9, 9)):
+            assert (start.year, start.month) == (end.year, end.month)
+
+    def test_windows_are_contiguous(self) -> None:
+        w = month_windows(date(2026, 1, 1), date(2026, 12, 31))
+        for earlier, later in pairwise(w):
+            assert later[0] == earlier[1] + timedelta(days=1)
+
+    def test_single_day_range(self) -> None:
+        d = date(2026, 6, 15)
+        assert month_windows(d, d) == [(d, d)]
+
+    def test_inverted_range_rejected(self) -> None:
+        with pytest.raises(ValueError, match="cannot be after"):
+            month_windows(date(2026, 5, 1), date(2026, 1, 1))
+
+    def test_every_window_fits_both_api_maxima(self) -> None:
+        for start, end in month_windows(date(2021, 1, 1), date(2026, 12, 31)):
+            span = (end - start).days + 1
+            assert span <= MAX_OPTIONS_WINDOW_DAYS
+            assert span <= MAX_INTRADAY_WINDOW_DAYS

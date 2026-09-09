@@ -135,9 +135,13 @@ class WarehouseReader:
             )
 
         file_paths = [
-            str(self.data_root / "warehouse" / "versions" / version / p.relative_path).replace(
-                "\\", "/"
-            )
+            str(
+                self.data_root
+                / "warehouse"
+                / "versions"
+                / (p.source_version or version)
+                / p.relative_path
+            ).replace("\\", "/")
             for p in pruned
         ]
 

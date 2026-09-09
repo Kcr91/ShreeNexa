@@ -245,6 +245,7 @@ class DailyBackfillManager:
             partitions=staged_partitions,
             source_ingest_ids=ingest_ids,
             code_commit=code_commit or "dev_local",
+            merge_with_current=True,
             reason="daily_backfill",
         )
         return pointer, ingest_ids

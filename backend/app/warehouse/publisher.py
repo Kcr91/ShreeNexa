@@ -10,6 +10,7 @@ import shutil
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -114,6 +115,61 @@ class WarehousePublisher:
             symbols=symbols,
         )
 
+    def _merge_with_current(
+        self,
+        new_version: str,
+        new_partitions: list[PartitionMetadata],
+        parent_version: str | None,
+    ) -> tuple[list[PartitionMetadata], str | None]:
+        """Carry the current manifest's partitions forward into a new version.
+
+        Returns the merged partition list and the parent version to record. New
+        partitions win on a relative-path collision so a corrected window supersedes
+        the original rather than being stored twice.
+        """
+        pointer_file = self.data_root / "warehouse" / "current.json"
+        if not pointer_file.is_file():
+            return list(new_partitions), parent_version
+
+        try:
+            pointer = json.loads(pointer_file.read_text(encoding="utf-8"))
+            current_version = str(pointer["warehouse_version"])
+            manifest_file = (
+                self.data_root / "warehouse" / "manifests" / f"manifest-{current_version}.json"
+            )
+            previous = WarehouseManifest.model_validate(
+                json.loads(manifest_file.read_text(encoding="utf-8"))
+            )
+        except (OSError, KeyError, ValueError) as exc:
+            # A missing or unreadable predecessor must not silently drop history.
+            raise RuntimeError(
+                f"Cannot append to warehouse version {new_version}: the current manifest "
+                f"could not be read ({exc}). Refusing to publish a manifest that would "
+                "orphan previously published partitions."
+            ) from exc
+
+        merged: dict[str, PartitionMetadata] = {}
+        for part in previous.partitions:
+            merged[part.relative_path] = part.model_copy(
+                update={"source_version": part.source_version or previous.warehouse_version}
+            )
+        for part in new_partitions:
+            merged[part.relative_path] = part
+
+        return list(merged.values()), parent_version or current_version
+
+    def append_to_current(
+        self,
+        warehouse_version: str,
+        partitions: list[PartitionMetadata],
+        **kwargs: Any,
+    ) -> CurrentPointer:
+        """Publish a version that accumulates on top of the current one."""
+        kwargs.setdefault("reason", "append")
+        return self.publish_version(
+            warehouse_version, partitions, merge_with_current=True, **kwargs
+        )
+
     def publish_version(
         self,
         warehouse_version: str,
@@ -124,8 +180,20 @@ class WarehousePublisher:
         code_commit: str | None = None,
         actor: str = "worker",
         reason: str = "initial_publish",
+        merge_with_current: bool = False,
     ) -> CurrentPointer:
-        """Promote staging directory atomically, write manifest, and replace active pointer."""
+        """Promote staging atomically, write the manifest, and replace the active pointer.
+
+        With ``merge_with_current`` the new manifest also carries forward every partition
+        from the currently published version. Without it each publish supersedes the last,
+        so a backfill that publishes once per window leaves only the final window
+        reachable - which is exactly what happened on the first live run: 527,758 rows on
+        disk across 41 versions, of which a query returned 23,663.
+
+        Carried-forward partitions are referenced in place via ``source_version``; nothing
+        is copied. A new partition sharing a relative path with an old one supersedes it,
+        so re-fetching a corrected window replaces rather than duplicates it.
+        """
         staging_dir = self.data_root / "staging" / warehouse_version
         version_dir = self.data_root / "warehouse" / "versions" / warehouse_version
 
@@ -151,15 +219,22 @@ class WarehousePublisher:
 
         shutil.move(str(staging_dir), str(version_dir))
 
+        effective_parent = parent_version
+        merged_partitions = list(partitions)
+        if merge_with_current:
+            merged_partitions, effective_parent = self._merge_with_current(
+                warehouse_version, partitions, parent_version
+            )
+
         # Build and write manifest
         manifest = WarehouseManifest(
             warehouse_version=warehouse_version,
-            parent_version=parent_version,
+            parent_version=effective_parent,
             created_at=datetime.now(UTC).isoformat(),
             code_commit=code_commit or "dev_local",
             source_ingest_ids=source_ingest_ids or [],
             corrections=corrections or [],
-            partitions=partitions,
+            partitions=merged_partitions,
         )
         manifest_digest = manifest.compute_sha256()
         manifest_file = (

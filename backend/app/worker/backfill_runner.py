@@ -21,7 +21,7 @@ import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +35,7 @@ from app.dhan.exceptions import (
     DhanRateLimitError,
 )
 from app.dhan.models import DhanHistoricalData
-from app.marketdata.calendar import TradingCalendar
+from app.marketdata.calendar import TradingCalendar, to_ist
 from app.warehouse import paths
 from app.warehouse.paths import DataRootCapacityError, check_write_admission
 from app.warehouse.publisher import WarehousePublisher
@@ -70,11 +70,17 @@ logger = logging.getLogger(__name__)
 DAILY_DATASETS = frozenset({"daily"})
 OPTION_DATASETS = frozenset({"options"})
 
-# Share of a window's bars that must land inside a real trading session for the
-# window to be trusted. Dhan's archive for some thinly-followed indices returns bars
-# on Saturdays and across a ten-hour span; storing those would silently corrupt any
-# back-test that used them. Set below 1.0 because a handful of boundary bars around
-# special sessions are normal.
+# Share of a window's bars that must fall within market hours for the window to be
+# trusted. Dhan's archive for some thinly-followed indices returns bars across a
+# ten-hour span and on Saturdays; storing those would silently corrupt any back-test
+# built on them.
+#
+# The test is deliberately time-of-day plus weekday, NOT holiday-calendar membership.
+# A stale holiday entry is a fact about our calendar, not about the data: NIFTY
+# returned a full, correctly-timed 375-bar session on 2026-05-27, which
+# nse_calendar.yaml lists as a holiday. Rejecting on calendar membership discarded
+# that entire month. Bars on unexpected dates are still counted and logged, because
+# they are a genuine quality signal - they just must not veto good data.
 MIN_IN_SESSION_RATIO = 0.95
 
 # Rough upper bound on the disk one window can add, used for write admission.
@@ -455,7 +461,7 @@ class BackfillRunner:
     # ---------------------------------------------------------------- helpers
 
     def _assert_in_session(self, window: ClaimedWindow, bars: list[Any]) -> None:
-        """Refuse a window whose bars mostly sit outside a real trading session.
+        """Refuse a window whose bars mostly sit outside market hours.
 
         Daily bars are stamped at IST midnight rather than inside the session, so the
         check applies to intraday series only.
@@ -464,14 +470,37 @@ class BackfillRunner:
             return
 
         segment = window.exchange_segment.upper()
-        in_session = 0
-        for bar in bars:
-            stamp = datetime.fromtimestamp(bar.timestamp, tz=UTC)
-            if self.calendar.validate_bar_session(stamp, segment=segment):
-                in_session += 1
+        bounds = self.calendar.default_sessions.get(segment)
+        if bounds is None:
+            bounds = self.calendar.default_sessions.get("NSE_EQ")
+        if bounds is None:
+            return
 
-        if in_session < len(bars) * MIN_IN_SESSION_RATIO:
-            raise OutOfSessionData(window.symbol, in_session, len(bars))
+        in_hours = 0
+        unexpected_dates: set[date] = set()
+        for bar in bars:
+            stamp_ist = to_ist(datetime.fromtimestamp(bar.timestamp, tz=UTC))
+            weekday_ok = stamp_ist.weekday() < 5
+            time_ok = bounds.start <= stamp_ist.time() <= bounds.end
+            if weekday_ok and time_ok:
+                in_hours += 1
+            if not self.calendar.is_trading_day(stamp_ist.date(), segment=segment):
+                unexpected_dates.add(stamp_ist.date())
+
+        if unexpected_dates:
+            # Worth knowing about - either our calendar is stale or the exchange held
+            # an unscheduled session - but not grounds for discarding the window.
+            logger.warning(
+                "%s %s: %d bar date(s) absent from the %s calendar, e.g. %s",
+                window.symbol,
+                window.window_start,
+                len(unexpected_dates),
+                segment,
+                sorted(unexpected_dates)[:3],
+            )
+
+        if in_hours < len(bars) * MIN_IN_SESSION_RATIO:
+            raise OutOfSessionData(window.symbol, in_hours, len(bars))
 
     def _raw_params(self, window: ClaimedWindow) -> dict[str, Any]:
         return {
