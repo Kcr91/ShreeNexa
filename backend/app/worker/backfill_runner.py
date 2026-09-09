@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -70,35 +71,17 @@ logger = logging.getLogger(__name__)
 DAILY_DATASETS = frozenset({"daily"})
 OPTION_DATASETS = frozenset({"options"})
 
-# Share of a window's bars that must fall within market hours for the window to be
-# trusted. Dhan's archive for some thinly-followed indices returns bars across a
-# ten-hour span and on Saturdays; storing those would silently corrupt any back-test
-# built on them.
-#
-# The test is deliberately time-of-day plus weekday, NOT holiday-calendar membership.
-# A stale holiday entry is a fact about our calendar, not about the data: NIFTY
-# returned a full, correctly-timed 375-bar session on 2026-05-27, which
-# nse_calendar.yaml lists as a holiday. Rejecting on calendar membership discarded
-# that entire month. Bars on unexpected dates are still counted and logged, because
-# they are a genuine quality signal - they just must not veto good data.
-MIN_IN_SESSION_RATIO = 0.95
+# Below this share of bars inside regular market hours a window is flagged as suspect
+# in the Historic Data Report. It is NOT rejected: exchange calendars are not something
+# this system can adjudicate. Holidays differ per exchange, holiday dates move, Muhurat
+# and other special sessions exist, and sessions are sometimes shortened or run outside
+# the usual window. An earlier version of this guard discarded a whole month of NIFTY
+# because nse_calendar.yaml wrongly lists 2026-05-27 as a holiday. Everything fetched is
+# now stored; anomalies are recorded for a later, separate cleaning task.
+SUSPECT_IN_HOURS_RATIO = 0.95
 
 # Rough upper bound on the disk one window can add, used for write admission.
 WINDOW_WRITE_HEADROOM_BYTES = 256 * 1024 * 1024
-
-
-class OutOfSessionData(ValueError):
-    """Raised when a fetched window is mostly outside any real trading session."""
-
-    def __init__(self, symbol: str, in_session: int, total: int) -> None:
-        self.symbol = symbol
-        self.in_session = in_session
-        self.total = total
-        ratio = in_session / total if total else 0.0
-        super().__init__(
-            f"{symbol}: only {in_session}/{total} bars ({ratio:.1%}) fall inside a "
-            f"trading session; refusing to publish likely-corrupt upstream history"
-        )
 
 
 class BudgetExhausted(RuntimeError):
@@ -149,6 +132,7 @@ class BackfillRunner:
         # Outcome of the most recent run_once, so drain() can report real totals.
         self.last_outcome: str = "none"
         self.last_rows: int = 0
+        self.last_quality: dict[str, Any] = {}
         # The managers stage into staging/ and warehouse/; a first run against a fresh
         # data root would otherwise fail with a missing staging directory.
         WarehousePublisher(self.data_root).ensure_data_root()
@@ -177,17 +161,6 @@ class BackfillRunner:
         except DhanRateLimitError as err:
             release_window(self.engine, window.job_id, window.window_start)
             raise BudgetExhausted(str(err)) from err
-        except OutOfSessionData as err:
-            self.last_outcome = "failed"
-            logger.warning("Quarantining window: %s", err)
-            fail_window(
-                self.engine,
-                window.job_id,
-                window.window_start,
-                str(err),
-                max_attempts=0,
-            )
-            return True
         except DhanClientError as err:
             # A malformed request will fail identically forever; retiring it immediately
             # keeps the queue moving instead of burning five attempts on it.
@@ -223,6 +196,8 @@ class BackfillRunner:
             window.window_start,
             rows=rows,
             raw_ingest_id=payload,
+            quality=self.last_quality,
+            span=span,
         )
         if rows and span is not None:
             upsert_coverage(
@@ -315,7 +290,7 @@ class BackfillRunner:
         bars = data.to_bars()
         if not bars:
             return ingest_id, 0, None
-        self._assert_in_session(window, bars)
+        self.last_quality = self.assess_window(window, bars)
 
         task = DailyBackfillTask(
             symbol=window.symbol,
@@ -351,7 +326,7 @@ class BackfillRunner:
         bars = data.to_bars()
         if not bars:
             return ingest_id, 0, None
-        self._assert_in_session(window, bars)
+        self.last_quality = self.assess_window(window, bars)
 
         task = MinuteBackfillTask(
             symbol=window.symbol,
@@ -460,47 +435,74 @@ class BackfillRunner:
 
     # ---------------------------------------------------------------- helpers
 
-    def _assert_in_session(self, window: ClaimedWindow, bars: list[Any]) -> None:
-        """Refuse a window whose bars mostly sit outside market hours.
+    def assess_window(self, window: ClaimedWindow, bars: list[Any]) -> dict[str, Any]:
+        """Describe what was fetched, without judging whether to keep it.
 
-        Daily bars are stamped at IST midnight rather than inside the session, so the
-        check applies to intraday series only.
+        Returns metrics the Historic Data Report highlights: how many bars fell inside
+        regular market hours, which dates are absent from our calendar, how many bars
+        landed on each day, and the observed span. A window can be unusual for entirely
+        legitimate reasons - a special session, a shortened day, a moved holiday - so
+        this only ever flags, never discards.
         """
+        metrics: dict[str, Any] = {
+            "bars": len(bars),
+            "in_hours": 0,
+            "out_of_hours": 0,
+            "unexpected_dates": [],
+            "distinct_days": 0,
+            "max_bars_in_a_day": 0,
+            "weekend_days": 0,
+            "suspect_reasons": [],
+        }
         if window.dataset == "daily" or not bars:
-            return
+            return metrics
 
         segment = window.exchange_segment.upper()
-        bounds = self.calendar.default_sessions.get(segment)
-        if bounds is None:
-            bounds = self.calendar.default_sessions.get("NSE_EQ")
-        if bounds is None:
-            return
+        bounds = self.calendar.default_sessions.get(segment) or self.calendar.default_sessions.get(
+            "NSE_EQ"
+        )
 
+        per_day: Counter[date] = Counter()
+        unexpected: set[date] = set()
+        weekend: set[date] = set()
         in_hours = 0
-        unexpected_dates: set[date] = set()
+
         for bar in bars:
             stamp_ist = to_ist(datetime.fromtimestamp(bar.timestamp, tz=UTC))
-            weekday_ok = stamp_ist.weekday() < 5
-            time_ok = bounds.start <= stamp_ist.time() <= bounds.end
-            if weekday_ok and time_ok:
+            day = stamp_ist.date()
+            per_day[day] += 1
+            if bounds is not None and bounds.start <= stamp_ist.time() <= bounds.end:
                 in_hours += 1
-            if not self.calendar.is_trading_day(stamp_ist.date(), segment=segment):
-                unexpected_dates.add(stamp_ist.date())
+            if stamp_ist.weekday() >= 5:
+                weekend.add(day)
+            if not self.calendar.is_trading_day(day, segment=segment):
+                unexpected.add(day)
 
-        if unexpected_dates:
-            # Worth knowing about - either our calendar is stale or the exchange held
-            # an unscheduled session - but not grounds for discarding the window.
-            logger.warning(
-                "%s %s: %d bar date(s) absent from the %s calendar, e.g. %s",
+        metrics["in_hours"] = in_hours
+        metrics["out_of_hours"] = len(bars) - in_hours
+        metrics["unexpected_dates"] = [d.isoformat() for d in sorted(unexpected)]
+        metrics["weekend_days"] = len(weekend)
+        metrics["distinct_days"] = len(per_day)
+        metrics["max_bars_in_a_day"] = max(per_day.values()) if per_day else 0
+
+        reasons: list[str] = []
+        if in_hours < len(bars) * SUSPECT_IN_HOURS_RATIO:
+            share = in_hours / len(bars) if bars else 0.0
+            reasons.append(f"only {share:.0%} of bars inside regular market hours")
+        if weekend:
+            reasons.append(f"{len(weekend)} weekend day(s) present")
+        if unexpected:
+            reasons.append(f"{len(unexpected)} date(s) not in the {segment} calendar")
+        metrics["suspect_reasons"] = reasons
+
+        if reasons:
+            logger.info(
+                "%s %s stored with anomalies: %s",
                 window.symbol,
                 window.window_start,
-                len(unexpected_dates),
-                segment,
-                sorted(unexpected_dates)[:3],
+                "; ".join(reasons),
             )
-
-        if in_hours < len(bars) * MIN_IN_SESSION_RATIO:
-            raise OutOfSessionData(window.symbol, in_hours, len(bars))
+        return metrics
 
     def _raw_params(self, window: ClaimedWindow) -> dict[str, Any]:
         return {

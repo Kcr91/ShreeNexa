@@ -313,10 +313,12 @@ def test_empty_response_is_terminal_not_retried(backfill_engine: Engine, tmp_pat
     assert "empty" in states
 
 
-class TestSessionGuard:
-    """Dhan's archive for some thin indices returns Saturdays and 10-hour spans."""
+class TestAnomalyFlagging:
+    """Nothing fetched is discarded. Exchange calendars are not ours to adjudicate:
+    holidays differ per exchange, dates move, and special or shortened sessions exist.
+    Unusual windows are stored and flagged for the Historic Data Report instead."""
 
-    def out_of_session_transport(self) -> StubTransport:
+    def odd_hours_transport(self) -> StubTransport:
         transport = StubTransport()
         # 2021-09-11 was a Saturday; 22:55 UTC is far outside any NSE session.
         base = 1631487300
@@ -336,11 +338,9 @@ class TestSessionGuard:
         )
         return transport
 
-    def test_out_of_session_window_is_not_published(
-        self, backfill_engine: Engine, tmp_path: Path
-    ) -> None:
+    def test_odd_window_is_still_stored(self, backfill_engine: Engine, tmp_path: Path) -> None:
         enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
-        runner = build_runner(backfill_engine, tmp_path, self.out_of_session_transport())
+        runner = build_runner(backfill_engine, tmp_path, self.odd_hours_transport())
 
         runner.run_once()
 
@@ -348,57 +348,78 @@ class TestSessionGuard:
             states = [r[0] for r in conn.execute(select(backfill_window_table.c.state)).all()]
             coverage = conn.execute(select(bar_coverage_table)).mappings().all()
 
-        assert "failed" in states, "corrupt upstream history must not be stored"
-        assert coverage == [], "no coverage may be claimed for rejected data"
+        assert "done" in states, "whatever the API returned must be kept"
+        assert coverage, "stored data must be reported as coverage"
 
-    def test_out_of_session_window_is_not_retried(
+    def test_odd_window_is_flagged_suspect_with_reasons(
         self, backfill_engine: Engine, tmp_path: Path
     ) -> None:
-        """Bad upstream history is permanent; five retries would waste budget."""
         enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
-        transport = self.out_of_session_transport()
-        runner = build_runner(backfill_engine, tmp_path, transport)
-
-        runner.drain(max_windows=6)
+        build_runner(backfill_engine, tmp_path, self.odd_hours_transport()).run_once()
 
         with backfill_engine.connect() as conn:
-            attempts = [
-                r[0]
-                for r in conn.execute(
-                    select(backfill_window_table.c.attempts).where(
-                        backfill_window_table.c.state == "failed"
-                    )
-                ).all()
-            ]
-        assert attempts and max(attempts) == 1
+            row = (
+                conn.execute(
+                    select(
+                        backfill_window_table.c.suspect,
+                        backfill_window_table.c.quality,
+                    ).where(backfill_window_table.c.state == "done")
+                )
+                .mappings()
+                .one()
+            )
 
-    def test_in_session_data_is_accepted(self, backfill_engine: Engine, tmp_path: Path) -> None:
-        """The guard must not reject genuine session data."""
+        assert row["suspect"] is True
+        reasons = row["quality"]["suspect_reasons"]
+        assert reasons, "a flagged window must say why"
+        assert any("market hours" in r for r in reasons)
+        # These bars land at 04:25 IST - outside the session but on a weekday, so the
+        # out-of-hours count is the signal here, not the weekend count.
+        assert row["quality"]["out_of_hours"] == row["quality"]["bars"]
+        assert row["quality"]["in_hours"] == 0
+
+    def test_clean_window_is_not_flagged(self, backfill_engine: Engine, tmp_path: Path) -> None:
         enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
-        transport = StubTransport()
-        # 2026-09-01 03:45 UTC is 09:15 IST, exactly market open.
-        base = 1788234300
-        transport.request = lambda *a, **k: (  # type: ignore[method-assign]
-            200,
-            {},
-            json.dumps(
-                {
-                    "open": [1.0] * 60,
-                    "high": [2.0] * 60,
-                    "low": [0.5] * 60,
-                    "close": [1.5] * 60,
-                    "volume": [10] * 60,
-                    "timestamp": [base + 60 * i for i in range(60)],
-                }
-            ).encode(),
-        )
-        runner = build_runner(backfill_engine, tmp_path, transport)
-
-        runner.run_once()
+        build_runner(backfill_engine, tmp_path, StubTransport()).run_once()
 
         with backfill_engine.connect() as conn:
-            states = [r[0] for r in conn.execute(select(backfill_window_table.c.state)).all()]
-        assert "done" in states
+            row = (
+                conn.execute(
+                    select(
+                        backfill_window_table.c.suspect,
+                        backfill_window_table.c.quality,
+                    ).where(backfill_window_table.c.state == "done")
+                )
+                .mappings()
+                .one()
+            )
+
+        assert row["suspect"] is False
+        assert row["quality"]["suspect_reasons"] == []
+        assert row["quality"]["in_hours"] == row["quality"]["bars"]
+
+    def test_quality_records_the_observed_span(
+        self, backfill_engine: Engine, tmp_path: Path
+    ) -> None:
+        enqueue_jobs(backfill_engine, [equity_spec()], two_windows)
+        build_runner(backfill_engine, tmp_path, StubTransport()).run_once()
+
+        with backfill_engine.connect() as conn:
+            row = (
+                conn.execute(
+                    select(
+                        backfill_window_table.c.min_ts,
+                        backfill_window_table.c.max_ts,
+                        backfill_window_table.c.distinct_days,
+                    ).where(backfill_window_table.c.state == "done")
+                )
+                .mappings()
+                .one()
+            )
+
+        assert row["min_ts"] is not None and row["max_ts"] is not None
+        assert row["max_ts"] >= row["min_ts"]
+        assert row["distinct_days"] >= 1
 
 
 def test_drain_reports_real_totals(backfill_engine: Engine, tmp_path: Path) -> None:

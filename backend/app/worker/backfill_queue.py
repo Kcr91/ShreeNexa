@@ -24,6 +24,7 @@ from typing import Any, Literal
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     Column,
     Date,
     Integer,
@@ -36,7 +37,7 @@ from sqlalchemy import (
     text,
     update,
 )
-from sqlalchemy.dialects.postgresql import TIMESTAMP
+from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Connection, Engine
 
@@ -87,6 +88,11 @@ backfill_window_table = Table(
     Column("last_error", Text, nullable=True),
     Column("claimed_at", TIMESTAMP(timezone=True), nullable=True),
     Column("completed_at", TIMESTAMP(timezone=True), nullable=True),
+    Column("quality", JSONB, nullable=True),
+    Column("suspect", Boolean, nullable=False),
+    Column("distinct_days", Integer, nullable=True),
+    Column("min_ts", TIMESTAMP(timezone=True), nullable=True),
+    Column("max_ts", TIMESTAMP(timezone=True), nullable=True),
 )
 
 bar_coverage_table = Table(
@@ -226,6 +232,7 @@ def enqueue_jobs(
                     "window_end": w_end,
                     "state": "pending",
                     "attempts": 0,
+                    "suspect": False,
                 }
                 for w_start, w_end in windows_for(spec)
             ]
@@ -343,6 +350,8 @@ def complete_window(
     rows: int,
     raw_ingest_id: str | None = None,
     sha256: str | None = None,
+    quality: dict[str, Any] | None = None,
+    span: tuple[datetime, datetime] | None = None,
 ) -> None:
     """Mark a window done. A window that returned no bars is recorded as ``empty``.
 
@@ -361,6 +370,12 @@ def complete_window(
                 sha256=sha256,
                 last_error=None,
                 completed_at=_now(),
+                quality=quality,
+                # Flagged for the Historic Data Report, never a reason to discard.
+                suspect=bool(quality and quality.get("suspect_reasons")),
+                distinct_days=(quality or {}).get("distinct_days"),
+                min_ts=span[0] if span else None,
+                max_ts=span[1] if span else None,
             )
         )
         _settle_job_if_finished(conn, job_id)
