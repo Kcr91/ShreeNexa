@@ -44,8 +44,23 @@ from app.worker.options_backfill import (
 
 logger = logging.getLogger(__name__)
 
-# charts/intraday and charts/rollingoption both reach back five years.
-HISTORY_YEARS = 5
+# Per-dataset history depth. The published docs say "last 5 years" for both
+# charts/intraday and charts/rollingoption, but probing the live API shows 1-minute
+# NIFTY data going back to roughly 2017-07 (2017-01 returns nothing, 2017-07 returns a
+# full 7,875-bar month). charts/historical serves daily data from inception - 2010
+# returns a full 251-session year.
+#
+# Intraday is therefore requested for the full depth rather than the documented five
+# years. Months before a symbol's history begins come back empty, which is recorded as
+# a terminal "empty" window and shown in the Historic Data Report - so the report ends
+# up stating exactly where each symbol's history actually starts, instead of that being
+# a guess.
+DAILY_HISTORY_YEARS = 10
+INTRADAY_HISTORY_YEARS = 10
+OPTIONS_HISTORY_YEARS = 5
+
+# Kept for callers that want a single default.
+HISTORY_YEARS = INTRADAY_HISTORY_YEARS
 
 TIER_INDEX_SPOT = 1
 TIER_INDEX_OPTIONS = 2
@@ -86,10 +101,19 @@ class UniverseCounts:
         return sum(self.jobs_by_tier.values())
 
 
-def default_history_start(today: date | None = None) -> date:
-    """Earliest date the intraday and rolling-option endpoints will serve."""
+def history_years_for(dataset: str) -> int:
+    """How far back to request for a dataset."""
+    if dataset == "daily":
+        return DAILY_HISTORY_YEARS
+    if dataset == "options":
+        return OPTIONS_HISTORY_YEARS
+    return INTRADAY_HISTORY_YEARS
+
+
+def default_history_start(today: date | None = None, dataset: str = "intraday") -> date:
+    """Earliest date to request for a dataset."""
     ref = today or date.today()
-    return ref - timedelta(days=365 * HISTORY_YEARS)
+    return ref - timedelta(days=365 * history_years_for(dataset))
 
 
 def month_windows(start: date, end: date) -> list[tuple[date, date]]:
@@ -178,7 +202,15 @@ class UniverseBuilder:
     ) -> None:
         self.engine = engine
         self.end_date = end_date or date.today()
-        self.start_date = start_date or default_history_start(self.end_date)
+        # An explicit start_date pins every dataset; otherwise each gets its own depth.
+        self.explicit_start = start_date
+        self.start_date = start_date or default_history_start(self.end_date, "intraday")
+
+    def start_for(self, dataset: str) -> date:
+        """Start date for a dataset, honouring an explicit override."""
+        if self.explicit_start is not None:
+            return self.explicit_start
+        return default_history_start(self.end_date, dataset)
 
     # ------------------------------------------------------------------ tiers
 
@@ -379,7 +411,7 @@ class UniverseBuilder:
             security_id=str(row["security_id"]),
             symbol=str(row["symbol"]),
             interval=interval,
-            start_date=self.start_date,
+            start_date=self.start_for(dataset),
             end_date=self.end_date,
             underlying_symbol=underlying_symbol,
             instrument_type=instrument_type or str(row.get("instrument_type") or "EQUITY"),
