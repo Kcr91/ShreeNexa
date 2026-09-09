@@ -66,6 +66,10 @@ INDEX_OPTION_UNDERLYINGS: tuple[tuple[str, str], ...] = (
 )
 
 # Weeklies exist for index chains; single-stock options are monthly only.
+# charts/rollingoption requires drvOptionType and returns only that leg, so each
+# strike costs one call per side rather than one call for the pair.
+OPTION_TYPES: tuple[str, ...] = ("CALL", "PUT")
+
 INDEX_EXPIRY_FLAGS: tuple[str, ...] = ("WEEK", "MONTH")
 STOCK_EXPIRY_FLAGS: tuple[str, ...] = ("MONTH",)
 
@@ -210,22 +214,24 @@ class UniverseBuilder:
 
             for flag in INDEX_EXPIRY_FLAGS:
                 for offset in strike_offsets(is_index=True):
-                    specs.append(
-                        self._spec(
-                            TIER_INDEX_OPTIONS,
-                            "options",
-                            row,
-                            interval="1",
-                            instrument_type="OPTIDX",
-                            exchange_segment=segment,
-                            underlying_symbol=symbol,
-                            expiry_flag=flag,
-                            expiry_code=1,
-                            strike_offset=offset,
-                            # Collect ATM outwards; near-the-money matters most.
-                            priority=20 + abs(offset),
+                    for option_type in OPTION_TYPES:
+                        specs.append(
+                            self._spec(
+                                TIER_INDEX_OPTIONS,
+                                "options",
+                                row,
+                                interval="1",
+                                instrument_type="OPTIDX",
+                                exchange_segment=segment,
+                                underlying_symbol=symbol,
+                                expiry_flag=flag,
+                                expiry_code=1,
+                                strike_offset=offset,
+                                option_type=option_type,
+                                # Collect ATM outwards; near-the-money matters most.
+                                priority=20 + abs(offset),
+                            )
                         )
-                    )
         return specs
 
     def tier_index_futures(self) -> list[JobSpec]:
@@ -255,21 +261,23 @@ class UniverseBuilder:
         for row in self._fno_underlyings():
             for flag in STOCK_EXPIRY_FLAGS:
                 for offset in strike_offsets(is_index=False):
-                    specs.append(
-                        self._spec(
-                            TIER_STOCK_OPTIONS,
-                            "options",
-                            row,
-                            interval="1",
-                            instrument_type="OPTSTK",
-                            exchange_segment="NSE_FNO",
-                            underlying_symbol=str(row["symbol"]),
-                            expiry_flag=flag,
-                            expiry_code=1,
-                            strike_offset=offset,
-                            priority=50 + abs(offset),
+                    for option_type in OPTION_TYPES:
+                        specs.append(
+                            self._spec(
+                                TIER_STOCK_OPTIONS,
+                                "options",
+                                row,
+                                interval="1",
+                                instrument_type="OPTSTK",
+                                exchange_segment="NSE_FNO",
+                                underlying_symbol=str(row["symbol"]),
+                                expiry_flag=flag,
+                                expiry_code=1,
+                                strike_offset=offset,
+                                option_type=option_type,
+                                priority=50 + abs(offset),
+                            )
                         )
-                    )
         return specs
 
     def tier_stock_futures(self) -> list[JobSpec]:
@@ -327,6 +335,7 @@ class UniverseBuilder:
         expiry_flag: str | None = None,
         expiry_code: int | None = None,
         strike_offset: int | None = None,
+        option_type: str | None = None,
         priority: int = 100,
     ) -> JobSpec:
         return JobSpec(
@@ -343,6 +352,7 @@ class UniverseBuilder:
             expiry_flag=expiry_flag,
             expiry_code=expiry_code,
             strike_offset=strike_offset,
+            option_type=option_type,
             priority=priority,
         )
 

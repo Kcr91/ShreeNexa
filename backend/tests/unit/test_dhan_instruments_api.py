@@ -2,39 +2,60 @@
 
 from __future__ import annotations
 
+import os
+import uuid
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 from app.api.instruments import get_db_engine
-from app.contracts import heartbeat as hb
 from app.dhan.instruments import ingest_instruments
 from app.main import app
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 SAMPLE_CSV_PATH = FIXTURES_DIR / "dhan_scrip_master_sample.csv"
 
 
-@pytest.fixture
+@pytest.fixture()
 def db_engine() -> Generator[Engine]:
+    """Engine bound to a throwaway schema holding its own instrument table.
+
+    These tests need a clean instrument table, and previously got one with
+    `DELETE FROM instrument` against the shared database. That destroyed the real
+    synced scrip master - 201,666 rows and a five-minute re-download - on every run,
+    and silently emptied the universe the backfill builds from. Each test now gets
+    its own schema instead.
+    """
+    from app.dhan.instruments import metadata as instrument_metadata
+
+    url = os.environ.get(
+        "DATABASE_URL",
+        "postgresql+psycopg://shreenexa:shreenexa_local_dev_only@127.0.0.1:5432/shreenexa",
+    )
+    schema = f"test_instr_{uuid.uuid4().hex[:8]}"
     try:
-        engine = hb.make_engine()
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        engine = create_engine(url, connect_args={"options": f"-csearch_path={schema}"})
+        with engine.begin() as conn:
+            conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+    except Exception as exc:  # pragma: no cover - environment dependent
+        pytest.skip(f"Postgres database not available: {exc}")
+
+    instrument_metadata.create_all(engine)
+    try:
         yield engine
+    finally:
+        with engine.begin() as conn:
+            conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
         engine.dispose()
-    except Exception as exc:
-        pytest.skip(f"Database not available for API test: {exc}")
 
 
 @pytest.fixture
 def client(db_engine: Engine) -> Generator[TestClient]:
     app.dependency_overrides[get_db_engine] = lambda: db_engine
-    with db_engine.begin() as conn:
-        conn.execute(text("DELETE FROM instrument"))
+    # The schema is created empty per test, so no destructive cleanup is needed.
     ingest_instruments(db_engine, SAMPLE_CSV_PATH)
     with TestClient(app) as test_client:
         yield test_client

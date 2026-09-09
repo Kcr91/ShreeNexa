@@ -299,16 +299,23 @@ class DhanRestClient:
         expiry_flag: str = "WEEK",
         expiry_code: int = 1,
         strike: str = "ATM",
-        option_type: str | None = None,
+        option_type: str = "CALL",
         interval: int = 1,
         required_data: Sequence[str] | None = None,
     ) -> DhanRollingOptionData:
         """Fetch expired-option history on a rolling, ATM-relative basis.
 
         Strikes are addressed relative to spot ("ATM", "ATM+3", "ATM-10") rather than by
-        absolute price, because expired contracts leave the scrip master. One call returns
-        both the CE and PE legs. The API accepts at most 45 days per call; windowing is the
-        caller's responsibility - see app.worker.options_backfill.generate_option_windows.
+        absolute price, because expired contracts leave the scrip master.
+
+        drvOptionType is REQUIRED despite the published docs marking it optional with a
+        CALL default: omitting it returns DH-905 "drvOptionType is required". Only the
+        requested leg is populated and the other returns null, so a full CE+PE chain
+        costs two calls per strike, not one.
+
+        The API accepts at most 45 days per call - verified empirically, since the
+        vendored docs state 45 days in one section and 30 in another; a 60-day request
+        is rejected with DH-905.
         """
         payload: dict[str, Any] = {
             "exchangeSegment": exchange_segment.upper(),
@@ -324,8 +331,7 @@ class DhanRestClient:
             if required_data is not None
             else ["open", "high", "low", "close", "volume", "oi", "iv", "spot", "strike"],
         }
-        if option_type is not None:
-            payload["drvOptionType"] = option_type.upper()
+        payload["drvOptionType"] = option_type.upper()
 
         data = self._request("POST", "charts/rollingoption", json_data=payload)
         if not isinstance(data, dict):

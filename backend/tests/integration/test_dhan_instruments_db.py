@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import os
+import uuid
 from collections.abc import Generator
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from app.contracts import heartbeat as hb
 from app.dhan.instruments import (
     InstrumentSearchQuery,
     get_distinct_segments,
@@ -18,31 +19,44 @@ from app.dhan.instruments import (
     ingest_instruments,
     search_instruments,
 )
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 SAMPLE_CSV_PATH = FIXTURES_DIR / "dhan_scrip_master_sample.csv"
 
 
-@pytest.fixture
+@pytest.fixture()
 def db_engine() -> Generator[Engine]:
-    """Provide a database engine connected to test Postgres."""
+    """Engine bound to a throwaway schema holding its own instrument table.
+
+    These tests need a clean instrument table, and previously got one with
+    `DELETE FROM instrument` against the shared database. That destroyed the real
+    synced scrip master - 201,666 rows and a five-minute re-download - on every run,
+    and silently emptied the universe the backfill builds from. Each test now gets
+    its own schema instead.
+    """
+    from app.dhan.instruments import metadata as instrument_metadata
+
+    url = os.environ.get(
+        "DATABASE_URL",
+        "postgresql+psycopg://shreenexa:shreenexa_local_dev_only@127.0.0.1:5432/shreenexa",
+    )
+    schema = f"test_instr_{uuid.uuid4().hex[:8]}"
     try:
-        engine = hb.make_engine()
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        yield engine
-        engine.dispose()
-    except Exception as exc:
+        engine = create_engine(url, connect_args={"options": f"-csearch_path={schema}"})
+        with engine.begin() as conn:
+            conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+    except Exception as exc:  # pragma: no cover - environment dependent
         pytest.skip(f"Postgres database not available: {exc}")
 
-
-@pytest.fixture(autouse=True)
-def clean_instruments_table(db_engine: Engine) -> None:
-    """Ensure clean table state before each test."""
-    with db_engine.begin() as conn:
-        conn.execute(text("DELETE FROM instrument"))
+    instrument_metadata.create_all(engine)
+    try:
+        yield engine
+    finally:
+        with engine.begin() as conn:
+            conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
+        engine.dispose()
 
 
 def test_ingest_and_query_instruments_in_postgres(db_engine: Engine) -> None:

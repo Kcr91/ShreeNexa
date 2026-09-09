@@ -112,16 +112,33 @@ class TestRollingOptionRequest:
         for field in ("iv", "oi", "spot", "strike"):
             assert field in sent["requiredData"]
 
-    def test_option_type_is_omitted_when_not_given(self) -> None:
-        """Omitting drvOptionType returns both legs in one call, halving the budget."""
-        transport = CapturingTransport({"ce": LEG, "pe": LEG})
+    def test_option_type_is_always_sent(self) -> None:
+        """drvOptionType is required by the live API despite the docs marking it optional.
+
+        Omitting it returns DH-905 "drvOptionType is required", verified against the
+        live API. Only the requested leg is populated, so a full CE+PE chain costs two
+        calls per strike rather than one.
+        """
+        transport = CapturingTransport({"ce": LEG, "pe": None})
         client = build_client(transport)
 
         client.get_rolling_option_history("13", from_date="2026-01-01", to_date="2026-01-10")
 
         sent = transport.last_json
         assert sent is not None
-        assert "drvOptionType" not in sent
+        assert sent["drvOptionType"] == "CALL"
+
+    def test_null_leg_is_normalised_to_empty(self) -> None:
+        """The unrequested leg comes back as JSON null, not an empty object."""
+        transport = CapturingTransport({"data": {"ce": LEG, "pe": None}})
+        client = build_client(transport)
+
+        result = client.get_rolling_option_history(
+            "13", from_date="2026-01-01", to_date="2026-01-10", option_type="CALL"
+        )
+
+        assert result.ce.bar_count() == 2
+        assert result.pe.bar_count() == 0
 
     def test_strike_is_normalised_to_upper_case(self) -> None:
         transport = CapturingTransport({"ce": LEG, "pe": LEG})
@@ -169,7 +186,7 @@ class TestRollingOptionResponse:
 
     def test_missing_leg_yields_empty_rather_than_raising(self) -> None:
         """A strike with no CE quotes must not abort the whole window."""
-        transport = CapturingTransport({"ce": LEG})
+        transport = CapturingTransport({"ce": LEG, "pe": None})
         client = build_client(transport)
 
         result = client.get_rolling_option_history(

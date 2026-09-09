@@ -368,6 +368,8 @@ class BackfillRunner:
         is_index = (window.instrument_type or "OPTIDX").upper() == "OPTIDX"
         self._guard_strike_offset(window.symbol, offset, is_index=is_index)
 
+        # One leg per call: drvOptionType is required and only that leg is returned.
+        option_type = (window.option_type or "CALL").upper()
         strike_label = "ATM" if offset == 0 else f"ATM{offset:+d}"
         data = self.client.get_rolling_option_history(
             window.security_id,
@@ -378,6 +380,7 @@ class BackfillRunner:
             expiry_flag=window.expiry_flag or "WEEK",
             expiry_code=window.expiry_code or 1,
             strike=strike_label,
+            option_type=option_type,
             interval=int(window.interval) if window.interval.isdigit() else 1,
         )
 
@@ -385,10 +388,11 @@ class BackfillRunner:
         ingest_id, _ = save_raw_option_ingest(
             self.data_root,
             json.dumps(payload).encode("utf-8"),
-            self._raw_params(window) | {"strike": strike_label},
+            self._raw_params(window) | {"strike": strike_label, "option_type": option_type},
         )
 
-        total = data.ce.bar_count() + data.pe.bar_count()
+        leg = data.ce if option_type == "CALL" else data.pe
+        total = leg.bar_count()
         if not total:
             # A strike that never traded in this window is a terminal, valid answer.
             return ingest_id, 0, None

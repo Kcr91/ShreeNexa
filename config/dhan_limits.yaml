@@ -7,7 +7,7 @@
 schema_version: 1
 as_of: "2026-09-03"
 source: "https://dhanhq.co/docs/v2/"
-notes: "Verified DhanHQ v2.5 rate limits: Orders 10/s (100k/day), Quotes 1/s, Data 5/s (7k/day), Option Chain 1 req/3s per underlying."
+notes: "Verified DhanHQ v2.5 rate limits (dhan-api-docs.md Rate Limit table): Orders 10/s and 7,000/day; Data 5/s and 100,000/day; Quotes 1/s; Option Chain 1 req/3s per underlying. The 7,000/day cap applies to Order APIs only."
 
 default_limit:
   rate: 10.0
@@ -32,14 +32,14 @@ categories:
   historical_daily:
     rate: 5.0
     burst: 5
-    per_day: 7000
-    description: "Daily historical chart data requests (5 req/s, 7,000 requests daily limit)"
+    per_day: 100000
+    description: "Daily historical chart data (Data APIs: 5 req/s, 100,000/day)"
 
   historical_intraday:
     rate: 5.0
     burst: 5
-    per_day: 7000
-    description: "Intraday minute historical chart data requests (5 req/s, 7,000 requests daily limit)"
+    per_day: 100000
+    description: "Intraday and rolling-option chart data (Data APIs: 5 req/s, 100,000/day)"
 
   quotes:
     rate: 1.0

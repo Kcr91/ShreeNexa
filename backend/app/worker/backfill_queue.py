@@ -61,6 +61,7 @@ backfill_job_table = Table(
     Column("expiry_flag", Text, nullable=True),
     Column("expiry_code", Integer, nullable=True),
     Column("strike_offset", Integer, nullable=True),
+    Column("option_type", Text, nullable=True),
     Column("interval", Text, nullable=False),
     Column("start_date", Date, nullable=False),
     Column("end_date", Date, nullable=False),
@@ -121,6 +122,7 @@ class JobSpec:
     expiry_flag: str | None = None
     expiry_code: int | None = None
     strike_offset: int | None = None
+    option_type: str | None = None
     priority: int = 100
 
     def job_id(self) -> str:
@@ -133,6 +135,7 @@ class JobSpec:
             self.expiry_flag or "",
             str(self.expiry_code if self.expiry_code is not None else -1),
             str(self.strike_offset if self.strike_offset is not None else -9999),
+            self.option_type or "",
         ]
         digest = hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:16]
         return f"bj-{self.dataset}-{digest}"
@@ -157,6 +160,7 @@ class ClaimedWindow:
     expiry_flag: str | None
     expiry_code: int | None
     strike_offset: int | None
+    option_type: str | None
 
 
 def _now() -> datetime:
@@ -197,6 +201,7 @@ def enqueue_jobs(
                     expiry_flag=spec.expiry_flag,
                     expiry_code=spec.expiry_code,
                     strike_offset=spec.strike_offset,
+                    option_type=spec.option_type,
                     interval=spec.interval,
                     start_date=spec.start_date,
                     end_date=spec.end_date,
@@ -280,6 +285,7 @@ def claim_next_window(
             j.c.expiry_flag,
             j.c.expiry_code,
             j.c.strike_offset,
+            j.c.option_type,
         )
         .select_from(w.join(j, w.c.job_id == j.c.job_id))
         .where(and_(*conditions))
@@ -325,6 +331,7 @@ def claim_next_window(
             expiry_flag=row["expiry_flag"],
             expiry_code=row["expiry_code"],
             strike_offset=row["strike_offset"],
+            option_type=row["option_type"],
         )
 
 

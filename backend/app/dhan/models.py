@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class DhanFundLimit(BaseModel):
@@ -258,9 +258,20 @@ class DhanRollingOptionLeg(BaseModel):
 
 
 class DhanRollingOptionData(BaseModel):
-    """Rolling expired-option response carrying both CE and PE legs."""
+    """Rolling expired-option response.
+
+    charts/rollingoption requires drvOptionType and returns only the requested leg;
+    the other comes back as JSON null, so both legs are optional here and are
+    normalised to an empty leg rather than left as None.
+    """
 
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     ce: DhanRollingOptionLeg = Field(default_factory=DhanRollingOptionLeg)
     pe: DhanRollingOptionLeg = Field(default_factory=DhanRollingOptionLeg)
+
+    @field_validator("ce", "pe", mode="before")
+    @classmethod
+    def _empty_leg_for_null(cls, value: Any) -> Any:
+        """Treat a null leg as an empty one so callers never branch on None."""
+        return {} if value is None else value
