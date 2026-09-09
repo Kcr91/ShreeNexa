@@ -35,6 +35,7 @@ from app.dhan.exceptions import (
     DhanRateLimitError,
 )
 from app.dhan.models import DhanHistoricalData
+from app.marketdata.calendar import TradingCalendar
 from app.warehouse import paths
 from app.warehouse.paths import DataRootCapacityError, check_write_admission
 from app.warehouse.publisher import WarehousePublisher
@@ -69,8 +70,29 @@ logger = logging.getLogger(__name__)
 DAILY_DATASETS = frozenset({"daily"})
 OPTION_DATASETS = frozenset({"options"})
 
+# Share of a window's bars that must land inside a real trading session for the
+# window to be trusted. Dhan's archive for some thinly-followed indices returns bars
+# on Saturdays and across a ten-hour span; storing those would silently corrupt any
+# back-test that used them. Set below 1.0 because a handful of boundary bars around
+# special sessions are normal.
+MIN_IN_SESSION_RATIO = 0.95
+
 # Rough upper bound on the disk one window can add, used for write admission.
 WINDOW_WRITE_HEADROOM_BYTES = 256 * 1024 * 1024
+
+
+class OutOfSessionData(ValueError):
+    """Raised when a fetched window is mostly outside any real trading session."""
+
+    def __init__(self, symbol: str, in_session: int, total: int) -> None:
+        self.symbol = symbol
+        self.in_session = in_session
+        self.total = total
+        ratio = in_session / total if total else 0.0
+        super().__init__(
+            f"{symbol}: only {in_session}/{total} bars ({ratio:.1%}) fall inside a "
+            f"trading session; refusing to publish likely-corrupt upstream history"
+        )
 
 
 class BudgetExhausted(RuntimeError):
@@ -110,12 +132,17 @@ class BackfillRunner:
         *,
         max_attempts: int = 5,
         auto_renew_token: bool = True,
+        calendar: TradingCalendar | None = None,
     ) -> None:
         self.engine = engine
         self.client = client or DhanRestClient()
         self.data_root = paths.resolve_data_root(data_root)
         self.max_attempts = max_attempts
         self.auto_renew_token = auto_renew_token
+        self.calendar = calendar or TradingCalendar()
+        # Outcome of the most recent run_once, so drain() can report real totals.
+        self.last_outcome: str = "none"
+        self.last_rows: int = 0
         # The managers stage into staging/ and warehouse/; a first run against a fresh
         # data root would otherwise fail with a missing staging directory.
         WarehousePublisher(self.data_root).ensure_data_root()
@@ -144,9 +171,21 @@ class BackfillRunner:
         except DhanRateLimitError as err:
             release_window(self.engine, window.job_id, window.window_start)
             raise BudgetExhausted(str(err)) from err
+        except OutOfSessionData as err:
+            self.last_outcome = "failed"
+            logger.warning("Quarantining window: %s", err)
+            fail_window(
+                self.engine,
+                window.job_id,
+                window.window_start,
+                str(err),
+                max_attempts=0,
+            )
+            return True
         except DhanClientError as err:
             # A malformed request will fail identically forever; retiring it immediately
             # keeps the queue moving instead of burning five attempts on it.
+            self.last_outcome = "failed"
             logger.warning(
                 "Window %s %s is not retryable: %s", window.job_id, window.window_start, err
             )
@@ -159,6 +198,7 @@ class BackfillRunner:
             )
             return True
         except (DhanError, OSError, ValueError) as err:
+            self.last_outcome = "failed"
             logger.warning("Window %s %s failed: %s", window.job_id, window.window_start, err)
             fail_window(
                 self.engine,
@@ -169,6 +209,8 @@ class BackfillRunner:
             )
             return True
 
+        self.last_outcome = "completed" if rows else "empty"
+        self.last_rows = rows
         complete_window(
             self.engine,
             window.job_id,
@@ -220,7 +262,15 @@ class BackfillRunner:
             if not progressed:
                 stats.stopped_reason = "drained"
                 return stats
+
             stats.windows_attempted += 1
+            if self.last_outcome == "completed":
+                stats.windows_completed += 1
+                stats.bars_written += self.last_rows
+            elif self.last_outcome == "empty":
+                stats.windows_empty += 1
+            elif self.last_outcome == "failed":
+                stats.windows_failed += 1
 
         stats.stopped_reason = "max_windows"
         return stats
@@ -259,6 +309,7 @@ class BackfillRunner:
         bars = data.to_bars()
         if not bars:
             return ingest_id, 0, None
+        self._assert_in_session(window, bars)
 
         task = DailyBackfillTask(
             symbol=window.symbol,
@@ -294,6 +345,7 @@ class BackfillRunner:
         bars = data.to_bars()
         if not bars:
             return ingest_id, 0, None
+        self._assert_in_session(window, bars)
 
         task = MinuteBackfillTask(
             symbol=window.symbol,
@@ -397,6 +449,25 @@ class BackfillRunner:
             )
 
     # ---------------------------------------------------------------- helpers
+
+    def _assert_in_session(self, window: ClaimedWindow, bars: list[Any]) -> None:
+        """Refuse a window whose bars mostly sit outside a real trading session.
+
+        Daily bars are stamped at IST midnight rather than inside the session, so the
+        check applies to intraday series only.
+        """
+        if window.dataset == "daily" or not bars:
+            return
+
+        segment = window.exchange_segment.upper()
+        in_session = 0
+        for bar in bars:
+            stamp = datetime.fromtimestamp(bar.timestamp, tz=UTC)
+            if self.calendar.validate_bar_session(stamp, segment=segment):
+                in_session += 1
+
+        if in_session < len(bars) * MIN_IN_SESSION_RATIO:
+            raise OutOfSessionData(window.symbol, in_session, len(bars))
 
     def _raw_params(self, window: ClaimedWindow) -> dict[str, Any]:
         return {
