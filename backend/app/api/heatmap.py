@@ -1,17 +1,22 @@
-"""REST API endpoints for market index and constituent heatmaps with breadth."""
+"""Heatmaps backed exclusively by verified Dhan quotes in the feedd hot cache."""
 
 from __future__ import annotations
 
 import json
 from datetime import date
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
+from app.api.ws import get_market_data_fanout_manager
 from app.contracts import heartbeat as hb
+from app.dhan.instruments import instrument_table
+from app.dhan.live_feed_service import DHAN_TO_SEGMENT
+from app.feedd.cache import CachedQuote, MarketDataState
 from app.marketdata.universe import IndexConstituentRecord, get_constituents_at_date
 
 OFFICIAL_CONSTITUENTS_PATH = (
@@ -20,48 +25,34 @@ OFFICIAL_CONSTITUENTS_PATH = (
 
 
 def load_official_records_for_index(index_name: str) -> list[IndexConstituentRecord]:
-    """Load authentic constituent records directly from scraped official NSE catalog."""
+    """Load identity and membership only from the checked-in NSE catalog."""
     if not OFFICIAL_CONSTITUENTS_PATH.is_file():
         return []
-
     try:
-        with open(OFFICIAL_CONSTITUENTS_PATH, encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception:
+        with OFFICIAL_CONSTITUENTS_PATH.open(encoding="utf-8") as source:
+            data = json.load(source)
+    except OSError, json.JSONDecodeError:
         return []
 
     clean = index_name.upper().strip()
     entry = data.get(clean)
     if not entry or not entry.get("stocks"):
         return []
-
     stocks = entry["stocks"]
-    count = len(stocks)
-    raw_weights = [pow(count - i, 1.25) for i in range(count)]
-    sum_raw = sum(raw_weights)
-    calc_weights = [round((w / sum_raw) * 100.0, 2) for w in raw_weights]
-    diff = round(100.0 - sum(calc_weights), 2)
-    if calc_weights:
-        calc_weights[0] = round(calc_weights[0] + diff, 2)
-
-    records: list[IndexConstituentRecord] = []
-    for idx, s in enumerate(stocks):
-        sym = s.get("symbol", "").strip().upper()
-        if not sym:
-            continue
-        records.append(
-            IndexConstituentRecord(
-                index_name=clean,
-                symbol=sym,
-                weight=calc_weights[idx],
-                sector=s.get("industry") or entry.get("category") or "Equities",
-                valid_from=date(2026, 1, 1),
-                valid_to=None,
-                source_date=date(2026, 9, 1),
-                source="OFFICIAL_NSE",
-            )
+    return [
+        IndexConstituentRecord(
+            index_name=clean,
+            symbol=str(stock.get("symbol", "")).strip().upper(),
+            weight=None,
+            sector=stock.get("industry") or entry.get("category") or "Equities",
+            valid_from=date(2026, 1, 1),
+            valid_to=None,
+            source_date=date(2026, 9, 1),
+            source="OFFICIAL_NSE",
         )
-    return records
+        for stock in stocks
+        if str(stock.get("symbol", "")).strip()
+    ]
 
 
 router = APIRouter(prefix="/api/v1/heatmap", tags=["heatmap"])
@@ -75,8 +66,6 @@ DbEngineDep = Annotated[Engine, Depends(get_db_engine)]
 
 
 class MarketBreadth(BaseModel):
-    """Aggregated market breadth and sentiment metrics."""
-
     total_count: int
     advances: int
     declines: int
@@ -88,348 +77,274 @@ class MarketBreadth(BaseModel):
 
 
 class IndexHeatmapCell(BaseModel):
-    """Index-level heatmap cell."""
-
     index_name: str
     sector: str
     weight: float
-    change_pct: float
-    ltp: float
-    advances: int
-    declines: int
-    unchanged: int
-    futures_basis: float
-    oi_change_pct: float
-    category: str | None = "SECTORAL"
+    security_id: str | None = None
+    segment: str | None = None
+    change_pct: float | None = None
+    ltp: float | None = None
+    advances: int | None = None
+    declines: int | None = None
+    unchanged: int | None = None
+    futures_basis: float | None = None
+    oi_change_pct: float | None = None
+    category: str = "SECTORAL"
     constituent_count: int | None = None
     weighting_source: str = "OFFICIAL_NSE"
+    market_state: MarketDataState = "UNAVAILABLE"
+    source: str | None = None
+    received_at: float | None = None
+    error: str | None = None
 
 
 class ConstituentHeatmapCell(BaseModel):
-    """Constituent-level heatmap cell with transparent weighting source."""
-
     symbol: str
     sector: str
     weight: float
+    security_id: str | None = None
+    segment: str | None = None
     is_weight_fallback: bool = False
     weighting_source: str = "OFFICIAL_NSE"
-    change_pct: float
-    ltp: float
-    volume: int = 0
+    change_pct: float | None = None
+    ltp: float | None = None
+    previous_close: float | None = None
+    volume: int | None = None
+    market_state: MarketDataState = "UNAVAILABLE"
+    source: str | None = None
+    received_at: float | None = None
+    error: str | None = None
 
 
 class ConstituentHeatmapResponse(BaseModel):
-    """Aggregated constituent heatmap response with breadth and cell totals."""
-
     index_name: str
     breadth: MarketBreadth
     cell_total_weight: float
+    market_state: MarketDataState
+    error: str | None = None
     constituents: list[ConstituentHeatmapCell] = Field(default_factory=list)
 
 
-INDEX_SEED_HEATMAP: list[IndexHeatmapCell] = [
-    IndexHeatmapCell(
-        index_name="NIFTY 50",
-        sector="Large Cap Benchmark",
-        weight=25.0,
-        change_pct=-0.50,
-        ltp=23779.15,
-        advances=13,
-        declines=37,
-        unchanged=0,
-        futures_basis=22.5,
-        oi_change_pct=1.8,
-        category="BROAD_MARKET",
-        constituent_count=50,
-    ),
-    IndexHeatmapCell(
-        index_name="NIFTY BANK",
-        sector="Banking",
-        weight=20.0,
-        change_pct=-0.49,
-        ltp=57088.30,
-        advances=4,
-        declines=8,
-        unchanged=0,
-        futures_basis=65.0,
-        oi_change_pct=3.2,
-        category="SECTORAL",
-        constituent_count=12,
-    ),
-    IndexHeatmapCell(
-        index_name="NIFTY IT",
-        sector="Information Technology",
-        weight=15.0,
-        change_pct=-2.29,
-        ltp=39995.20,
-        advances=1,
-        declines=9,
-        unchanged=0,
-        futures_basis=-85.0,
-        oi_change_pct=-3.5,
-        category="SECTORAL",
-        constituent_count=10,
-    ),
-    IndexHeatmapCell(
-        index_name="NIFTY AUTO",
-        sector="Automotive",
-        weight=10.0,
-        change_pct=-0.04,
-        ltp=27098.75,
-        advances=7,
-        declines=8,
-        unchanged=0,
-        futures_basis=18.0,
-        oi_change_pct=1.4,
-        category="SECTORAL",
-        constituent_count=15,
-    ),
-    IndexHeatmapCell(
-        index_name="NIFTY PHARMA",
-        sector="Pharmaceuticals",
-        weight=8.0,
-        change_pct=0.75,
-        ltp=26675.50,
-        advances=15,
-        declines=5,
-        unchanged=0,
-        futures_basis=32.0,
-        oi_change_pct=4.1,
-        category="SECTORAL",
-        constituent_count=20,
-    ),
-    IndexHeatmapCell(
-        index_name="NIFTY FMCG",
-        sector="FMCG",
-        weight=8.0,
-        change_pct=-0.66,
-        ltp=65592.15,
-        advances=4,
-        declines=11,
-        unchanged=0,
-        futures_basis=-25.0,
-        oi_change_pct=-0.8,
-        category="SECTORAL",
-        constituent_count=15,
-    ),
-    IndexHeatmapCell(
-        index_name="NIFTY METAL",
-        sector="Metals & Mining",
-        weight=7.0,
-        change_pct=-1.24,
-        ltp=13152.90,
-        advances=3,
-        declines=8,
-        unchanged=0,
-        futures_basis=-20.0,
-        oi_change_pct=0.5,
-        category="SECTORAL",
-        constituent_count=11,
-    ),
-    IndexHeatmapCell(
-        index_name="NIFTY ENERGY",
-        sector="Energy",
-        weight=7.0,
-        change_pct=-0.25,
-        ltp=37973.35,
-        advances=3,
-        declines=7,
-        unchanged=0,
-        futures_basis=20.0,
-        oi_change_pct=1.5,
-        category="THEMATIC",
-        constituent_count=10,
-    ),
-    IndexHeatmapCell(
-        index_name="NIFTY COMMODITIES",
-        sector="Commodities Producers",
-        weight=5.0,
-        change_pct=-1.04,
-        ltp=9702.10,
-        advances=8,
-        declines=22,
-        unchanged=0,
-        futures_basis=-15.0,
-        oi_change_pct=0.8,
-        category="THEMATIC",
-        constituent_count=30,
-    ),
-    IndexHeatmapCell(
-        index_name="NIFTY NEXT 50",
-        sector="Large Cap Emerging",
-        weight=12.0,
-        change_pct=-0.42,
-        ltp=72575.75,
-        advances=18,
-        declines=32,
-        unchanged=0,
-        futures_basis=35.0,
-        oi_change_pct=0.9,
-        category="BROAD_MARKET",
-        constituent_count=50,
-    ),
+# Static metadata is allowed; market values are always populated from Dhan.
+INDEX_CATALOG: list[dict[str, Any]] = [
+    {
+        "index_name": "NIFTY 50",
+        "sector": "Large Cap Benchmark",
+        "weight": 25.0,
+        "security_id": "13",
+        "segment": "0",
+        "category": "BROAD_MARKET",
+        "constituent_count": 50,
+    },
+    {
+        "index_name": "NIFTY BANK",
+        "sector": "Banking",
+        "weight": 20.0,
+        "security_id": "25",
+        "segment": "0",
+        "category": "SECTORAL",
+        "constituent_count": 12,
+    },
+    {
+        "index_name": "NIFTY FIN SERVICE",
+        "sector": "Financial Services",
+        "weight": 15.0,
+        "security_id": "27",
+        "segment": "0",
+        "category": "SECTORAL",
+        "constituent_count": 20,
+    },
+    {
+        "index_name": "NIFTY MID SELECT",
+        "sector": "Mid Cap Select",
+        "weight": 10.0,
+        "security_id": "28",
+        "segment": "0",
+        "category": "BROAD_MARKET",
+        "constituent_count": 25,
+    },
+    {
+        "index_name": "NIFTY IT",
+        "sector": "Information Technology",
+        "weight": 15.0,
+        "security_id": "29",
+        "segment": "0",
+        "category": "SECTORAL",
+        "constituent_count": 10,
+    },
+    {
+        "index_name": "NIFTY AUTO",
+        "sector": "Automotive",
+        "weight": 10.0,
+        "security_id": "30",
+        "segment": "0",
+        "category": "SECTORAL",
+        "constituent_count": 15,
+    },
 ]
+
+
+def _change_pct(quote: CachedQuote) -> float | None:
+    previous_close = quote.previous_close
+    if quote.ltp is None or previous_close is None or previous_close == 0.0:
+        return None
+    return round((quote.ltp - previous_close) / previous_close * 100.0, 2)
+
+
+def _quote_fields(quote: CachedQuote | None) -> dict[str, Any]:
+    if quote is None:
+        return {
+            "market_state": "UNAVAILABLE",
+            "error": "No verified Dhan quote is available",
+        }
+    return {
+        "ltp": quote.ltp,
+        "previous_close": quote.previous_close,
+        "change_pct": _change_pct(quote),
+        "volume": quote.volume,
+        "market_state": quote.market_state,
+        "source": quote.source,
+        "received_at": quote.received_at,
+        "error": quote.error,
+    }
 
 
 @router.get("/indices", response_model=list[IndexHeatmapCell])
 def get_index_heatmap(category: str | None = None) -> list[IndexHeatmapCell]:
-    """Retrieve index-level heatmap across major Indian market sectors."""
-    from app.dhan.live_feed_service import get_dhan_live_feed_service
-
-    feed_service = get_dhan_live_feed_service()
-    cached = feed_service.cached_quotes
-
+    """Return direct Dhan index levels; only percentage/color inputs are derived."""
+    selected = INDEX_CATALOG
+    if category:
+        clean = category.strip().upper()
+        selected = [item for item in selected if item["category"] == clean]
+    instruments = [(str(item["segment"]), str(item["security_id"])) for item in selected]
+    cache = get_market_data_fanout_manager().hot_cache
+    quotes = cache.get_multi_quotes(instruments)
     cells: list[IndexHeatmapCell] = []
-    for c in INDEX_SEED_HEATMAP:
-        cell_dict = c.model_dump()
-        q = cached.get(c.index_name) or cached.get(c.index_name.upper())
-        if q:
-            ltp = float(q["ltp"])
-            close_p = float(q.get("close", ltp))
-            open_p = float(q.get("open", ltp))
-            if close_p != ltp and close_p > 0:
-                chg = round((ltp - close_p) / close_p * 100, 2)
-            elif open_p != ltp and open_p > 0:
-                chg = round((ltp - open_p) / open_p * 100, 2)
-            else:
-                chg = 0.0
-            cell_dict["ltp"] = ltp
-            cell_dict["change_pct"] = chg
-        cells.append(IndexHeatmapCell(**cell_dict))
+    for item in selected:
+        instrument = (str(item["segment"]), str(item["security_id"]))
+        fields = _quote_fields(quotes.get(instrument))
+        fields.pop("previous_close", None)
+        fields.pop("volume", None)
+        cells.append(IndexHeatmapCell(**item, **fields))
+    return cells
 
-    if not category:
-        return cells
 
-    clean_cat = category.strip().upper()
-    filtered = [c for c in cells if c.category and c.category.upper() == clean_cat]
-    return filtered if filtered else cells
+def _instrument_map(engine: Engine, symbols: list[str]) -> dict[str, tuple[str, str]]:
+    if not symbols:
+        return {}
+    statement = select(
+        instrument_table.c.symbol,
+        instrument_table.c.exchange_segment,
+        instrument_table.c.security_id,
+    ).where(
+        instrument_table.c.symbol.in_(symbols),
+        instrument_table.c.exchange_segment.in_(["NSE_EQ", "BSE_EQ"]),
+        instrument_table.c.is_active.is_(True),
+    )
+    resolved: dict[str, tuple[str, str]] = {}
+    with engine.connect() as connection:
+        for row in connection.execute(statement).mappings():
+            segment = DHAN_TO_SEGMENT.get(str(row["exchange_segment"]))
+            if segment is not None:
+                resolved.setdefault(str(row["symbol"]).upper(), (segment, str(row["security_id"])))
+    return resolved
 
 
 @router.get("/{index_name}/constituents", response_model=ConstituentHeatmapResponse)
-def get_constituent_heatmap(
-    engine: DbEngineDep,
-    index_name: str,
-) -> ConstituentHeatmapResponse:
-    """Retrieve constituent-level heatmap with breadth and deterministic missing-weight handling."""
+def get_constituent_heatmap(engine: DbEngineDep, index_name: str) -> ConstituentHeatmapResponse:
+    """Return membership metadata plus direct Dhan constituent values."""
     records = get_constituents_at_date(engine, index_name=index_name)
-
-    if not records:
-        from app.marketdata.universe import ingest_fallback_constituents
-
-        ingest_fallback_constituents(engine)
-        records = get_constituents_at_date(engine, index_name=index_name)
-
     if not records:
         records = load_official_records_for_index(index_name)
 
-    # 1. Deterministic missing-weight handling
-    total_known_weight = sum(float(r.weight) for r in records if r.weight is not None)
-    unweighted_records = [r for r in records if r.weight is None or float(r.weight) <= 0.0]
-    unweighted_count = len(unweighted_records)
-
-    assigned_fallback_weight = 0.0
-    if unweighted_count > 0:
-        remaining_weight = max(0.0, 100.0 - total_known_weight)
-        assigned_fallback_weight = (
-            round(remaining_weight / unweighted_count, 4)
-            if remaining_weight > 0
-            else round(100.0 / len(records), 4)
+    total_known = sum(float(record.weight) for record in records if record.weight)
+    unweighted = [record for record in records if not record.weight]
+    fallback_weight = 0.0
+    if unweighted:
+        remaining = max(0.0, 100.0 - total_known)
+        fallback_weight = round(
+            (remaining / len(unweighted)) if remaining else (100.0 / len(records)), 4
         )
 
-    from app.dhan.live_feed_service import get_dhan_live_feed_service
-
-    feed_service = get_dhan_live_feed_service()
-    cached = feed_service.cached_quotes
-
-    # Authentic Dhan live/closing prices if available, else deterministic fallbacks
+    instruments = _instrument_map(engine, [record.symbol.upper() for record in records])
+    requested = list(instruments.values())
+    cache = get_market_data_fanout_manager().hot_cache
+    quotes = cache.get_multi_quotes(requested)
     cells: list[ConstituentHeatmapCell] = []
-    for r in records:
-        is_fallback = r.weight is None or float(r.weight) <= 0.0
-        weight = (
-            float(r.weight)
-            if not is_fallback and r.weight is not None
-            else assigned_fallback_weight
-        )
-        source = "FALLBACK_EQUAL_WEIGHT" if is_fallback else "OFFICIAL_NSE"
-
-        q = cached.get(r.symbol.upper())
-        if q:
-            ltp = float(q["ltp"])
-            close_p = float(q.get("close", ltp))
-            open_p = float(q.get("open", ltp))
-            if close_p != ltp and close_p > 0:
-                change_pct = round((ltp - close_p) / close_p * 100, 2)
-            elif open_p != ltp and open_p > 0:
-                change_pct = round((ltp - open_p) / open_p * 100, 2)
-            else:
-                change_pct = 0.0
-            vol = int(q.get("volume", 1000))
-        else:
-            sym_hash = sum(ord(c) for c in r.symbol)
-            change_pct = round(((sym_hash % 600) - 280) / 100.0, 2)
-            ltp = round(100.0 + (sym_hash % 3000), 2)
-            vol = (sym_hash * 1234) % 10000000
-
+    for record in records:
+        symbol = record.symbol.upper()
+        instrument = instruments.get(symbol)
+        quote = quotes.get(instrument) if instrument else None
+        is_fallback = not record.weight
+        fields = _quote_fields(quote)
         cells.append(
             ConstituentHeatmapCell(
-                symbol=r.symbol,
-                sector=r.sector or "General",
-                weight=round(weight, 2),
+                symbol=symbol,
+                sector=record.sector or "General",
+                weight=round(float(record.weight) if record.weight else fallback_weight, 2),
+                security_id=instrument[1] if instrument else None,
+                segment=instrument[0] if instrument else None,
                 is_weight_fallback=is_fallback,
-                weighting_source=source,
-                change_pct=change_pct,
-                ltp=ltp,
-                volume=vol,
+                weighting_source="FALLBACK_EQUAL_WEIGHT" if is_fallback else "OFFICIAL_NSE",
+                **fields,
             )
         )
 
-    # Normalize total weight to exactly 100.0%
-    curr_total = sum(c.weight for c in cells)
-    if curr_total > 0 and len(cells) > 0 and abs(curr_total - 100.0) > 0.01:
-        scale = 100.0 / curr_total
-        for c in cells:
-            c.weight = round(c.weight * scale, 2)
-        diff = round(100.0 - sum(c.weight for c in cells), 2)
-        max_idx = max(range(len(cells)), key=lambda i: cells[i].weight)
-        cells[max_idx].weight = round(cells[max_idx].weight + diff, 2)
+    current_total = sum(cell.weight for cell in cells)
+    if current_total and abs(current_total - 100.0) > 0.01:
+        scale = 100.0 / current_total
+        for cell in cells:
+            cell.weight = round(cell.weight * scale, 2)
+        largest = max(range(len(cells)), key=lambda index: cells[index].weight)
+        cells[largest].weight += round(100.0 - sum(cell.weight for cell in cells), 2)
 
-    cell_total = round(sum(c.weight for c in cells), 2)
-
-    # 2. Compute Market Breadth metrics
-    advances = sum(1 for c in cells if c.change_pct > 0)
-    declines = sum(1 for c in cells if c.change_pct < 0)
-    unchanged = sum(1 for c in cells if c.change_pct == 0)
-    total_count = len(cells)
-
-    ad_ratio = round(advances / max(declines, 1), 2)
-    pct_positive = round((advances / max(total_count, 1)) * 100.0, 1)
-    weighted_breadth = round(sum((c.weight * c.change_pct) for c in cells) / 100.0, 2)
-
-    if pct_positive >= 70.0:
-        posture = "Strong Bullish"
-    elif pct_positive >= 55.0:
-        posture = "Moderate Bullish"
-    elif pct_positive >= 45.0:
-        posture = "Neutral"
-    elif pct_positive >= 30.0:
-        posture = "Moderate Bearish"
-    else:
-        posture = "Strong Bearish"
-
-    breadth = MarketBreadth(
-        total_count=total_count,
-        advances=advances,
-        declines=declines,
-        unchanged=unchanged,
-        advance_decline_ratio=ad_ratio,
-        pct_above_prev_close=pct_positive,
-        weighted_breadth=weighted_breadth,
-        sentiment_posture=posture,
+    valued = [cell for cell in cells if cell.change_pct is not None]
+    advances = sum(1 for cell in valued if cell.change_pct and cell.change_pct > 0)
+    declines = sum(1 for cell in valued if cell.change_pct and cell.change_pct < 0)
+    unchanged = sum(1 for cell in valued if cell.change_pct == 0)
+    pct_positive = round(advances / len(valued) * 100.0, 1) if valued else 0.0
+    weighted_breadth = round(
+        sum(cell.weight * (cell.change_pct or 0.0) for cell in valued) / 100.0, 2
     )
-
+    posture = (
+        "Unavailable"
+        if not valued
+        else "Strong Bullish"
+        if pct_positive >= 70
+        else "Moderate Bullish"
+        if pct_positive >= 55
+        else "Neutral"
+        if pct_positive >= 45
+        else "Moderate Bearish"
+        if pct_positive >= 30
+        else "Strong Bearish"
+    )
+    states = {cell.market_state for cell in cells}
+    overall: MarketDataState = (
+        "LIVE"
+        if "LIVE" in states
+        else "MARKET_CLOSED"
+        if "MARKET_CLOSED" in states
+        else "STALE"
+        if "STALE" in states
+        else "ERROR"
+        if "ERROR" in states
+        else "UNAVAILABLE"
+    )
     return ConstituentHeatmapResponse(
         index_name=index_name,
-        breadth=breadth,
-        cell_total_weight=cell_total,
+        breadth=MarketBreadth(
+            total_count=len(valued),
+            advances=advances,
+            declines=declines,
+            unchanged=unchanged,
+            advance_decline_ratio=round(advances / max(declines, 1), 2),
+            pct_above_prev_close=pct_positive,
+            weighted_breadth=weighted_breadth,
+            sentiment_posture=posture,
+        ),
+        cell_total_weight=round(sum(cell.weight for cell in cells), 2),
+        market_state=overall,
+        error=None if valued else "No verified Dhan constituent quotes are available",
         constituents=cells,
     )

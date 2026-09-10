@@ -351,6 +351,16 @@ class DhanRestClient:
             raise DhanMalformedResponseError("Expected dictionary payload for marketfeed/quote")
         return DhanQuote.model_validate(data)
 
+    def get_quotes(self, instruments: dict[str, list[int]]) -> dict[str, Any]:
+        """Fetch Dhan's direct snapshot payload for up to 1,000 instruments."""
+        instrument_count = sum(len(security_ids) for security_ids in instruments.values())
+        if instrument_count < 1 or instrument_count > 1000:
+            raise ValueError("marketfeed/quote requires between 1 and 1000 instruments")
+        data = self._request("POST", "marketfeed/quote", json_data=instruments)
+        if not isinstance(data, dict):
+            raise DhanMalformedResponseError("Expected dictionary payload for marketfeed/quote")
+        return data
+
     def get_holdings(self) -> list[DhanHolding]:
         """Fetch account equity holdings."""
         data = self._request("GET", "holdings")

@@ -55,6 +55,46 @@ describe("NexaWebSocketClient Multiplexing and Auto-Reconnect", () => {
     unsubSymbol();
   });
 
+  it("leaves change and volume unavailable when Dhan did not send them", () => {
+    const listener = vi.fn();
+    client.onChannel("quotes", listener);
+    client.subscribeChannels(
+      ["quotes"],
+      ["RELIANCE"],
+      [{ segment: "1", securityId: "2885", symbol: "RELIANCE" }],
+    );
+
+    (client as any).handleMessage(JSON.stringify({
+      type: "delta",
+      channel: "quotes",
+      segment: "1",
+      security_id: "2885",
+      data: { ltp: 1412.5, market_state: "LIVE", source: "DHAN_WEBSOCKET" },
+    }));
+
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({
+      symbol: "RELIANCE",
+      ltp: 1412.5,
+      change: undefined,
+      changePct: undefined,
+      volume: undefined,
+    }));
+  });
+
+  it("reference-counts shared subscriptions before releasing them", () => {
+    const instrument = [{ segment: "1", securityId: "2885", symbol: "RELIANCE" }];
+    client.subscribeChannels(["quotes"], ["RELIANCE"], instrument);
+    client.subscribeChannels(["quotes"], ["RELIANCE"], instrument);
+
+    client.unsubscribeChannels(["quotes"], ["RELIANCE"], instrument);
+    expect(client.getSubscribedSymbols()).toContain("RELIANCE");
+    expect(client.getSubscribedChannels()).toContain("quotes");
+
+    client.unsubscribeChannels(["quotes"], ["RELIANCE"], instrument);
+    expect(client.getSubscribedSymbols()).not.toContain("RELIANCE");
+    expect(client.getSubscribedChannels()).not.toContain("quotes");
+  });
+
   it("transitions state and attempts auto-reconnect on disconnect", () => {
     const states: string[] = [];
     client.onStateChange((st) => states.push(st));

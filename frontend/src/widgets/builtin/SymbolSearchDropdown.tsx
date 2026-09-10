@@ -560,7 +560,7 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
                     </span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    {depthModalInstrument.ltp > 0 && (
+                    {typeof depthModalInstrument.ltp === "number" && depthModalInstrument.ltp > 0 && (
                       <span style={{ fontFamily: "var(--font-family-mono)", fontWeight: 700, fontSize: "14px", color: "#fff" }}>
                         ₹{depthModalInstrument.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                       </span>

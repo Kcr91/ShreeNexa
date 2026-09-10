@@ -69,6 +69,10 @@ export interface WatchlistItem {
   bid?: number;
   ask?: number;
   isStale?: boolean;
+  marketDataState?: "LIVE" | "MARKET_CLOSED" | "STALE" | "UNAVAILABLE" | "ERROR";
+  marketDataSource?: "DHAN_WEBSOCKET" | "DHAN_REST";
+  marketDataReceivedAt?: number;
+  marketDataError?: string;
 }
 
 export interface Watchlist {

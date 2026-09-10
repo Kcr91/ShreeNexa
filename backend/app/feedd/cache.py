@@ -6,7 +6,7 @@ import json
 import logging
 import time
 from collections.abc import Sequence
-from typing import Any, Protocol, cast
+from typing import Any, Literal, Protocol, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 from redis import Redis
@@ -24,9 +24,12 @@ from app.dhan.packets import (
 
 logger = logging.getLogger(__name__)
 
-CACHE_SCHEMA_VERSION = 1
+CACHE_SCHEMA_VERSION = 2
 DEFAULT_FRESHNESS_THRESHOLD_SECONDS = 5.0
-DEFAULT_CACHE_TTL_SECONDS = 86400  # 24 hours TTL for hot keys
+DEFAULT_CACHE_TTL_SECONDS = 604800  # Retain the last verified close across weekends.
+REQUESTED_INSTRUMENTS_KEY = "shreenexa:feed:v2:requested-instruments"
+
+MarketDataState = Literal["LIVE", "MARKET_CLOSED", "STALE", "UNAVAILABLE", "ERROR"]
 
 
 class CachedQuote(BaseModel):
@@ -37,18 +40,22 @@ class CachedQuote(BaseModel):
     schema_version: int = CACHE_SCHEMA_VERSION
     segment: str
     security_id: str
-    ltp: float
-    ltq: int
-    ltt: int
-    avg_price: float
-    volume: int
-    total_buy_qty: float
-    total_sell_qty: float
-    open: float
-    high: float
-    low: float
-    close: float
+    ltp: float | None = None
+    ltq: int | None = None
+    ltt: int | str | None = None
+    avg_price: float | None = None
+    volume: int | None = None
+    total_buy_qty: float | None = None
+    total_sell_qty: float | None = None
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    close: float | None = None
+    previous_close: float | None = None
     received_at: float
+    source: Literal["DHAN_WEBSOCKET", "DHAN_REST"] = "DHAN_WEBSOCKET"
+    market_state: MarketDataState = "LIVE"
+    error: str | None = None
     is_stale: bool = False
     staleness_seconds: float = 0.0
 
@@ -110,19 +117,19 @@ class CachedFeedHealth(BaseModel):
 
 
 def quote_key(segment: str, security_id: str) -> str:
-    return f"shreenexa:feed:v1:quote:{segment}:{security_id}"
+    return f"shreenexa:feed:v2:quote:{segment}:{security_id}"
 
 
 def oi_key(segment: str, security_id: str) -> str:
-    return f"shreenexa:feed:v1:oi:{segment}:{security_id}"
+    return f"shreenexa:feed:v2:oi:{segment}:{security_id}"
 
 
 def depth_key(segment: str, security_id: str) -> str:
-    return f"shreenexa:feed:v1:depth:{segment}:{security_id}"
+    return f"shreenexa:feed:v2:depth:{segment}:{security_id}"
 
 
 def health_key(socket_id: str) -> str:
-    return f"shreenexa:feed:v1:health:{socket_id}"
+    return f"shreenexa:feed:v2:health:{socket_id}"
 
 
 class HotCache(Protocol):
@@ -160,6 +167,12 @@ class HotCache(Protocol):
 
     def get_all_feed_health(self, now: float | None = None) -> list[CachedFeedHealth]: ...
 
+    def request_subscriptions(self, instruments: Sequence[tuple[str, str]]) -> None: ...
+
+    def release_subscriptions(self, instruments: Sequence[tuple[str, str]]) -> None: ...
+
+    def get_requested_subscriptions(self) -> set[tuple[str, str]]: ...
+
 
 def _apply_freshness_quote(quote: CachedQuote, now: float, threshold: float) -> CachedQuote:
     elapsed = max(0.0, now - quote.received_at)
@@ -179,7 +192,11 @@ def _apply_freshness_quote(quote: CachedQuote, now: float, threshold: float) -> 
         high=quote.high,
         low=quote.low,
         close=quote.close,
+        previous_close=quote.previous_close,
         received_at=quote.received_at,
+        source=quote.source,
+        market_state="STALE" if is_stale and quote.market_state == "LIVE" else quote.market_state,
+        error=quote.error,
         is_stale=is_stale,
         staleness_seconds=round(elapsed, 3),
     )
@@ -244,6 +261,7 @@ class InMemoryHotCache:
         self._oi: dict[tuple[str, str], CachedOI] = {}
         self._depth: dict[tuple[str, str], CachedDepth] = {}
         self._health: dict[str, CachedFeedHealth] = {}
+        self._requested: set[tuple[str, str]] = set()
 
     def update_from_packet(self, packet: FeedPacket, now: float | None = None) -> None:
         t = now if now is not None else time.time()
@@ -251,6 +269,7 @@ class InMemoryHotCache:
         sec_id = str(packet.header.security_id)
 
         if isinstance(packet, (QuotePacket, FullPacket)):
+            existing_quote = self._quotes.get((seg, sec_id))
             self._quotes[(seg, sec_id)] = CachedQuote(
                 segment=seg,
                 security_id=sec_id,
@@ -265,6 +284,9 @@ class InMemoryHotCache:
                 high=packet.high,
                 low=packet.low,
                 close=packet.close,
+                previous_close=(
+                    existing_quote.previous_close if existing_quote is not None else None
+                ),
                 received_at=t,
             )
 
@@ -308,9 +330,10 @@ class InMemoryHotCache:
                     total_buy_qty=existing.total_buy_qty,
                     total_sell_qty=existing.total_sell_qty,
                     open=existing.open,
-                    high=max(existing.high, packet.ltp),
-                    low=min(existing.low, packet.ltp),
+                    high=max(existing.high, packet.ltp) if existing.high is not None else None,
+                    low=min(existing.low, packet.ltp) if existing.low is not None else None,
                     close=existing.close,
+                    previous_close=existing.previous_close,
                     received_at=t,
                 )
             else:
@@ -318,16 +341,7 @@ class InMemoryHotCache:
                     segment=seg,
                     security_id=sec_id,
                     ltp=packet.ltp,
-                    ltq=0,
                     ltt=packet.ltt,
-                    avg_price=packet.ltp,
-                    volume=0,
-                    total_buy_qty=0.0,
-                    total_sell_qty=0.0,
-                    open=packet.ltp,
-                    high=packet.ltp,
-                    low=packet.ltp,
-                    close=packet.ltp,
                     received_at=t,
                 )
 
@@ -347,24 +361,15 @@ class InMemoryHotCache:
                     open=existing.open,
                     high=existing.high,
                     low=existing.low,
-                    close=packet.prev_close,
+                    close=existing.close,
+                    previous_close=packet.prev_close,
                     received_at=t,
                 )
             else:
                 self._quotes[(seg, sec_id)] = CachedQuote(
                     segment=seg,
                     security_id=sec_id,
-                    ltp=packet.prev_close,
-                    ltq=0,
-                    ltt=int(t),
-                    avg_price=packet.prev_close,
-                    volume=0,
-                    total_buy_qty=0.0,
-                    total_sell_qty=0.0,
-                    open=packet.prev_close,
-                    high=packet.prev_close,
-                    low=packet.prev_close,
-                    close=packet.prev_close,
+                    previous_close=packet.prev_close,
                     received_at=t,
                 )
 
@@ -429,6 +434,15 @@ class InMemoryHotCache:
             for item in self._health.values()
         ]
 
+    def request_subscriptions(self, instruments: Sequence[tuple[str, str]]) -> None:
+        self._requested.update((str(seg), str(sec_id)) for seg, sec_id in instruments)
+
+    def release_subscriptions(self, instruments: Sequence[tuple[str, str]]) -> None:
+        self._requested.difference_update((str(seg), str(sec_id)) for seg, sec_id in instruments)
+
+    def get_requested_subscriptions(self) -> set[tuple[str, str]]:
+        return set(self._requested)
+
 
 class RedisHotCache:
     """Production Redis-backed implementation of HotCache supporting atomic pipeline writes."""
@@ -458,6 +472,9 @@ class RedisHotCache:
             return
 
         t = now if now is not None else time.time()
+        # Packet types must merge with the existing quote; writing only quote/full
+        # packets loses ticker/index updates and can corrupt LTP on previous-close.
+        passthrough: list[IndexPacket | TickerPacket | PrevClosePacket] = []
         pipe = self._client.pipeline(transaction=True)
 
         for packet in packets:
@@ -466,6 +483,7 @@ class RedisHotCache:
 
             if isinstance(packet, (QuotePacket, FullPacket)):
                 q_key = quote_key(seg, sec_id)
+                existing_quote = self.get_quote(seg, sec_id, now=t)
                 data = {
                     "schema_version": CACHE_SCHEMA_VERSION,
                     "segment": seg,
@@ -481,9 +499,16 @@ class RedisHotCache:
                     "high": packet.high,
                     "low": packet.low,
                     "close": packet.close,
+                    "previous_close": (
+                        existing_quote.previous_close if existing_quote is not None else None
+                    ),
                     "received_at": t,
+                    "source": "DHAN_WEBSOCKET",
+                    "market_state": "LIVE",
                 }
                 pipe.set(q_key, json.dumps(data), ex=self.ttl)
+            elif isinstance(packet, (TickerPacket, IndexPacket, PrevClosePacket)):
+                passthrough.append(packet)
 
             if isinstance(packet, (OIPacket, FullPacket)):
                 o_key = oi_key(seg, sec_id)
@@ -517,6 +542,54 @@ class RedisHotCache:
                 pipe.set(d_key, json.dumps(depth_data), ex=self.ttl)
 
         pipe.execute()
+
+        # These updates depend on the previous cache value and are deliberately
+        # merged after the atomic independent writes above.
+        for packet in passthrough:
+            seg = str(packet.header.exchange_segment)
+            sec_id = str(packet.header.security_id)
+            existing = self.get_quote(seg, sec_id, now=t)
+            if isinstance(packet, PrevClosePacket):
+                quote = (
+                    existing.model_copy(
+                        update={
+                            "previous_close": packet.prev_close,
+                            "received_at": t,
+                            "is_stale": False,
+                            "staleness_seconds": 0.0,
+                        }
+                    )
+                    if existing
+                    else CachedQuote(
+                        segment=seg,
+                        security_id=sec_id,
+                        previous_close=packet.prev_close,
+                        received_at=t,
+                    )
+                )
+            else:
+                quote = (
+                    existing.model_copy(
+                        update={
+                            "ltp": packet.ltp,
+                            "ltt": packet.ltt,
+                            "received_at": t,
+                            "source": "DHAN_WEBSOCKET",
+                            "market_state": "LIVE",
+                            "is_stale": False,
+                            "staleness_seconds": 0.0,
+                        }
+                    )
+                    if existing
+                    else CachedQuote(
+                        segment=seg,
+                        security_id=sec_id,
+                        ltp=packet.ltp,
+                        ltt=packet.ltt,
+                        received_at=t,
+                    )
+                )
+            self.set_quote(quote)
 
     def set_quote(self, quote: CachedQuote) -> None:
         q_key = quote_key(quote.segment, quote.security_id)
@@ -577,7 +650,7 @@ class RedisHotCache:
         data = health.model_dump()
         self._client.set(h_key, json.dumps(data), ex=self.ttl)
         # Add to set of known socket IDs
-        self._client.sadd("shreenexa:feed:v1:sockets", health.socket_id)
+        self._client.sadd("shreenexa:feed:v2:sockets", health.socket_id)
 
     def get_feed_health(self, socket_id: str, now: float | None = None) -> CachedFeedHealth | None:
         t = now if now is not None else time.time()
@@ -591,7 +664,7 @@ class RedisHotCache:
 
     def get_all_feed_health(self, now: float | None = None) -> list[CachedFeedHealth]:
         t = now if now is not None else time.time()
-        socket_ids = cast(set[Any], self._client.smembers("shreenexa:feed:v1:sockets"))
+        socket_ids = cast(set[Any], self._client.smembers("shreenexa:feed:v2:sockets"))
         if not socket_ids:
             return []
 
@@ -602,3 +675,22 @@ class RedisHotCache:
                 health_records.append(h)
 
         return health_records
+
+    def request_subscriptions(self, instruments: Sequence[tuple[str, str]]) -> None:
+        values = [f"{seg}|{sec_id}" for seg, sec_id in instruments if seg and sec_id]
+        if values:
+            self._client.sadd(REQUESTED_INSTRUMENTS_KEY, *values)
+
+    def release_subscriptions(self, instruments: Sequence[tuple[str, str]]) -> None:
+        values = [f"{seg}|{sec_id}" for seg, sec_id in instruments if seg and sec_id]
+        if values:
+            self._client.srem(REQUESTED_INSTRUMENTS_KEY, *values)
+
+    def get_requested_subscriptions(self) -> set[tuple[str, str]]:
+        values = cast(set[Any], self._client.smembers(REQUESTED_INSTRUMENTS_KEY))
+        requested: set[tuple[str, str]] = set()
+        for value in values:
+            segment, separator, security_id = str(value).partition("|")
+            if separator and segment and security_id:
+                requested.add((segment, security_id))
+        return requested

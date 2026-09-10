@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import struct
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ from app.dhan import (
     FeedResponseCode,
     FullPacket,
     IndexPacket,
+    MarketStatusPacket,
     OIPacket,
     QuotePacket,
     TickerPacket,
@@ -67,6 +69,40 @@ def test_independent_golden_quote_packet_decode() -> None:
     assert packet.close == 152.00
 
 
+def test_official_v2_quote_field_order_is_decoded_independently() -> None:
+    """Pack the published Dhan layout directly, without using the production builder."""
+    header = struct.pack(
+        "<BHBi",
+        int(FeedResponseCode.QUOTE),
+        50,
+        int(ExchangeSegmentCode.NSE_EQ),
+        2885,
+    )
+    payload = struct.pack(
+        "<fHifIIIffff",
+        1412.5,  # LTP
+        20,  # LTQ
+        1772614502,  # LTT
+        1400.25,  # average price
+        123456,  # volume
+        4700,  # total sell quantity comes first on the wire
+        4500,  # total buy quantity
+        1395.0,  # open
+        1400.0,  # close
+        1420.0,  # high
+        1390.0,  # low
+    )
+
+    packet = DhanFeedParser.parse_packet(header + payload)
+    assert isinstance(packet, QuotePacket)
+    assert packet.total_buy_qty == 4500.0
+    assert packet.total_sell_qty == 4700.0
+    assert packet.open == 1395.0
+    assert packet.close == 1400.0
+    assert packet.high == 1420.0
+    assert packet.low == 1390.0
+
+
 def test_independent_golden_oi_packet_decode() -> None:
     data = (FIXTURES_DIR / "golden_oi.bin").read_bytes()
     packet = DhanFeedParser.parse_packet(data)
@@ -76,6 +112,16 @@ def test_independent_golden_oi_packet_decode() -> None:
     assert packet.header.exchange_segment == ExchangeSegmentCode.NSE_FNO
     assert packet.header.security_id == 45000
     assert packet.open_interest == 2450000
+
+
+def test_market_status_packet_does_not_discard_following_quotes() -> None:
+    client = DhanLiveFeedClient(client_id="test_client", access_token="test_token")
+    status_packet = struct.pack("<BHBi", int(FeedResponseCode.MARKET_STATUS), 8, 1, 0)
+    ticker_packet = DhanFeedParser.build_ticker_packet(1, 2885, 1412.5, 1772614502)
+
+    packets = client.process_incoming_frame(status_packet + ticker_packet)
+    assert isinstance(packets[0], MarketStatusPacket)
+    assert isinstance(packets[1], TickerPacket)
 
 
 def test_independent_golden_full_packet_decode() -> None:

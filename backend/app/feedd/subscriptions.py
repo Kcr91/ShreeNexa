@@ -37,8 +37,8 @@ class SubscriptionMode(IntEnum):
     """Dhan subscription mode codes."""
 
     TICKER = 15
-    QUOTE = 16
-    FULL = 17
+    QUOTE = 17
+    FULL = 21
 
 
 class SubscriptionCapacityExceededError(RuntimeError):
@@ -265,7 +265,7 @@ class SubscriptionManager:
                     "InstrumentList": inst_list,
                 }
                 if is_unsubscribe:
-                    msg["IsUnsubscribe"] = True
+                    msg["RequestCode"] = 18
 
                 messages.append(msg)
 

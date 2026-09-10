@@ -15,6 +15,7 @@ def hermetic_test_environment(monkeypatch: pytest.MonkeyPatch) -> Generator[None
     # Unless a test explicitly requests a specific env file, disable loading the repo .env
     if "SHREENEXA_ENV_FILE" not in os.environ:
         monkeypatch.setenv("SHREENEXA_ENV_FILE", "")
+    monkeypatch.setenv("SHREENEXA_HOT_CACHE_BACKEND", "memory")
 
     get_settings.cache_clear()
     yield

@@ -27,7 +27,8 @@ export interface MarketBreadth {
     | "Moderate Bullish"
     | "Neutral"
     | "Moderate Bearish"
-    | "Strong Bearish";
+    | "Strong Bearish"
+    | "Unavailable";
 }
 
 export interface IndexHeatmapItem {
@@ -35,15 +36,21 @@ export interface IndexHeatmapItem {
   category?: IndexCategory;
   sector: string;
   weight: number;
-  changePct: number;
-  ltp: number;
-  advances: number;
-  declines: number;
-  unchanged: number;
-  futuresBasis: number;
-  oiChangePct: number;
+  changePct?: number;
+  ltp?: number;
+  advances?: number;
+  declines?: number;
+  unchanged?: number;
+  futuresBasis?: number;
+  oiChangePct?: number;
   constituentCount?: number;
   weightingSource: WeightingSource;
+  securityId?: string;
+  segment?: string;
+  marketState?: "LIVE" | "MARKET_CLOSED" | "STALE" | "UNAVAILABLE" | "ERROR";
+  source?: "DHAN_WEBSOCKET" | "DHAN_REST";
+  receivedAt?: number;
+  error?: string;
 }
 
 export interface ConstituentHeatmapItem {
@@ -53,11 +60,17 @@ export interface ConstituentHeatmapItem {
   weight: number;
   isWeightFallback: boolean;
   weightingSource: WeightingSource;
-  changePct: number;
+  changePct?: number;
   changeAbs?: number;
-  ltp: number;
+  ltp?: number;
   prevClose?: number;
-  volume: number;
+  volume?: number;
+  securityId?: string;
+  segment?: string;
+  marketState?: "LIVE" | "MARKET_CLOSED" | "STALE" | "UNAVAILABLE" | "ERROR";
+  source?: "DHAN_WEBSOCKET" | "DHAN_REST";
+  receivedAt?: number;
+  error?: string;
 }
 
 export interface ConstituentHeatmapResponse {
@@ -66,4 +79,6 @@ export interface ConstituentHeatmapResponse {
   breadth: MarketBreadth;
   cellTotalWeight: number;
   constituents: ConstituentHeatmapItem[];
+  marketState?: "LIVE" | "MARKET_CLOSED" | "STALE" | "UNAVAILABLE" | "ERROR";
+  error?: string;
 }

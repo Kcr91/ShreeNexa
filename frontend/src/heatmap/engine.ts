@@ -5,32 +5,35 @@ import {
 } from "./types";
 
 export function calculateMarketBreadth(
-  items: { changePct: number; weight?: number }[]
+  items: { changePct?: number; weight?: number }[]
 ): MarketBreadth {
-  const totalCount = items.length;
+  const valuedItems = items.filter(
+    (item): item is { changePct: number; weight?: number } => typeof item.changePct === "number",
+  );
+  const totalCount = valuedItems.length;
   if (totalCount === 0) {
     return {
       totalCount: 0,
       advances: 0,
       declines: 0,
       unchanged: 0,
-      advanceDeclineRatio: 1.0,
+      advanceDeclineRatio: 0.0,
       pctAbovePrevClose: 0.0,
       weightedBreadth: 0.0,
-      sentimentPosture: "Neutral",
+      sentimentPosture: "Unavailable",
     };
   }
 
-  const advances = items.filter((i) => i.changePct > 0).length;
-  const declines = items.filter((i) => i.changePct < 0).length;
-  const unchanged = items.filter((i) => i.changePct === 0).length;
+  const advances = valuedItems.filter((i) => i.changePct > 0).length;
+  const declines = valuedItems.filter((i) => i.changePct < 0).length;
+  const unchanged = valuedItems.filter((i) => i.changePct === 0).length;
 
   const adRatio = Number((advances / Math.max(declines, 1)).toFixed(2));
   const pctPositive = Number(((advances / totalCount) * 100).toFixed(1));
 
   let totalWeight = 0;
   let weightedSum = 0;
-  items.forEach((i) => {
+  valuedItems.forEach((i) => {
     const wt = i.weight ?? (100.0 / totalCount);
     totalWeight += wt;
     weightedSum += wt * i.changePct;
@@ -70,8 +73,8 @@ export function handleMissingWeights(
     symbol: string;
     sector: string;
     weight?: number | null;
-    changePct: number;
-    ltp: number;
+    changePct?: number;
+    ltp?: number;
     volume?: number;
     weightingSource?: WeightingSource;
   }[]
@@ -109,7 +112,7 @@ export function handleMissingWeights(
       weightingSource: source,
       changePct: item.changePct,
       ltp: item.ltp,
-      volume: item.volume || 0,
+      volume: item.volume,
     };
   });
 

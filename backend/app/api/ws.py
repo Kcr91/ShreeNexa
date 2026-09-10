@@ -24,6 +24,7 @@ from app.dhan.packets import (
 from app.feedd.cache import (
     HotCache,
     InMemoryHotCache,
+    RedisHotCache,
 )
 
 logger = logging.getLogger(__name__)
@@ -93,6 +94,7 @@ class MarketDataFanoutManager:
 
     def unregister_session(self, session_id: str) -> None:
         session = self._sessions.pop(session_id, None)
+        released: list[tuple[str, str]] = []
         if session:
             for inst in session.subscribed_instruments:
                 subscribers = self._instrument_subscribers.get(inst)
@@ -100,6 +102,8 @@ class MarketDataFanoutManager:
                     subscribers.discard(session_id)
                     if not subscribers:
                         self._instrument_subscribers.pop(inst, None)
+                        released.append(inst)
+        self.hot_cache.release_subscriptions(released)
 
     def get_session(self, session_id: str) -> ClientSession | None:
         return self._sessions.get(session_id)
@@ -121,8 +125,10 @@ class MarketDataFanoutManager:
 
         snapshots: list[dict[str, Any]] = []
         t = now if now is not None else time.time()
+        normalized = [(str(seg), str(sec_id)) for seg, sec_id in instruments if seg and sec_id]
+        self.hot_cache.request_subscriptions(normalized)
 
-        for seg, sec_id in instruments:
+        for seg, sec_id in normalized:
             inst_key = (str(seg), str(sec_id))
             session.subscribed_instruments.add(inst_key)
 
@@ -178,6 +184,7 @@ class MarketDataFanoutManager:
         if not session:
             return
 
+        released: list[tuple[str, str]] = []
         for seg, sec_id in instruments:
             inst_key = (str(seg), str(sec_id))
             session.subscribed_instruments.discard(inst_key)
@@ -186,6 +193,8 @@ class MarketDataFanoutManager:
                 subscribers.discard(session_id)
                 if not subscribers:
                     self._instrument_subscribers.pop(inst_key, None)
+                    released.append(inst_key)
+        self.hot_cache.release_subscriptions(released)
 
     def resync(self, session_id: str, now: float | None = None) -> list[dict[str, Any]]:
         """Deliver fresh state snapshots for all currently subscribed instruments."""
@@ -248,17 +257,21 @@ class MarketDataFanoutManager:
             )
 
         elif isinstance(packet, PrevClosePacket):
+            quote = self.hot_cache.get_quote(seg, sec_id, now=t)
             messages_to_dispatch.append(
                 {
                     "type": "delta",
                     "channel": "quotes",
                     "segment": seg,
                     "security_id": sec_id,
-                    "data": {
+                    "data": quote.model_dump()
+                    if quote
+                    else {
                         "segment": seg,
                         "security_id": sec_id,
-                        "ltp": packet.prev_close,
-                        "close": packet.prev_close,
+                        "ltp": None,
+                        "previous_close": packet.prev_close,
+                        "market_state": "UNAVAILABLE",
                         "received_at": t,
                     },
                 }
@@ -341,6 +354,14 @@ def get_market_data_fanout_manager() -> MarketDataFanoutManager:
     return _GLOBAL_FANOUT_MANAGER
 
 
+def configure_market_data_hot_cache(*, use_redis: bool) -> None:
+    """Select the API read cache before accepting browser sessions."""
+    global _GLOBAL_FANOUT_MANAGER
+    _GLOBAL_FANOUT_MANAGER = MarketDataFanoutManager(
+        hot_cache=RedisHotCache() if use_redis else InMemoryHotCache()
+    )
+
+
 router = APIRouter(tags=["feed"])
 
 
@@ -358,6 +379,40 @@ async def _pump_outbound_messages(websocket: WebSocket, session: ClientSession) 
             "Outbound pump encountered error for session %s: %s",
             session.session_id,
             exc,
+        )
+
+
+async def _poll_hot_cache(session: ClientSession, manager: MarketDataFanoutManager) -> None:
+    """Bridge feedd's Redis-owned quote state into the API WebSocket process."""
+    last_seen: dict[tuple[str, str], float] = {}
+    try:
+        while True:
+            await asyncio.sleep(0.25)
+            instruments = list(session.subscribed_instruments)
+            quotes = await asyncio.to_thread(manager.hot_cache.get_multi_quotes, instruments)
+            for instrument, quote in quotes.items():
+                if quote.received_at <= last_seen.get(instrument, 0.0):
+                    continue
+                last_seen[instrument] = quote.received_at
+                session.send_nowait(
+                    {
+                        "type": "delta",
+                        "channel": "quotes",
+                        "segment": instrument[0],
+                        "security_id": instrument[1],
+                        "data": quote.model_dump(),
+                    }
+                )
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        logger.warning("Hot-cache polling failed for session %s: %s", session.session_id, exc)
+        session.send_nowait(
+            {
+                "type": "feed_error",
+                "channel": "quotes",
+                "error": "Authoritative market-data cache is unavailable",
+            }
         )
 
 
@@ -382,6 +437,13 @@ async def market_data_websocket(
         await websocket.close(code=4401, reason="Unauthorized: valid session cookie required")
         return
 
+    if session_info.username == "Demo Trader":
+        await websocket.close(
+            code=4403,
+            reason="Live Dhan market data requires master password and TOTP login",
+        )
+        return
+
     await websocket.accept()
 
     fanout_manager = get_market_data_fanout_manager()
@@ -393,6 +455,7 @@ async def market_data_websocket(
     fanout_manager.register_session(session)
 
     pump_task = asyncio.create_task(_pump_outbound_messages(websocket, session))
+    cache_task = asyncio.create_task(_poll_hot_cache(session, fanout_manager))
 
     try:
         while True:
@@ -437,8 +500,9 @@ async def market_data_websocket(
         pass
     finally:
         pump_task.cancel()
+        cache_task.cancel()
         try:
-            await pump_task
+            await asyncio.gather(pump_task, cache_task, return_exceptions=True)
         except asyncio.CancelledError:
             pass
         fanout_manager.unregister_session(session.session_id)

@@ -1,4 +1,4 @@
-"""Live Dhan WebSocket market feed ingestion service for ShreeNexa."""
+"""Dhan market-data ingestion owned exclusively by the ``feedd`` process."""
 
 from __future__ import annotations
 
@@ -6,423 +6,370 @@ import asyncio
 import json
 import logging
 import time
+from datetime import UTC, datetime
+from datetime import time as clock_time
 from typing import Any
+from zoneinfo import ZoneInfo
 
-import httpx
 import websockets
 
-from app.api.ws import get_market_data_fanout_manager
 from app.config import mask_client_id
+from app.dhan.client import DhanRestClient
 from app.dhan.credentials import resolve_dhan_credentials
 from app.dhan.feed import DhanLiveFeedClient
-from app.feedd.cache import CachedQuote
+from app.feedd.cache import (
+    CachedFeedHealth,
+    CachedQuote,
+    HotCache,
+    MarketDataState,
+    RedisHotCache,
+)
 
 logger = logging.getLogger("shreenexa.dhan.live_feed")
 
-# Default liquid instruments to stream
-DEFAULT_SUBSCRIPTIONS = [
-    # Top NIFTY 50 Stocks (NSE_EQ)
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "1333"},  # HDFCBANK
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "2885"},  # RELIANCE
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "11536"},  # TCS
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "1594"},  # INFY
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "4963"},  # ICICIBANK
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "3045"},  # SBIN
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "10604"},  # BHARTIARTL
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "3456"},  # TATAMOTORS
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "1232"},  # GRASIM
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "1922"},  # KOTAKBANK
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "5900"},  # AXISBANK
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "236"},  # ASIANPAINT
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "11483"},  # LT
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "526"},  # BPCL
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "1363"},  # HINDUNILVR
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "1660"},  # ITC
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "317"},  # BAJFINANCE
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "10999"},  # MARUTI
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "3499"},  # TATASTEEL
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "3351"},  # SUNPHARMA
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "3787"},  # WIPRO
-    {"ExchangeSegment": "NSE_EQ", "SecurityId": "7229"},  # HCLTECH
-    # Indices (IDX_I)
-    {"ExchangeSegment": "IDX_I", "SecurityId": "13"},  # NIFTY 50
-    {"ExchangeSegment": "IDX_I", "SecurityId": "25"},  # NIFTY BANK
-]
+MAX_INSTRUMENTS_PER_MESSAGE = 100
+MAX_INSTRUMENTS_PER_SOCKET = 5000
+MAX_INSTRUMENTS_PER_QUOTE_REQUEST = 1000
+QUOTE_REQUEST_CODE = 17
+UNSUBSCRIBE_REQUEST_CODE = 18
+IST = ZoneInfo("Asia/Kolkata")
 
-SECURITY_ID_TO_SYMBOL: dict[str, str] = {
-    "1333": "HDFCBANK",
-    "2885": "RELIANCE",
-    "11536": "TCS",
-    "1594": "INFY",
-    "4963": "ICICIBANK",
-    "3045": "SBIN",
-    "10604": "BHARTIARTL",
-    "3456": "TATAMOTORS",
-    "1232": "GRASIM",
-    "1922": "KOTAKBANK",
-    "5900": "AXISBANK",
-    "236": "ASIANPAINT",
-    "11483": "LT",
-    "526": "BPCL",
-    "1363": "HINDUNILVR",
-    "1660": "ITC",
-    "317": "BAJFINANCE",
-    "10999": "MARUTI",
-    "3499": "TATASTEEL",
-    "3351": "SUNPHARMA",
-    "3787": "WIPRO",
-    "7229": "HCLTECH",
-    "2142": "POWERGRID",
-    "3103": "NESTLEIND",
-    "10794": "NTPC",
-    "13538": "TECHM",
-    "14977": "ONGC",
-    "3506": "TITAN",
-    "14418": "NIFTYBEES",
-    "14419": "BANKBEES",
-    "13": "NIFTY 50",
-    "25": "NIFTY BANK",
-    "27": "NIFTY FIN SERVICE",
-    "28": "NIFTY MID SELECT",
-    "29": "NIFTY IT",
-    "30": "NIFTY AUTO",
+SEGMENT_TO_DHAN = {
+    "0": "IDX_I",
+    "1": "NSE_EQ",
+    "2": "NSE_FNO",
+    "3": "NSE_CURRENCY",
+    "4": "BSE_EQ",
+    "5": "MCX_COMM",
+    "7": "BSE_CURRENCY",
+    "8": "BSE_FNO",
 }
+DHAN_TO_SEGMENT = {value: key for key, value in SEGMENT_TO_DHAN.items()}
+
+
+def market_is_open(now: datetime | None = None, segment: str = "0") -> bool:
+    """Return the regular segment session window without guessing holiday truth."""
+    current = (now or datetime.now(tz=IST)).astimezone(IST)
+    if current.weekday() >= 5:
+        return False
+    session_bounds = {
+        "3": (clock_time(9, 0), clock_time(17, 0)),
+        "5": (clock_time(9, 0), clock_time(23, 30)),
+        "7": (clock_time(9, 0), clock_time(17, 0)),
+    }
+    start, end = session_bounds.get(segment, (clock_time(9, 15), clock_time(15, 30)))
+    return start <= current.time().replace(tzinfo=None) <= end
+
+
+def _market_state_for_trade_time(
+    trade_time: int | str | None,
+    *,
+    segment: str,
+    now: datetime | None = None,
+) -> MarketDataState:
+    """Classify a Dhan quote from its direct LTT plus the regular session window."""
+    current = (now or datetime.now(tz=IST)).astimezone(IST)
+    traded_at: datetime | None = None
+    if isinstance(trade_time, int) and trade_time > 0:
+        try:
+            traded_at = datetime.fromtimestamp(trade_time, tz=UTC).astimezone(IST)
+        except OSError, OverflowError, ValueError:
+            traded_at = None
+    elif isinstance(trade_time, str):
+        try:
+            traded_at = datetime.strptime(trade_time, "%d/%m/%Y %H:%M:%S").replace(tzinfo=IST)
+        except ValueError:
+            traded_at = None
+
+    if traded_at is None:
+        return "STALE" if market_is_open(current, segment) else "MARKET_CLOSED"
+    if traded_at.date() != current.date():
+        return "MARKET_CLOSED"
+    if abs((current - traded_at).total_seconds()) <= 300:
+        return "LIVE"
+    return "LIVE" if market_is_open(current, segment) else "MARKET_CLOSED"
+
+
+def _wire_instruments(instruments: set[tuple[str, str]]) -> list[dict[str, str]]:
+    wire: list[dict[str, str]] = []
+    for segment, security_id in sorted(instruments):
+        dhan_segment = SEGMENT_TO_DHAN.get(segment)
+        if dhan_segment:
+            wire.append({"ExchangeSegment": dhan_segment, "SecurityId": security_id})
+    return wire
+
+
+def _chunks(items: list[dict[str, str]]) -> list[list[dict[str, str]]]:
+    return [
+        items[index : index + MAX_INSTRUMENTS_PER_MESSAGE]
+        for index in range(0, len(items), MAX_INSTRUMENTS_PER_MESSAGE)
+    ]
+
+
+def _quote_request_bodies(
+    instruments: set[tuple[str, str]],
+) -> list[dict[str, list[int]]]:
+    """Build direct-quote request bodies within Dhan's 1000-instrument limit."""
+    normalized: list[tuple[str, int]] = []
+    for segment, security_id in sorted(instruments):
+        dhan_segment = SEGMENT_TO_DHAN.get(segment)
+        if dhan_segment is None:
+            continue
+        try:
+            normalized.append((dhan_segment, int(security_id)))
+        except ValueError:
+            continue
+
+    bodies: list[dict[str, list[int]]] = []
+    for offset in range(0, len(normalized), MAX_INSTRUMENTS_PER_QUOTE_REQUEST):
+        body: dict[str, list[int]] = {}
+        for dhan_segment, numeric_id in normalized[
+            offset : offset + MAX_INSTRUMENTS_PER_QUOTE_REQUEST
+        ]:
+            body.setdefault(dhan_segment, []).append(numeric_id)
+        if body:
+            bodies.append(body)
+    return bodies
 
 
 class DhanLiveFeedService:
-    """Manages active connection to DhanHQ Live Market Feed WebSocket and packet fan-out."""
+    """Maintains dynamic Dhan subscriptions and publishes normalized Redis state."""
 
-    def __init__(self, subscriptions: list[dict[str, str]] | None = None) -> None:
-        self.subscriptions = subscriptions or list(DEFAULT_SUBSCRIPTIONS)
+    def __init__(self, hot_cache: HotCache | None = None) -> None:
+        self.hot_cache = hot_cache or RedisHotCache()
         self.is_running = False
         self.total_packets = 0
-        self.cached_quotes: dict[str, Any] = {}
-        self.last_quote_sync_time: float = 0.0
         self._stop_event = asyncio.Event()
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._active: set[tuple[str, str]] = set()
+        self._reconnect_count = 0
+        self._last_packet_time: str | None = None
+        self._last_rest_sync = 0.0
 
-    def get_latest_quotes(self) -> dict[str, Any]:
-        """Return latest authentic Dhan OHLC and closing quotes."""
-        return self.cached_quotes
+    def _health(self, *, connected: bool) -> None:
+        self.hot_cache.update_feed_health(
+            CachedFeedHealth(
+                socket_id="dhan-market-feed-1",
+                is_connected=connected,
+                subscribed_count=len(self._active),
+                reconnect_count=self._reconnect_count,
+                total_packets=self.total_packets,
+                last_packet_time=self._last_packet_time,
+                updated_at=time.time(),
+            )
+        )
 
-    async def sync_ohlc_quotes(self) -> None:
-        """Fetch authentic closing/OHLC quotes from Dhan REST API and update hot cache."""
+    async def _send_subscription_change(
+        self,
+        ws: Any,
+        instruments: set[tuple[str, str]],
+        *,
+        unsubscribe: bool = False,
+    ) -> None:
+        for chunk in _chunks(_wire_instruments(instruments)):
+            if not chunk:
+                continue
+            await ws.send(
+                json.dumps(
+                    {
+                        "RequestCode": UNSUBSCRIBE_REQUEST_CODE
+                        if unsubscribe
+                        else QUOTE_REQUEST_CODE,
+                        "InstrumentCount": len(chunk),
+                        "InstrumentList": chunk,
+                    }
+                )
+            )
+
+    async def sync_quotes(self, instruments: set[tuple[str, str]]) -> None:
+        """Bootstrap requested instruments from Dhan's direct quote endpoint."""
+        if not instruments:
+            return
         creds = resolve_dhan_credentials()
         if not creds or not creds.access_token or not creds.client_id:
             return
 
-        client_id = creds.client_id
-        token = creds.access_token.get_secret_value()
-        url = "https://api.dhan.co/v2/marketfeed/ohlc"
-        headers = {
-            "access-token": token,
-            "client-id": client_id,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        }
+        request_bodies = _quote_request_bodies(instruments)
+        if not request_bodies:
+            return
 
-        eq_ids = [
-            1333,
-            2885,
-            11536,
-            1594,
-            4963,
-            3045,
-            10604,
-            1660,
-            1922,
-            317,
-            10999,
-            3456,
-            1232,
-            5900,
-            236,
-            11483,
-            526,
-            1363,
-            3499,
-            3351,
-            3787,
-            7229,
-            2142,
-            3103,
-            10794,
-            13538,
-            14977,
-            3506,
-            14418,
-            14419,
-        ]
-        body = {"NSE_EQ": eq_ids, "IDX_I": [13, 25, 27, 28, 29, 30]}
-
+        payload: dict[str, Any] = {}
         try:
-            async with httpx.AsyncClient(timeout=10.0) as http_client:
-                resp = await http_client.post(url, headers=headers, json=body)
-                if resp.status_code == 200:
-                    data = resp.json().get("data", {})
-                    t = time.time()
-                    fanout_mgr = get_market_data_fanout_manager()
+            client = DhanRestClient(credentials=creds)
+            for body in request_bodies:
+                response_data = await asyncio.to_thread(client.get_quotes, body)
+                for segment, quotes in response_data.items():
+                    if isinstance(quotes, dict):
+                        payload.setdefault(segment, {}).update(quotes)
+        except Exception as exc:
+            logger.warning("Dhan quote bootstrap failed: %s", type(exc).__name__)
+            return
 
-                    # 1. Equities
-                    for sec_id_str, q in data.get("NSE_EQ", {}).items():
-                        ltp = float(q.get("last_price", 0.0))
-                        ohlc = q.get("ohlc", {})
-                        open_p = float(ohlc.get("open", ltp))
-                        close_p = float(ohlc.get("close", ltp))
-                        high_p = float(ohlc.get("high", ltp))
-                        low_p = float(ohlc.get("low", ltp))
-
-                        quote_item = {
-                            "segment": "NSE_EQ",
-                            "security_id": sec_id_str,
-                            "ltp": ltp,
-                            "open": open_p,
-                            "high": high_p,
-                            "low": low_p,
-                            "close": close_p,
-                            "received_at": t,
-                        }
-                        self.cached_quotes[f"NSE_EQ:{sec_id_str}"] = quote_item
-                        self.cached_quotes[sec_id_str] = quote_item
-                        sym = SECURITY_ID_TO_SYMBOL.get(sec_id_str)
-                        if sym:
-                            self.cached_quotes[sym] = quote_item
-
-                        cached_q = CachedQuote(
-                            segment="1",
-                            security_id=sec_id_str,
-                            ltp=ltp,
-                            ltq=1,
-                            ltt=int(t),
-                            avg_price=ltp,
-                            volume=1000,
-                            total_buy_qty=1000.0,
-                            total_sell_qty=1000.0,
-                            open=open_p,
-                            high=high_p,
-                            low=low_p,
-                            close=close_p,
-                            received_at=t,
-                        )
-                        fanout_mgr.hot_cache.set_quote(cached_q)
-                        fanout_mgr.hot_cache.set_quote(
-                            cached_q.model_copy(update={"segment": "NSE_EQ"})
-                        )
-
-                    # 2. Indices
-                    for sec_id_str, q in data.get("IDX_I", {}).items():
-                        ltp = float(q.get("last_price", 0.0))
-                        ohlc = q.get("ohlc", {})
-                        open_p = float(ohlc.get("open", ltp))
-                        close_p = float(ohlc.get("close", ltp))
-                        high_p = float(ohlc.get("high", ltp))
-                        low_p = float(ohlc.get("low", ltp))
-
-                        quote_item = {
-                            "segment": "IDX_I",
-                            "security_id": sec_id_str,
-                            "ltp": ltp,
-                            "open": open_p,
-                            "high": high_p,
-                            "low": low_p,
-                            "close": close_p,
-                            "received_at": t,
-                        }
-                        self.cached_quotes[f"IDX_I:{sec_id_str}"] = quote_item
-                        self.cached_quotes[sec_id_str] = quote_item
-                        sym = SECURITY_ID_TO_SYMBOL.get(sec_id_str)
-                        if sym:
-                            self.cached_quotes[sym] = quote_item
-                            if sym == "NIFTY 50":
-                                self.cached_quotes["NIFTY"] = quote_item
-                                self.cached_quotes["NIFTY50"] = quote_item
-                            elif sym == "NIFTY BANK":
-                                self.cached_quotes["BANKNIFTY"] = quote_item
-                                self.cached_quotes["BANK NIFTY"] = quote_item
-                            elif sym == "NIFTY FIN SERVICE":
-                                self.cached_quotes["FINNIFTY"] = quote_item
-                            elif sym == "NIFTY MID SELECT":
-                                self.cached_quotes["MIDCPNIFTY"] = quote_item
-                            elif sym == "NIFTY IT":
-                                self.cached_quotes["NIFTYIT"] = quote_item
-                            elif sym == "NIFTY AUTO":
-                                self.cached_quotes["NIFTYAUTO"] = quote_item
-
-                        cached_q = CachedQuote(
-                            segment="0",
-                            security_id=sec_id_str,
-                            ltp=ltp,
-                            ltq=1,
-                            ltt=int(t),
-                            avg_price=ltp,
-                            volume=1000,
-                            total_buy_qty=1000.0,
-                            total_sell_qty=1000.0,
-                            open=open_p,
-                            high=high_p,
-                            low=low_p,
-                            close=close_p,
-                            received_at=t,
-                        )
-                        fanout_mgr.hot_cache.set_quote(cached_q)
-                        fanout_mgr.hot_cache.set_quote(
-                            cached_q.model_copy(update={"segment": "1"})
-                        )
-                        fanout_mgr.hot_cache.set_quote(
-                            cached_q.model_copy(update={"segment": "IDX_I"})
-                        )
-
-                    self.last_quote_sync_time = t
-                    eq_cnt = len(data.get("NSE_EQ", {}))
-                    idx_cnt = len(data.get("IDX_I", {}))
-                    print(
-                        f"[DhanFeed] Successfully synced {eq_cnt} equities and "
-                        f"{idx_cnt} indices real quotes from Dhan REST API",
-                        flush=True,
+        received_at = time.time()
+        for dhan_segment, segment_quotes in payload.items():
+            segment_code = DHAN_TO_SEGMENT.get(str(dhan_segment))
+            if segment_code is None or not isinstance(segment_quotes, dict):
+                continue
+            for security_id, raw in segment_quotes.items():
+                if not isinstance(raw, dict):
+                    continue
+                ltp = _number(raw.get("last_price"))
+                net_change = _number(raw.get("net_change"))
+                raw_ohlc = raw.get("ohlc")
+                ohlc: dict[str, Any] = raw_ohlc if isinstance(raw_ohlc, dict) else {}
+                previous_close = (
+                    ltp - net_change if ltp is not None and net_change is not None else None
+                )
+                trade_time = _trade_time(raw.get("last_trade_time"))
+                self.hot_cache.set_quote(
+                    CachedQuote(
+                        segment=segment_code,
+                        security_id=str(security_id),
+                        ltp=ltp,
+                        ltq=_integer(raw.get("last_quantity")),
+                        ltt=trade_time,
+                        avg_price=_number(raw.get("average_price")),
+                        volume=_integer(raw.get("volume")),
+                        total_buy_qty=_number(raw.get("buy_quantity")),
+                        total_sell_qty=_number(raw.get("sell_quantity")),
+                        open=_number(ohlc.get("open")),
+                        high=_number(ohlc.get("high")),
+                        low=_number(ohlc.get("low")),
+                        close=_number(ohlc.get("close")),
+                        previous_close=previous_close,
+                        received_at=received_at,
+                        source="DHAN_REST",
+                        market_state=_market_state_for_trade_time(trade_time, segment=segment_code),
                     )
-        except Exception as err:
-            logger.warning(f"[DhanFeed] Failed to sync OHLC quotes from REST API: {err}")
+                )
+        self._last_rest_sync = received_at
+
+    async def _reconcile_subscriptions(self, ws: Any) -> None:
+        desired = self.hot_cache.get_requested_subscriptions()
+        if len(desired) > MAX_INSTRUMENTS_PER_SOCKET:
+            logger.error("Requested Dhan subscriptions exceed the 5000-instrument socket limit")
+            desired = set(sorted(desired)[:MAX_INSTRUMENTS_PER_SOCKET])
+        additions = desired - self._active
+        removals = self._active - desired
+        if additions:
+            await self.sync_quotes(additions)
+            await self._send_subscription_change(ws, additions)
+        if removals:
+            await self._send_subscription_change(ws, removals, unsubscribe=True)
+        self._active = desired
+        if desired and not market_is_open() and time.time() - self._last_rest_sync > 300.0:
+            await self.sync_quotes(desired)
+        self._health(connected=True)
 
     async def run(self) -> None:
-        """Connect to Dhan WebSocket, subscribe to instruments, and pump decoded packets."""
+        """Connect, reconcile demand, decode packets, and update Redis."""
+        self._loop = asyncio.get_running_loop()
         self.is_running = True
         self._stop_event.clear()
         backoff = 1.0
-
-        # Initial synchronization of authentic Dhan OHLC and closing quotes
-        await self.sync_ohlc_quotes()
-
-        while not self._stop_event.is_set():
-            creds = resolve_dhan_credentials()
-            if not creds or not creds.access_token or not creds.client_id:
-                logger.warning(
-                    "[DhanFeed] No valid Dhan credentials found in environment or .env; "
-                    "waiting 10s..."
-                )
-                try:
-                    await asyncio.wait_for(self._stop_event.wait(), timeout=10.0)
-                except TimeoutError:
-                    continue
-                break
-
-            client_id = creds.client_id
-            token = creds.access_token.get_secret_value()
-            masked_id = mask_client_id(client_id)
-            feed_url = (
-                f"wss://api-feed.dhan.co?version=2&token={token}&clientId={client_id}&authType=2"
-            )
-
-            print(
-                f"[DhanFeed] Connecting to Dhan live market feed (client={masked_id})...",
-                flush=True,
-            )
-            fanout_mgr = get_market_data_fanout_manager()
-            client = DhanLiveFeedClient(client_id=client_id, access_token=token)
-
-            try:
-                async with websockets.connect(
-                    feed_url,
-                    ping_interval=10,
-                    ping_timeout=20,
-                    close_timeout=5,
-                ) as ws:
-                    print(
-                        "[DhanFeed] Connected to Dhan live feed WebSocket successfully!",
-                        flush=True,
-                    )
-                    backoff = 1.0
-
-                    # 1. Equities subscription (Ticker = 15 or Quote = 16)
-                    eq_list = [s for s in self.subscriptions if s["ExchangeSegment"] != "IDX_I"]
-                    if eq_list:
-                        await ws.send(
-                            json.dumps(
-                                {
-                                    "RequestCode": 15,  # Ticker mode ensures high throughput
-                                    "InstrumentCount": len(eq_list),
-                                    "InstrumentList": eq_list,
-                                }
-                            )
-                        )
-                        print(
-                            f"[DhanFeed] Subscribed to {len(eq_list)} equity instruments",
-                            flush=True,
-                        )
-
-                    # 2. Index subscription (IDX_I)
-                    idx_list = [s for s in self.subscriptions if s["ExchangeSegment"] == "IDX_I"]
-                    if idx_list:
-                        await ws.send(
-                            json.dumps(
-                                {
-                                    "RequestCode": 15,
-                                    "InstrumentCount": len(idx_list),
-                                    "InstrumentList": idx_list,
-                                }
-                            )
-                        )
-                        print(
-                            f"[DhanFeed] Subscribed to {len(idx_list)} index instruments",
-                            flush=True,
-                        )
-
-                    last_log_time = asyncio.get_event_loop().time()
-                    packets_since_log = 0
-
-                    while not self._stop_event.is_set():
-                        try:
-                            msg = await asyncio.wait_for(ws.recv(), timeout=15.0)
-                        except TimeoutError:
-                            continue
-
-                        if isinstance(msg, bytes):
-                            packets = client.process_incoming_frame(msg)
-                            for pkt in packets:
-                                self.total_packets += 1
-                                packets_since_log += 1
-                                fanout_mgr.broadcast_packet(pkt)
-
-                            now = asyncio.get_event_loop().time()
-                            if now - last_log_time >= 10.0:
-                                print(
-                                    f"[DhanFeed] Feed active: {packets_since_log} packets "
-                                    f"in last 10s (total={self.total_packets})",
-                                    flush=True,
-                                )
-                                last_log_time = now
-                                packets_since_log = 0
-                        elif isinstance(msg, str):
-                            print(f"[DhanFeed] Received text message: {msg}", flush=True)
-
-            except asyncio.CancelledError:
-                print("[DhanFeed] Feed task cancelled, closing connection cleanly", flush=True)
-                break
-            except Exception as exc:
-                if self._stop_event.is_set():
+        try:
+            while not self._stop_event.is_set():
+                creds = resolve_dhan_credentials()
+                if not creds or not creds.access_token or not creds.client_id:
+                    self._health(connected=False)
+                    try:
+                        await asyncio.wait_for(self._stop_event.wait(), timeout=10.0)
+                    except TimeoutError:
+                        continue
                     break
-                print(
-                    f"[DhanFeed] Connection dropped ({type(exc).__name__}: {exc}). "
-                    f"Reconnecting in {backoff:.1f}s...",
-                    flush=True,
-                )
-                try:
-                    await asyncio.wait_for(self._stop_event.wait(), timeout=backoff)
-                except TimeoutError:
-                    pass
-                backoff = min(backoff * 2.0, 15.0)
 
-        self.is_running = False
-        logger.info("[DhanFeed] Service stopped")
+                token = creds.access_token.get_secret_value()
+                url = (
+                    "wss://api-feed.dhan.co?version=2"
+                    f"&token={token}&clientId={creds.client_id}&authType=2"
+                )
+                logger.info("Connecting Dhan feed for client %s", mask_client_id(creds.client_id))
+                client = DhanLiveFeedClient(client_id=creds.client_id, access_token=token)
+                self._active.clear()
+                try:
+                    async with websockets.connect(
+                        url, ping_interval=10, ping_timeout=20, close_timeout=5
+                    ) as ws:
+                        backoff = 1.0
+                        await self._reconcile_subscriptions(ws)
+                        while not self._stop_event.is_set():
+                            await self._reconcile_subscriptions(ws)
+                            try:
+                                message = await asyncio.wait_for(ws.recv(), timeout=1.0)
+                            except TimeoutError:
+                                continue
+                            if not isinstance(message, bytes):
+                                continue
+                            packets = client.process_incoming_frame(message)
+                            self.hot_cache.batch_update_packets(packets)
+                            for packet in packets:
+                                quote = self.hot_cache.get_quote(
+                                    str(packet.header.exchange_segment),
+                                    str(packet.header.security_id),
+                                )
+                                state = (
+                                    _market_state_for_trade_time(
+                                        quote.ltt,
+                                        segment=str(packet.header.exchange_segment),
+                                    )
+                                    if quote is not None
+                                    else "UNAVAILABLE"
+                                )
+                                if quote is not None and quote.market_state != state:
+                                    self.hot_cache.set_quote(
+                                        quote.model_copy(update={"market_state": state})
+                                    )
+                            self.total_packets += len(packets)
+                            if packets:
+                                self._last_packet_time = datetime.now(tz=IST).isoformat()
+                                self._health(connected=True)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    self._reconnect_count += 1
+                    self._health(connected=False)
+                    logger.warning("Dhan feed disconnected (%s); retrying", type(exc).__name__)
+                    try:
+                        await asyncio.wait_for(self._stop_event.wait(), timeout=backoff)
+                    except TimeoutError:
+                        pass
+                    backoff = min(backoff * 2.0, 15.0)
+        finally:
+            self.is_running = False
+            self._health(connected=False)
 
     def stop(self) -> None:
-        """Signal background runner to stop."""
-        self._stop_event.set()
+        """Signal the feed loop from the feedd process's main thread."""
+        if self._loop and self._loop.is_running():
+            self._loop.call_soon_threadsafe(self._stop_event.set)
+        else:
+            self._stop_event.set()
+
+
+def _number(value: Any) -> float | None:
+    try:
+        return float(value) if value is not None else None
+    except TypeError, ValueError:
+        return None
+
+
+def _integer(value: Any) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except TypeError, ValueError:
+        return None
+
+
+def _trade_time(value: Any) -> int | str | None:
+    if isinstance(value, str):
+        return value.strip() or None
+    return _integer(value)
 
 
 _GLOBAL_FEED_SERVICE: DhanLiveFeedService | None = None
 
 
 def get_dhan_live_feed_service() -> DhanLiveFeedService:
-    """Retrieve global singleton feed service instance."""
     global _GLOBAL_FEED_SERVICE
     if _GLOBAL_FEED_SERVICE is None:
         _GLOBAL_FEED_SERVICE = DhanLiveFeedService()

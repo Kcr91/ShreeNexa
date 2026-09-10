@@ -226,7 +226,7 @@ class DhanLiveFeedClient:
     def build_subscription_message(
         cls,
         instruments: Sequence[tuple[int | str, int | str]],
-        request_code: int = 17,  # Default: Full Mode (15=Ticker, 16=Quote, 17=Full)
+        request_code: int = 17,  # Dhan v2 quote subscription (15=ticker, 17=quote, 21=full)
     ) -> dict[str, Any]:
         """Construct subscription JSON request adhering to <=100 instruments batch limit."""
         if len(instruments) > MAX_INSTRUMENTS_PER_SUBSCRIBE_MESSAGE:

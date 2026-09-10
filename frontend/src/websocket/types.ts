@@ -5,14 +5,25 @@ export type FeedChannel = "quotes" | "depth" | "orders" | "positions" | "pnl" | 
 export interface TickData {
   symbol: string;
   ltp: number;
-  change: number;
-  changePct: number;
-  volume: number;
+  change?: number;
+  changePct?: number;
+  volume?: number;
   timestamp: number;
+  sourceTimestamp?: number | string;
   open?: number;
   high?: number;
   low?: number;
   close?: number;
+  previousClose?: number;
+  marketState?: "LIVE" | "MARKET_CLOSED" | "STALE" | "UNAVAILABLE" | "ERROR";
+  source?: "DHAN_WEBSOCKET" | "DHAN_REST";
+  isStale?: boolean;
+}
+
+export interface InstrumentSubscription {
+  segment: string;
+  securityId: string;
+  symbol?: string;
 }
 
 export interface OrderUpdateMessage {

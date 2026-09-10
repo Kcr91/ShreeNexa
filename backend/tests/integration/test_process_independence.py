@@ -25,8 +25,9 @@ from itertools import pairwise
 import pytest
 from app.contracts import heartbeat as hb
 from app.contracts.proc_utils import is_alive, kill_tree, resolve_real_pid
-from conftest import DATABASE_URL
 from sqlalchemy.engine import Engine
+
+from conftest import DATABASE_URL
 
 MODULE_FOR_ROLE = {
     "api": "app.main",
@@ -35,7 +36,11 @@ MODULE_FOR_ROLE = {
     "worker": "app.worker.core",
 }
 
-WAIT_TIMEOUT_S = 10.0
+# Starting the full FastAPI module graph can exceed ten seconds on the audited
+# Windows/CPython environment, especially while the suite is running other
+# subprocess tests. This allowance governs startup polling only; the assertions
+# below still verify sustained heartbeats and independent process lifecycles.
+WAIT_TIMEOUT_S = 30.0
 POLL_INTERVAL_S = 0.2
 
 

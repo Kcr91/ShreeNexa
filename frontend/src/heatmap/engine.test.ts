@@ -29,6 +29,13 @@ describe("Market Heatmap Engine", () => {
     expect(breadth.weightedBreadth).toBeCloseTo(0.565, 2);
   });
 
+  it("reports unavailable breadth when no verified changes exist", () => {
+    const breadth = calculateMarketBreadth([{ weight: 50 }, { weight: 50 }]);
+    expect(breadth.totalCount).toBe(0);
+    expect(breadth.advanceDeclineRatio).toBe(0);
+    expect(breadth.sentimentPosture).toBe("Unavailable");
+  });
+
   it("handles deterministic missing weight assignment and guarantees 100% cell totals", () => {
     const rawItems = [
       { symbol: "RELIANCE", sector: "Energy", weight: 30.0, changePct: 1.2, ltp: 2980 },

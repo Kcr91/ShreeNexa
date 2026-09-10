@@ -3991,3 +3991,35 @@ typecheck clean, 285 vitest across 67 files, `vite build` clean.
 - `uv run python build/validate_manifest.py` and `validate_fixtures.py` passed.
 - `uv run pytest backend/tests/unit/test_feedd_hot_cache.py backend/tests/unit/test_market_ws_fanout.py backend/tests/unit/test_dhan_feed_packets.py backend/tests/unit/test_auth_security.py backend/tests/unit/test_api_auth_enforcement.py backend/tests/unit/test_heatmap_api.py` passed (39/39 tests).
 
+### 2026-09-10 — F7.4/F7.5/F7.8 authoritative live-market correction
+
+The earlier integration incorrectly made `api` a second Dhan feed owner, used static
+market values in watchlist/heatmap definitions, and decoded Dhan quote packets with an
+incorrect field order. The correction makes `feedd` the sole Dhan WebSocket and REST
+quote owner, with API/browser consumers reading Redis hot state through dynamic,
+reference-counted subscriptions.
+
+- Dhan Quote mode now uses official request codes and packet ordering. Snapshot bootstrap
+  goes through the centralized rate-limited `DhanRestClient`; Previous Close enriches the
+  comparison reference and never replaces LTP.
+- Watchlists and heatmaps contain identity/layout metadata only. Price, OHLC, volume,
+  change and breadth are shown only from Dhan data. Heatmap color/change may be derived
+  from Dhan LTP and previous close; absent data renders `UNAVAILABLE`/`ERROR`, never a
+  seeded or generated value.
+- Quote state is explicit: `LIVE`, `MARKET_CLOSED`, `STALE`, `UNAVAILABLE`, or `ERROR`.
+  Demo sessions receive 403/4403 on live market routes; master password plus TOTP is
+  required.
+- Browser subscription reference counts ensure shared instruments are unsubscribed only
+  after the final consumer releases them. The API no longer starts or controls a broker
+  connection.
+- Windows test reliability was corrected by allowing the full FastAPI process graph 30
+  seconds to start and by measuring Redis token-bucket concurrency across the complete
+  grant interval instead of scheduler-delayed client timestamps.
+
+**Verification:** Ruff clean; strict mypy clean across 357 source files; frontend
+typecheck clean; 67 Vitest files / 288 tests passed; Vite production build passed;
+manifest and fixture validators passed. The complete Python collection reached 947/948
+passing in the external DPAPI environment, with the sole failure caused by nested Git
+discovery in that elevated context; the same control-plane test passed in its intended
+sandbox context, completing coverage of all 948 collected tests. No protected path or
+credential material changed.

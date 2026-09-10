@@ -30,7 +30,7 @@ export type InstrumentCategoryType =
 export interface KnownInstrumentMeta {
   securityId: string;
   tradingSymbol: string;
-  ltp: number;
+  ltp?: number;
   segment: string;
   name: string;
   instrumentType: InstrumentCategoryType;
@@ -46,7 +46,7 @@ export interface CatalogInstrument {
   segment: string;
   instrumentType: InstrumentCategoryType;
   name: string;
-  ltp: number;
+  ltp?: number;
   changePct?: number;
   aliases?: string[];
   expiry?: string;
@@ -58,141 +58,141 @@ export interface CatalogInstrument {
 }
 
 export const KNOWN_EQUITY_INSTRUMENTS: Record<string, KnownInstrumentMeta> = {
-  RELIANCE: { securityId: "2885", tradingSymbol: "RELIANCE-EQ", ltp: 1279.0, segment: "NSE_EQ", name: "Reliance Industries Ltd", instrumentType: "EQUITY" },
-  TCS: { securityId: "11536", tradingSymbol: "TCS-EQ", ltp: 2208.0, segment: "NSE_EQ", name: "Tata Consultancy Services Ltd", instrumentType: "EQUITY" },
-  HDFCBANK: { securityId: "1333", tradingSymbol: "HDFCBANK-EQ", ltp: 687.1, segment: "NSE_EQ", name: "HDFC Bank Ltd", instrumentType: "EQUITY" },
-  INFY: { securityId: "1594", tradingSymbol: "INFY-EQ", ltp: 1035.0, segment: "NSE_EQ", name: "Infosys Ltd", instrumentType: "EQUITY" },
-  ICICIBANK: { securityId: "4963", tradingSymbol: "ICICIBANK-EQ", ltp: 1389.1, segment: "NSE_EQ", name: "ICICI Bank Ltd", instrumentType: "EQUITY" },
-  SBIN: { securityId: "3045", tradingSymbol: "SBIN-EQ", ltp: 1000.5, segment: "NSE_EQ", name: "State Bank of India", instrumentType: "EQUITY" },
-  BHARTIARTL: { securityId: "10604", tradingSymbol: "BHARTIARTL-EQ", ltp: 1814.7, segment: "NSE_EQ", name: "Bharti Airtel Ltd", instrumentType: "EQUITY" },
-  ITC: { securityId: "1660", tradingSymbol: "ITC-EQ", ltp: 260.8, segment: "NSE_EQ", name: "ITC Ltd", instrumentType: "EQUITY" },
-  KOTAKBANK: { securityId: "1922", tradingSymbol: "KOTAKBANK-EQ", ltp: 414.0, segment: "NSE_EQ", name: "Kotak Mahindra Bank Ltd", instrumentType: "EQUITY" },
-  LT: { securityId: "11483", tradingSymbol: "LT-EQ", ltp: 3922.6, segment: "NSE_EQ", name: "Larsen & Toubro Ltd", instrumentType: "EQUITY" },
-  AXISBANK: { securityId: "5900", tradingSymbol: "AXISBANK-EQ", ltp: 1238.5, segment: "NSE_EQ", name: "Axis Bank Ltd", instrumentType: "EQUITY" },
-  WIPRO: { securityId: "3787", tradingSymbol: "WIPRO-EQ", ltp: 167.0, segment: "NSE_EQ", name: "Wipro Ltd", instrumentType: "EQUITY" },
-  HCLTECH: { securityId: "7229", tradingSymbol: "HCLTECH-EQ", ltp: 1229.8, segment: "NSE_EQ", name: "HCL Technologies Ltd", instrumentType: "EQUITY" },
-  BAJFINANCE: { securityId: "317", tradingSymbol: "BAJFINANCE-EQ", ltp: 1039.3, segment: "NSE_EQ", name: "Bajaj Finance Ltd", instrumentType: "EQUITY" },
-  MARUTI: { securityId: "10999", tradingSymbol: "MARUTI-EQ", ltp: 12618.0, segment: "NSE_EQ", name: "Maruti Suzuki India Ltd", instrumentType: "EQUITY" },
-  TATAMOTORS: { securityId: "3456", tradingSymbol: "TATAMOTORS-EQ", ltp: 303.0, segment: "NSE_EQ", name: "Tata Motors Ltd", instrumentType: "EQUITY" },
-  TATASTEEL: { securityId: "3499", tradingSymbol: "TATASTEEL-EQ", ltp: 188.75, segment: "NSE_EQ", name: "Tata Steel Ltd", instrumentType: "EQUITY" },
-  SUNPHARMA: { securityId: "3351", tradingSymbol: "SUNPHARMA-EQ", ltp: 1864.9, segment: "NSE_EQ", name: "Sun Pharmaceutical Industries Ltd", instrumentType: "EQUITY" },
-  NIFTY: { securityId: "13", tradingSymbol: "NIFTY 50", ltp: 23431.5, segment: "IDX_I", name: "NIFTY 50 INDEX", instrumentType: "INDEX" },
-  NIFTY50: { securityId: "13", tradingSymbol: "NIFTY 50", ltp: 23431.5, segment: "IDX_I", name: "NIFTY 50 INDEX", instrumentType: "INDEX" },
-  "NIFTY 50": { securityId: "13", tradingSymbol: "NIFTY 50", ltp: 23431.5, segment: "IDX_I", name: "NIFTY 50 INDEX", instrumentType: "INDEX" },
-  BANKNIFTY: { securityId: "25", tradingSymbol: "NIFTY BANK", ltp: 56295.55, segment: "IDX_I", name: "NIFTY BANK INDEX", instrumentType: "INDEX" },
-  "BANK NIFTY": { securityId: "25", tradingSymbol: "NIFTY BANK", ltp: 56295.55, segment: "IDX_I", name: "NIFTY BANK INDEX", instrumentType: "INDEX" },
-  FINNIFTY: { securityId: "27", tradingSymbol: "NIFTY FIN SERVICE", ltp: 25376.8, segment: "IDX_I", name: "NIFTY FINANCIAL SERVICES INDEX", instrumentType: "INDEX" },
-  "FIN NIFTY": { securityId: "27", tradingSymbol: "NIFTY FIN SERVICE", ltp: 25376.8, segment: "IDX_I", name: "NIFTY FINANCIAL SERVICES INDEX", instrumentType: "INDEX" },
-  MIDCPNIFTY: { securityId: "28", tradingSymbol: "NIFTY MID SELECT", ltp: 45309.25, segment: "IDX_I", name: "NIFTY MIDCAP SELECT INDEX", instrumentType: "INDEX" },
-  SENSEX: { securityId: "51", tradingSymbol: "SENSEX", ltp: 81200.0, segment: "IDX_I", name: "BSE SENSEX INDEX", instrumentType: "INDEX" },
-  NIFTYIT: { securityId: "29", tradingSymbol: "NIFTY IT", ltp: 28914.0, segment: "IDX_I", name: "NIFTY IT INDEX", instrumentType: "INDEX" },
-  "NIFTY IT": { securityId: "29", tradingSymbol: "NIFTY IT", ltp: 28914.0, segment: "IDX_I", name: "NIFTY IT INDEX", instrumentType: "INDEX" },
-  NIFTYAUTO: { securityId: "30", tradingSymbol: "NIFTY AUTO", ltp: 1526.45, segment: "IDX_I", name: "NIFTY AUTO INDEX", instrumentType: "INDEX" },
-  "NIFTY AUTO": { securityId: "30", tradingSymbol: "NIFTY AUTO", ltp: 1526.45, segment: "IDX_I", name: "NIFTY AUTO INDEX", instrumentType: "INDEX" },
-  NIFTYBEES: { securityId: "14418", tradingSymbol: "NIFTYBEES-EQ", ltp: 275.50, segment: "NSE_EQ", name: "NIPPON INDIA ETF NIFTY BEES", instrumentType: "ETF" },
-  BANKBEES: { securityId: "14419", tradingSymbol: "BANKBEES-EQ", ltp: 532.10, segment: "NSE_EQ", name: "NIPPON INDIA ETF BANK BEES", instrumentType: "ETF" },
-  GOLDBEES: { securityId: "14420", tradingSymbol: "GOLDBEES-EQ", ltp: 62.40, segment: "NSE_EQ", name: "NIPPON INDIA ETF GOLD BEES", instrumentType: "ETF" },
-  SILVERBEES: { securityId: "14421", tradingSymbol: "SILVERBEES-EQ", ltp: 88.75, segment: "NSE_EQ", name: "NIPPON INDIA ETF SILVER BEES", instrumentType: "ETF" },
-  ITBEES: { securityId: "14422", tradingSymbol: "ITBEES-EQ", ltp: 43.15, segment: "NSE_EQ", name: "NIPPON INDIA ETF NIFTY IT", instrumentType: "ETF" },
-  JUNIORBEES: { securityId: "14423", tradingSymbol: "JUNIORBEES-EQ", ltp: 745.00, segment: "NSE_EQ", name: "NIPPON INDIA ETF JUNIOR BEES", instrumentType: "ETF" },
-  LIQUIDBEES: { securityId: "14424", tradingSymbol: "LIQUIDBEES-EQ", ltp: 1000.00, segment: "NSE_EQ", name: "NIPPON INDIA ETF LIQUID BEES", instrumentType: "ETF" },
-  CRUDEOIL: { securityId: "254101", tradingSymbol: "CRUDEOIL-19Sep2026-FUT", ltp: 6150.0, segment: "MCX_COMM", name: "CRUDE OIL MCX FUTURES", instrumentType: "FUTCOM", lotSize: 100 },
-  GOLD: { securityId: "254102", tradingSymbol: "GOLD-05Oct2026-FUT", ltp: 72450.0, segment: "MCX_COMM", name: "GOLD 1KG MCX FUTURES", instrumentType: "FUTCOM", lotSize: 100 },
-  SILVER: { securityId: "254103", tradingSymbol: "SILVER-05Sep2026-FUT", ltp: 84200.0, segment: "MCX_COMM", name: "SILVER 30KG MCX FUTURES", instrumentType: "FUTCOM", lotSize: 30 },
-  NATURALGAS: { securityId: "254104", tradingSymbol: "NATURALGAS-25Sep2026-FUT", ltp: 195.50, segment: "MCX_COMM", name: "NATURAL GAS MCX FUTURES", instrumentType: "FUTCOM", lotSize: 1250 },
-  COPPER: { securityId: "254105", tradingSymbol: "COPPER-30Sep2026-FUT", ltp: 825.40, segment: "MCX_COMM", name: "COPPER MCX FUTURES", instrumentType: "FUTCOM", lotSize: 2500 },
-  USDINR: { securityId: "601201", tradingSymbol: "USDINR-26Aug2026-FUT", ltp: 83.92, segment: "NSE_CURRENCY", name: "USDINR CURRENCY FUTURES", instrumentType: "FUTCUR", lotSize: 1000 },
-  EURINR: { securityId: "601202", tradingSymbol: "EURINR-26Aug2026-FUT", ltp: 91.45, segment: "NSE_CURRENCY", name: "EURINR CURRENCY FUTURES", instrumentType: "FUTCUR", lotSize: 1000 },
-  GBPINR: { securityId: "601203", tradingSymbol: "GBPINR-26Aug2026-FUT", ltp: 109.80, segment: "NSE_CURRENCY", name: "GBPINR CURRENCY FUTURES", instrumentType: "FUTCUR", lotSize: 1000 },
-  JPYINR: { securityId: "601204", tradingSymbol: "JPYINR-26Aug2026-FUT", ltp: 58.30, segment: "NSE_CURRENCY", name: "JPYINR CURRENCY FUTURES", instrumentType: "FUTCUR", lotSize: 1000 },
-  COIN: { securityId: "9999", tradingSymbol: "COIN-EQ", ltp: 150.0, segment: "NSE_EQ", name: "Coin Proxy Demo Stock", instrumentType: "EQUITY" },
+  RELIANCE: { securityId: "2885", tradingSymbol: "RELIANCE-EQ", segment: "NSE_EQ", name: "Reliance Industries Ltd", instrumentType: "EQUITY" },
+  TCS: { securityId: "11536", tradingSymbol: "TCS-EQ", segment: "NSE_EQ", name: "Tata Consultancy Services Ltd", instrumentType: "EQUITY" },
+  HDFCBANK: { securityId: "1333", tradingSymbol: "HDFCBANK-EQ", segment: "NSE_EQ", name: "HDFC Bank Ltd", instrumentType: "EQUITY" },
+  INFY: { securityId: "1594", tradingSymbol: "INFY-EQ", segment: "NSE_EQ", name: "Infosys Ltd", instrumentType: "EQUITY" },
+  ICICIBANK: { securityId: "4963", tradingSymbol: "ICICIBANK-EQ", segment: "NSE_EQ", name: "ICICI Bank Ltd", instrumentType: "EQUITY" },
+  SBIN: { securityId: "3045", tradingSymbol: "SBIN-EQ", segment: "NSE_EQ", name: "State Bank of India", instrumentType: "EQUITY" },
+  BHARTIARTL: { securityId: "10604", tradingSymbol: "BHARTIARTL-EQ", segment: "NSE_EQ", name: "Bharti Airtel Ltd", instrumentType: "EQUITY" },
+  ITC: { securityId: "1660", tradingSymbol: "ITC-EQ", segment: "NSE_EQ", name: "ITC Ltd", instrumentType: "EQUITY" },
+  KOTAKBANK: { securityId: "1922", tradingSymbol: "KOTAKBANK-EQ", segment: "NSE_EQ", name: "Kotak Mahindra Bank Ltd", instrumentType: "EQUITY" },
+  LT: { securityId: "11483", tradingSymbol: "LT-EQ", segment: "NSE_EQ", name: "Larsen & Toubro Ltd", instrumentType: "EQUITY" },
+  AXISBANK: { securityId: "5900", tradingSymbol: "AXISBANK-EQ", segment: "NSE_EQ", name: "Axis Bank Ltd", instrumentType: "EQUITY" },
+  WIPRO: { securityId: "3787", tradingSymbol: "WIPRO-EQ", segment: "NSE_EQ", name: "Wipro Ltd", instrumentType: "EQUITY" },
+  HCLTECH: { securityId: "7229", tradingSymbol: "HCLTECH-EQ", segment: "NSE_EQ", name: "HCL Technologies Ltd", instrumentType: "EQUITY" },
+  BAJFINANCE: { securityId: "317", tradingSymbol: "BAJFINANCE-EQ", segment: "NSE_EQ", name: "Bajaj Finance Ltd", instrumentType: "EQUITY" },
+  MARUTI: { securityId: "10999", tradingSymbol: "MARUTI-EQ", segment: "NSE_EQ", name: "Maruti Suzuki India Ltd", instrumentType: "EQUITY" },
+  TATAMOTORS: { securityId: "3456", tradingSymbol: "TATAMOTORS-EQ", segment: "NSE_EQ", name: "Tata Motors Ltd", instrumentType: "EQUITY" },
+  TATASTEEL: { securityId: "3499", tradingSymbol: "TATASTEEL-EQ", segment: "NSE_EQ", name: "Tata Steel Ltd", instrumentType: "EQUITY" },
+  SUNPHARMA: { securityId: "3351", tradingSymbol: "SUNPHARMA-EQ", segment: "NSE_EQ", name: "Sun Pharmaceutical Industries Ltd", instrumentType: "EQUITY" },
+  NIFTY: { securityId: "13", tradingSymbol: "NIFTY 50", segment: "IDX_I", name: "NIFTY 50 INDEX", instrumentType: "INDEX" },
+  NIFTY50: { securityId: "13", tradingSymbol: "NIFTY 50", segment: "IDX_I", name: "NIFTY 50 INDEX", instrumentType: "INDEX" },
+  "NIFTY 50": { securityId: "13", tradingSymbol: "NIFTY 50", segment: "IDX_I", name: "NIFTY 50 INDEX", instrumentType: "INDEX" },
+  BANKNIFTY: { securityId: "25", tradingSymbol: "NIFTY BANK", segment: "IDX_I", name: "NIFTY BANK INDEX", instrumentType: "INDEX" },
+  "BANK NIFTY": { securityId: "25", tradingSymbol: "NIFTY BANK", segment: "IDX_I", name: "NIFTY BANK INDEX", instrumentType: "INDEX" },
+  FINNIFTY: { securityId: "27", tradingSymbol: "NIFTY FIN SERVICE", segment: "IDX_I", name: "NIFTY FINANCIAL SERVICES INDEX", instrumentType: "INDEX" },
+  "FIN NIFTY": { securityId: "27", tradingSymbol: "NIFTY FIN SERVICE", segment: "IDX_I", name: "NIFTY FINANCIAL SERVICES INDEX", instrumentType: "INDEX" },
+  MIDCPNIFTY: { securityId: "28", tradingSymbol: "NIFTY MID SELECT", segment: "IDX_I", name: "NIFTY MIDCAP SELECT INDEX", instrumentType: "INDEX" },
+  SENSEX: { securityId: "51", tradingSymbol: "SENSEX", segment: "IDX_I", name: "BSE SENSEX INDEX", instrumentType: "INDEX" },
+  NIFTYIT: { securityId: "29", tradingSymbol: "NIFTY IT", segment: "IDX_I", name: "NIFTY IT INDEX", instrumentType: "INDEX" },
+  "NIFTY IT": { securityId: "29", tradingSymbol: "NIFTY IT", segment: "IDX_I", name: "NIFTY IT INDEX", instrumentType: "INDEX" },
+  NIFTYAUTO: { securityId: "30", tradingSymbol: "NIFTY AUTO", segment: "IDX_I", name: "NIFTY AUTO INDEX", instrumentType: "INDEX" },
+  "NIFTY AUTO": { securityId: "30", tradingSymbol: "NIFTY AUTO", segment: "IDX_I", name: "NIFTY AUTO INDEX", instrumentType: "INDEX" },
+  NIFTYBEES: { securityId: "14418", tradingSymbol: "NIFTYBEES-EQ", segment: "NSE_EQ", name: "NIPPON INDIA ETF NIFTY BEES", instrumentType: "ETF" },
+  BANKBEES: { securityId: "14419", tradingSymbol: "BANKBEES-EQ", segment: "NSE_EQ", name: "NIPPON INDIA ETF BANK BEES", instrumentType: "ETF" },
+  GOLDBEES: { securityId: "14420", tradingSymbol: "GOLDBEES-EQ", segment: "NSE_EQ", name: "NIPPON INDIA ETF GOLD BEES", instrumentType: "ETF" },
+  SILVERBEES: { securityId: "14421", tradingSymbol: "SILVERBEES-EQ", segment: "NSE_EQ", name: "NIPPON INDIA ETF SILVER BEES", instrumentType: "ETF" },
+  ITBEES: { securityId: "14422", tradingSymbol: "ITBEES-EQ", segment: "NSE_EQ", name: "NIPPON INDIA ETF NIFTY IT", instrumentType: "ETF" },
+  JUNIORBEES: { securityId: "14423", tradingSymbol: "JUNIORBEES-EQ", segment: "NSE_EQ", name: "NIPPON INDIA ETF JUNIOR BEES", instrumentType: "ETF" },
+  LIQUIDBEES: { securityId: "14424", tradingSymbol: "LIQUIDBEES-EQ", segment: "NSE_EQ", name: "NIPPON INDIA ETF LIQUID BEES", instrumentType: "ETF" },
+  CRUDEOIL: { securityId: "254101", tradingSymbol: "CRUDEOIL-19Sep2026-FUT", segment: "MCX_COMM", name: "CRUDE OIL MCX FUTURES", instrumentType: "FUTCOM", lotSize: 100 },
+  GOLD: { securityId: "254102", tradingSymbol: "GOLD-05Oct2026-FUT", segment: "MCX_COMM", name: "GOLD 1KG MCX FUTURES", instrumentType: "FUTCOM", lotSize: 100 },
+  SILVER: { securityId: "254103", tradingSymbol: "SILVER-05Sep2026-FUT", segment: "MCX_COMM", name: "SILVER 30KG MCX FUTURES", instrumentType: "FUTCOM", lotSize: 30 },
+  NATURALGAS: { securityId: "254104", tradingSymbol: "NATURALGAS-25Sep2026-FUT", segment: "MCX_COMM", name: "NATURAL GAS MCX FUTURES", instrumentType: "FUTCOM", lotSize: 1250 },
+  COPPER: { securityId: "254105", tradingSymbol: "COPPER-30Sep2026-FUT", segment: "MCX_COMM", name: "COPPER MCX FUTURES", instrumentType: "FUTCOM", lotSize: 2500 },
+  USDINR: { securityId: "601201", tradingSymbol: "USDINR-26Aug2026-FUT", segment: "NSE_CURRENCY", name: "USDINR CURRENCY FUTURES", instrumentType: "FUTCUR", lotSize: 1000 },
+  EURINR: { securityId: "601202", tradingSymbol: "EURINR-26Aug2026-FUT", segment: "NSE_CURRENCY", name: "EURINR CURRENCY FUTURES", instrumentType: "FUTCUR", lotSize: 1000 },
+  GBPINR: { securityId: "601203", tradingSymbol: "GBPINR-26Aug2026-FUT", segment: "NSE_CURRENCY", name: "GBPINR CURRENCY FUTURES", instrumentType: "FUTCUR", lotSize: 1000 },
+  JPYINR: { securityId: "601204", tradingSymbol: "JPYINR-26Aug2026-FUT", segment: "NSE_CURRENCY", name: "JPYINR CURRENCY FUTURES", instrumentType: "FUTCUR", lotSize: 1000 },
+  COIN: { securityId: "9999", tradingSymbol: "COIN-EQ", segment: "NSE_EQ", name: "Coin Proxy Demo Stock", instrumentType: "EQUITY" },
   // Additional Indices from Image 2
-  "NIFTY MIDCAP 100": { securityId: "26", tradingSymbol: "NIFTY MIDCAP 100", ltp: 58900.0, segment: "IDX_I", name: "NIFTY MIDCAP 100 INDEX", instrumentType: "INDEX" },
-  BANKEX: { securityId: "52", tradingSymbol: "BSE INDEX BANKEX", ltp: 58200.0, segment: "IDX_I", name: "BSE BANKEX INDEX", instrumentType: "INDEX" },
-  ALLCAP: { securityId: "53", tradingSymbol: "BSE INDEX ALLCAP", ltp: 10400.0, segment: "IDX_I", name: "BSE ALLCAP INDEX", instrumentType: "INDEX" },
-  "NIFTY 100": { securityId: "31", tradingSymbol: "NIFTY 100", ltp: 25100.0, segment: "IDX_I", name: "NIFTY 100 INDEX", instrumentType: "INDEX" },
-  "NIFTY DIV OPPS 50": { securityId: "32", tradingSymbol: "NIFTY DIV OPPS 50", ltp: 6800.0, segment: "IDX_I", name: "NIFTY DIVIDEND OPPORTUNITIES 50 INDEX", instrumentType: "INDEX" },
-  "NIFTY COMMODITIES": { securityId: "33", tradingSymbol: "NIFTY COMMODITIES", ltp: 9200.0, segment: "IDX_I", name: "NIFTY COMMODITIES INDEX", instrumentType: "INDEX" },
-  "NIFTY CONSUMPTION": { securityId: "34", tradingSymbol: "NIFTY CONSUMPTION", ltp: 11400.0, segment: "IDX_I", name: "NIFTY CONSUMPTION INDEX", instrumentType: "INDEX" },
-  "NIFTY50 PR 2X LEV": { securityId: "35", tradingSymbol: "NIFTY50 PR 2X LEV", ltp: 15400.0, segment: "IDX_I", name: "NIFTY50 PR 2X LEVERAGED INDEX", instrumentType: "INDEX" },
-  "NIFTY50 PR 1X INV": { securityId: "36", tradingSymbol: "NIFTY50 PR 1X INV", ltp: 3200.0, segment: "IDX_I", name: "NIFTY50 PR 1X INVERSE INDEX", instrumentType: "INDEX" },
-  "NIFTY50 TR 2X LEV": { securityId: "37", tradingSymbol: "NIFTY50 TR 2X LEV", ltp: 16200.0, segment: "IDX_I", name: "NIFTY50 TR 2X LEVERAGED INDEX", instrumentType: "INDEX" },
-  "NIFTY50 TR 1X INV": { securityId: "38", tradingSymbol: "NIFTY50 TR 1X INV", ltp: 3100.0, segment: "IDX_I", name: "NIFTY50 TR 1X INVERSE INDEX", instrumentType: "INDEX" },
-  "NIFTY MIDCAP 50": { securityId: "39", tradingSymbol: "NIFTY MIDCAP 50", ltp: 16100.0, segment: "IDX_I", name: "NIFTY MIDCAP 50 INDEX", instrumentType: "INDEX" },
-  "NIFTY REALTY": { securityId: "40", tradingSymbol: "NIFTY REALTY", ltp: 1050.0, segment: "IDX_I", name: "NIFTY REALTY INDEX", instrumentType: "INDEX" },
-  "NIFTY INFRA": { securityId: "41", tradingSymbol: "NIFTY INFRA", ltp: 9100.0, segment: "IDX_I", name: "NIFTY INFRASTRUCTURE INDEX", instrumentType: "INDEX" },
+  "NIFTY MIDCAP 100": { securityId: "26", tradingSymbol: "NIFTY MIDCAP 100", segment: "IDX_I", name: "NIFTY MIDCAP 100 INDEX", instrumentType: "INDEX" },
+  BANKEX: { securityId: "52", tradingSymbol: "BSE INDEX BANKEX", segment: "IDX_I", name: "BSE BANKEX INDEX", instrumentType: "INDEX" },
+  ALLCAP: { securityId: "53", tradingSymbol: "BSE INDEX ALLCAP", segment: "IDX_I", name: "BSE ALLCAP INDEX", instrumentType: "INDEX" },
+  "NIFTY 100": { securityId: "31", tradingSymbol: "NIFTY 100", segment: "IDX_I", name: "NIFTY 100 INDEX", instrumentType: "INDEX" },
+  "NIFTY DIV OPPS 50": { securityId: "32", tradingSymbol: "NIFTY DIV OPPS 50", segment: "IDX_I", name: "NIFTY DIVIDEND OPPORTUNITIES 50 INDEX", instrumentType: "INDEX" },
+  "NIFTY COMMODITIES": { securityId: "33", tradingSymbol: "NIFTY COMMODITIES", segment: "IDX_I", name: "NIFTY COMMODITIES INDEX", instrumentType: "INDEX" },
+  "NIFTY CONSUMPTION": { securityId: "34", tradingSymbol: "NIFTY CONSUMPTION", segment: "IDX_I", name: "NIFTY CONSUMPTION INDEX", instrumentType: "INDEX" },
+  "NIFTY50 PR 2X LEV": { securityId: "35", tradingSymbol: "NIFTY50 PR 2X LEV", segment: "IDX_I", name: "NIFTY50 PR 2X LEVERAGED INDEX", instrumentType: "INDEX" },
+  "NIFTY50 PR 1X INV": { securityId: "36", tradingSymbol: "NIFTY50 PR 1X INV", segment: "IDX_I", name: "NIFTY50 PR 1X INVERSE INDEX", instrumentType: "INDEX" },
+  "NIFTY50 TR 2X LEV": { securityId: "37", tradingSymbol: "NIFTY50 TR 2X LEV", segment: "IDX_I", name: "NIFTY50 TR 2X LEVERAGED INDEX", instrumentType: "INDEX" },
+  "NIFTY50 TR 1X INV": { securityId: "38", tradingSymbol: "NIFTY50 TR 1X INV", segment: "IDX_I", name: "NIFTY50 TR 1X INVERSE INDEX", instrumentType: "INDEX" },
+  "NIFTY MIDCAP 50": { securityId: "39", tradingSymbol: "NIFTY MIDCAP 50", segment: "IDX_I", name: "NIFTY MIDCAP 50 INDEX", instrumentType: "INDEX" },
+  "NIFTY REALTY": { securityId: "40", tradingSymbol: "NIFTY REALTY", segment: "IDX_I", name: "NIFTY REALTY INDEX", instrumentType: "INDEX" },
+  "NIFTY INFRA": { securityId: "41", tradingSymbol: "NIFTY INFRA", segment: "IDX_I", name: "NIFTY INFRASTRUCTURE INDEX", instrumentType: "INDEX" },
   // Image 3 Equities
-  HEROMOTOCO: { securityId: "1348", tradingSymbol: "HEROMOTOCO-EQ", ltp: 5300.0, segment: "NSE_EQ", name: "Hero MotoCorp Ltd", instrumentType: "EQUITY" },
-  MPHASIS: { securityId: "4503", tradingSymbol: "MPHASIS-EQ", ltp: 2357.10, segment: "NSE_EQ", name: "Mphasis Ltd", instrumentType: "EQUITY", fiftyTwoWeekHigh: 3125.00, fiftyTwoWeekLow: 2180.00 },
-  CIPLA: { securityId: "694", tradingSymbol: "CIPLA-EQ", ltp: 1385.0, segment: "NSE_EQ", name: "Cipla Ltd", instrumentType: "EQUITY" },
-  COALINDIA: { securityId: "20374", tradingSymbol: "COALINDIA-EQ", ltp: 415.35, segment: "NSE_EQ", name: "Coal India Ltd", instrumentType: "EQUITY" },
-  GODFRYPHLP: { securityId: "1181", tradingSymbol: "GODFRYPHLP-EQ", ltp: 2051.0, segment: "NSE_EQ", name: "Godfrey Phillips India Ltd", instrumentType: "EQUITY" },
-  TECHNOE: { securityId: "6445", tradingSymbol: "TECHNOE-EQ", ltp: 979.50, segment: "NSE_EQ", name: "Techno Electric & Engineering Co Ltd", instrumentType: "EQUITY" },
-  LTTS: { securityId: "18564", tradingSymbol: "LTTS-EQ", ltp: 3493.30, segment: "NSE_EQ", name: "L&T Technology Services Ltd", instrumentType: "EQUITY" },
+  HEROMOTOCO: { securityId: "1348", tradingSymbol: "HEROMOTOCO-EQ", segment: "NSE_EQ", name: "Hero MotoCorp Ltd", instrumentType: "EQUITY" },
+  MPHASIS: { securityId: "4503", tradingSymbol: "MPHASIS-EQ", segment: "NSE_EQ", name: "Mphasis Ltd", instrumentType: "EQUITY" },
+  CIPLA: { securityId: "694", tradingSymbol: "CIPLA-EQ", segment: "NSE_EQ", name: "Cipla Ltd", instrumentType: "EQUITY" },
+  COALINDIA: { securityId: "20374", tradingSymbol: "COALINDIA-EQ", segment: "NSE_EQ", name: "Coal India Ltd", instrumentType: "EQUITY" },
+  GODFRYPHLP: { securityId: "1181", tradingSymbol: "GODFRYPHLP-EQ", segment: "NSE_EQ", name: "Godfrey Phillips India Ltd", instrumentType: "EQUITY" },
+  TECHNOE: { securityId: "6445", tradingSymbol: "TECHNOE-EQ", segment: "NSE_EQ", name: "Techno Electric & Engineering Co Ltd", instrumentType: "EQUITY" },
+  LTTS: { securityId: "18564", tradingSymbol: "LTTS-EQ", segment: "NSE_EQ", name: "L&T Technology Services Ltd", instrumentType: "EQUITY" },
   // Image 1 & 2 Holdings
-  MANAPPURAM: { securityId: "19061", tradingSymbol: "MANAPPURAM-EQ", ltp: 339.70, segment: "NSE_EQ", name: "Manappuram Finance Ltd", instrumentType: "EQUITY" },
-  BODALCHEM: { securityId: "19001", tradingSymbol: "BODALCHEM-EQ", ltp: 155.62, segment: "NSE_EQ", name: "Bodal Chemicals Ltd", instrumentType: "EQUITY" },
-  BLSE: { securityId: "19002", tradingSymbol: "BLSE-EQ", ltp: 320.05, segment: "NSE_EQ", name: "BLS E-Services Ltd", instrumentType: "EQUITY" },
-  MOREPENLAB: { securityId: "19003", tradingSymbol: "MOREPENLAB-EQ", ltp: 113.74, segment: "NSE_EQ", name: "Morepen Laboratories Ltd", instrumentType: "EQUITY" },
-  MON100: { securityId: "19004", tradingSymbol: "MON100-EQ", ltp: 324.67, segment: "NSE_EQ", name: "Motilal Oswal Nasdaq 100 ETF", instrumentType: "ETF" },
-  TMCV: { securityId: "759782", tradingSymbol: "TMCV-EQ", ltp: 458.20, segment: "NSE_EQ", name: "Tata Motors Commercial Vehicles", instrumentType: "EQUITY" },
-  CAMS: { securityId: "342", tradingSymbol: "CAMS-EQ", ltp: 748.80, segment: "NSE_EQ", name: "Computer Age Management Services Ltd", instrumentType: "EQUITY" },
-  DELTACORP: { securityId: "19007", tradingSymbol: "DELTACORP-EQ", ltp: 56.15, segment: "NSE_EQ", name: "Delta Corp Ltd", instrumentType: "EQUITY" },
-  HDFCAMC: { securityId: "4244", tradingSymbol: "HDFCAMC-EQ", ltp: 2463.00, segment: "NSE_EQ", name: "HDFC Asset Management Co Ltd", instrumentType: "EQUITY" },
-  AARTIIND: { securityId: "7", tradingSymbol: "AARTIIND-EQ", ltp: 492.05, segment: "NSE_EQ", name: "Aarti Industries Ltd", instrumentType: "EQUITY" },
-  IGL: { securityId: "11262", tradingSymbol: "IGL-EQ", ltp: 158.05, segment: "NSE_EQ", name: "Indraprastha Gas Ltd", instrumentType: "EQUITY" },
+  MANAPPURAM: { securityId: "19061", tradingSymbol: "MANAPPURAM-EQ", segment: "NSE_EQ", name: "Manappuram Finance Ltd", instrumentType: "EQUITY" },
+  BODALCHEM: { securityId: "19001", tradingSymbol: "BODALCHEM-EQ", segment: "NSE_EQ", name: "Bodal Chemicals Ltd", instrumentType: "EQUITY" },
+  BLSE: { securityId: "19002", tradingSymbol: "BLSE-EQ", segment: "NSE_EQ", name: "BLS E-Services Ltd", instrumentType: "EQUITY" },
+  MOREPENLAB: { securityId: "19003", tradingSymbol: "MOREPENLAB-EQ", segment: "NSE_EQ", name: "Morepen Laboratories Ltd", instrumentType: "EQUITY" },
+  MON100: { securityId: "19004", tradingSymbol: "MON100-EQ", segment: "NSE_EQ", name: "Motilal Oswal Nasdaq 100 ETF", instrumentType: "ETF" },
+  TMCV: { securityId: "759782", tradingSymbol: "TMCV-EQ", segment: "NSE_EQ", name: "Tata Motors Commercial Vehicles", instrumentType: "EQUITY" },
+  CAMS: { securityId: "342", tradingSymbol: "CAMS-EQ", segment: "NSE_EQ", name: "Computer Age Management Services Ltd", instrumentType: "EQUITY" },
+  DELTACORP: { securityId: "19007", tradingSymbol: "DELTACORP-EQ", segment: "NSE_EQ", name: "Delta Corp Ltd", instrumentType: "EQUITY" },
+  HDFCAMC: { securityId: "4244", tradingSymbol: "HDFCAMC-EQ", segment: "NSE_EQ", name: "HDFC Asset Management Co Ltd", instrumentType: "EQUITY" },
+  AARTIIND: { securityId: "7", tradingSymbol: "AARTIIND-EQ", segment: "NSE_EQ", name: "Aarti Industries Ltd", instrumentType: "EQUITY" },
+  IGL: { securityId: "11262", tradingSymbol: "IGL-EQ", segment: "NSE_EQ", name: "Indraprastha Gas Ltd", instrumentType: "EQUITY" },
   // Image 1 Scrips & ETFs
-  SILVERCASF: { securityId: "20001", tradingSymbol: "SILVERCASF", ltp: 88.50, segment: "BSE_EQ", name: "ZERODHA SILVER ETF", instrumentType: "ETF" },
-  SILCASINAV: { securityId: "20002", tradingSymbol: "SILCASINAV", ltp: 88.20, segment: "NSE_EQ", name: "ZERODHA AMC - SILCASINAV", instrumentType: "ETF" },
-  SML100INAV: { securityId: "20003", tradingSymbol: "SML100INAV", ltp: 55.40, segment: "NSE_EQ", name: "ZERODHA AMC - SML100NAV", instrumentType: "ETF" },
-  SML100CASE: { securityId: "20004", tradingSymbol: "SML100CASE", ltp: 55.70, segment: "NSE_EQ", name: "ZERODHA NIFTY SMALLCAP 100 ETF", instrumentType: "ETF" },
-  STYRFNIX: { securityId: "20005", tradingSymbol: "STYRFNIX-EQ", ltp: 2150.0, segment: "NSE_EQ", name: "STYRENIX PERFORMANCE", instrumentType: "EQUITY" },
-  SHAREINDIA: { securityId: "104", tradingSymbol: "SHAREINDIA-EQ", ltp: 1420.0, segment: "NSE_EQ", name: "SHARE IND. SECURITIES", instrumentType: "EQUITY" },
-  SINTERCOM: { securityId: "20007", tradingSymbol: "SINTERCOM-EQ", ltp: 145.0, segment: "NSE_EQ", name: "SINTERCOM INDIA", instrumentType: "EQUITY" },
-  SHRADHA: { securityId: "20008", tradingSymbol: "SHRADHA-EQ", ltp: 72.50, segment: "NSE_EQ", name: "SHRADHA REALTY", instrumentType: "EQUITY" },
-  SHALBY: { securityId: "20009", tradingSymbol: "SHALBY-EQ", ltp: 245.0, segment: "NSE_EQ", name: "SHALBY LTD", instrumentType: "EQUITY" },
-  SUDARCOLOR: { securityId: "20010", tradingSymbol: "SUDARCOLOR-EQ", ltp: 680.0, segment: "NSE_EQ", name: "SUDARSHAN COLORANT IND", instrumentType: "EQUITY" },
-  SBIETFPB: { securityId: "20011", tradingSymbol: "SBIETFPB-EQ", ltp: 450.0, segment: "NSE_EQ", name: "SBI PRIVATE BANK ETF", instrumentType: "ETF" },
-  SBIETFIT: { securityId: "20012", tradingSymbol: "SBIETFIT-EQ", ltp: 42.80, segment: "NSE_EQ", name: "SBI ETF IT ETF", instrumentType: "ETF" },
-  SHIVATEX: { securityId: "20013", tradingSymbol: "SHIVATEX-EQ", ltp: 195.0, segment: "NSE_EQ", name: "SHIVA TEXYARN", instrumentType: "EQUITY" },
-  SUBEXLTD: { securityId: "20014", tradingSymbol: "SUBEXLTD-EQ", ltp: 32.50, segment: "NSE_EQ", name: "SUBEX INDIA", instrumentType: "EQUITY" },
-  SCHAEFFLER: { securityId: "1011", tradingSymbol: "SCHAEFFLER-EQ", ltp: 3850.0, segment: "NSE_EQ", name: "SCHAEFFLER INDIA", instrumentType: "EQUITY" },
-  SDBL: { securityId: "20016", tradingSymbol: "SDBL-EQ", ltp: 310.0, segment: "NSE_EQ", name: "SOM DIST & BREW", instrumentType: "EQUITY" },
-  SANOFI: { securityId: "20017", tradingSymbol: "SANOFI-EQ", ltp: 6800.0, segment: "NSE_EQ", name: "SANOFI INDIA", instrumentType: "EQUITY" },
+  SILVERCASF: { securityId: "20001", tradingSymbol: "SILVERCASF", segment: "BSE_EQ", name: "ZERODHA SILVER ETF", instrumentType: "ETF" },
+  SILCASINAV: { securityId: "20002", tradingSymbol: "SILCASINAV", segment: "NSE_EQ", name: "ZERODHA AMC - SILCASINAV", instrumentType: "ETF" },
+  SML100INAV: { securityId: "20003", tradingSymbol: "SML100INAV", segment: "NSE_EQ", name: "ZERODHA AMC - SML100NAV", instrumentType: "ETF" },
+  SML100CASE: { securityId: "20004", tradingSymbol: "SML100CASE", segment: "NSE_EQ", name: "ZERODHA NIFTY SMALLCAP 100 ETF", instrumentType: "ETF" },
+  STYRFNIX: { securityId: "20005", tradingSymbol: "STYRFNIX-EQ", segment: "NSE_EQ", name: "STYRENIX PERFORMANCE", instrumentType: "EQUITY" },
+  SHAREINDIA: { securityId: "104", tradingSymbol: "SHAREINDIA-EQ", segment: "NSE_EQ", name: "SHARE IND. SECURITIES", instrumentType: "EQUITY" },
+  SINTERCOM: { securityId: "20007", tradingSymbol: "SINTERCOM-EQ", segment: "NSE_EQ", name: "SINTERCOM INDIA", instrumentType: "EQUITY" },
+  SHRADHA: { securityId: "20008", tradingSymbol: "SHRADHA-EQ", segment: "NSE_EQ", name: "SHRADHA REALTY", instrumentType: "EQUITY" },
+  SHALBY: { securityId: "20009", tradingSymbol: "SHALBY-EQ", segment: "NSE_EQ", name: "SHALBY LTD", instrumentType: "EQUITY" },
+  SUDARCOLOR: { securityId: "20010", tradingSymbol: "SUDARCOLOR-EQ", segment: "NSE_EQ", name: "SUDARSHAN COLORANT IND", instrumentType: "EQUITY" },
+  SBIETFPB: { securityId: "20011", tradingSymbol: "SBIETFPB-EQ", segment: "NSE_EQ", name: "SBI PRIVATE BANK ETF", instrumentType: "ETF" },
+  SBIETFIT: { securityId: "20012", tradingSymbol: "SBIETFIT-EQ", segment: "NSE_EQ", name: "SBI ETF IT ETF", instrumentType: "ETF" },
+  SHIVATEX: { securityId: "20013", tradingSymbol: "SHIVATEX-EQ", segment: "NSE_EQ", name: "SHIVA TEXYARN", instrumentType: "EQUITY" },
+  SUBEXLTD: { securityId: "20014", tradingSymbol: "SUBEXLTD-EQ", segment: "NSE_EQ", name: "SUBEX INDIA", instrumentType: "EQUITY" },
+  SCHAEFFLER: { securityId: "1011", tradingSymbol: "SCHAEFFLER-EQ", segment: "NSE_EQ", name: "SCHAEFFLER INDIA", instrumentType: "EQUITY" },
+  SDBL: { securityId: "20016", tradingSymbol: "SDBL-EQ", segment: "NSE_EQ", name: "SOM DIST & BREW", instrumentType: "EQUITY" },
+  SANOFI: { securityId: "20017", tradingSymbol: "SANOFI-EQ", segment: "NSE_EQ", name: "SANOFI INDIA", instrumentType: "EQUITY" },
   // Additional Nifty 50 & Top Equities
-  TITAN: { securityId: "3506", tradingSymbol: "TITAN-EQ", ltp: 3450.0, segment: "NSE_EQ", name: "Titan Company Ltd", instrumentType: "EQUITY" },
-  ADANIENT: { securityId: "25", tradingSymbol: "ADANIENT-EQ", ltp: 3020.0, segment: "NSE_EQ", name: "Adani Enterprises Ltd", instrumentType: "EQUITY" },
-  ADANIPORTS: { securityId: "15083", tradingSymbol: "ADANIPORTS-EQ", ltp: 1450.0, segment: "NSE_EQ", name: "Adani Ports & SEZ Ltd", instrumentType: "EQUITY" },
-  ASIANPAINT: { securityId: "236", tradingSymbol: "ASIANPAINT-EQ", ltp: 3180.0, segment: "NSE_EQ", name: "Asian Paints Ltd", instrumentType: "EQUITY" },
-  "BAJAJ-AUTO": { securityId: "16669", tradingSymbol: "BAJAJ-AUTO-EQ", ltp: 10400.0, segment: "NSE_EQ", name: "Bajaj Auto Ltd", instrumentType: "EQUITY" },
-  BAJAJFINSV: { securityId: "16675", tradingSymbol: "BAJAJFINSV-EQ", ltp: 1720.0, segment: "NSE_EQ", name: "Bajaj Finserv Ltd", instrumentType: "EQUITY" },
-  BPCL: { securityId: "526", tradingSymbol: "BPCL-EQ", ltp: 350.0, segment: "NSE_EQ", name: "Bharat Petroleum Corporation Ltd", instrumentType: "EQUITY" },
-  BRITANNIA: { securityId: "547", tradingSymbol: "BRITANNIA-EQ", ltp: 5800.0, segment: "NSE_EQ", name: "Britannia Industries Ltd", instrumentType: "EQUITY" },
-  DRREDDY: { securityId: "881", tradingSymbol: "DRREDDY-EQ", ltp: 6600.0, segment: "NSE_EQ", name: "Dr. Reddy's Laboratories Ltd", instrumentType: "EQUITY" },
-  EICHERMOT: { securityId: "910", tradingSymbol: "EICHERMOT-EQ", ltp: 4900.0, segment: "NSE_EQ", name: "Eicher Motors Ltd", instrumentType: "EQUITY" },
-  GRASIM: { securityId: "1232", tradingSymbol: "GRASIM-EQ", ltp: 2650.0, segment: "NSE_EQ", name: "Grasim Industries Ltd", instrumentType: "EQUITY" },
-  HDFCLIFE: { securityId: "467", tradingSymbol: "HDFCLIFE-EQ", ltp: 710.0, segment: "NSE_EQ", name: "HDFC Life Insurance Co Ltd", instrumentType: "EQUITY" },
-  HINDALCO: { securityId: "1363", tradingSymbol: "HINDALCO-EQ", ltp: 670.0, segment: "NSE_EQ", name: "Hindalco Industries Ltd", instrumentType: "EQUITY" },
-  HINDUNILVR: { securityId: "1394", tradingSymbol: "HINDUNILVR-EQ", ltp: 2780.0, segment: "NSE_EQ", name: "Hindustan Unilever Ltd", instrumentType: "EQUITY" },
-  INDUSINDBK: { securityId: "5258", tradingSymbol: "INDUSINDBK-EQ", ltp: 1420.0, segment: "NSE_EQ", name: "IndusInd Bank Ltd", instrumentType: "EQUITY" },
-  JSWSTEEL: { securityId: "11723", tradingSymbol: "JSWSTEEL-EQ", ltp: 940.0, segment: "NSE_EQ", name: "JSW Steel Ltd", instrumentType: "EQUITY" },
-  "M&M": { securityId: "2031", tradingSymbol: "M&M-EQ", ltp: 2850.0, segment: "NSE_EQ", name: "Mahindra & Mahindra Ltd", instrumentType: "EQUITY" },
-  NESTLEIND: { securityId: "17963", tradingSymbol: "NESTLEIND-EQ", ltp: 2500.0, segment: "NSE_EQ", name: "Nestle India Ltd", instrumentType: "EQUITY" },
-  NTPC: { securityId: "11630", tradingSymbol: "NTPC-EQ", ltp: 410.0, segment: "NSE_EQ", name: "NTPC Ltd", instrumentType: "EQUITY" },
-  ONGC: { securityId: "2475", tradingSymbol: "ONGC-EQ", ltp: 320.0, segment: "NSE_EQ", name: "Oil & Natural Gas Corporation Ltd", instrumentType: "EQUITY" },
-  POWERGRID: { securityId: "14977", tradingSymbol: "POWERGRID-EQ", ltp: 330.0, segment: "NSE_EQ", name: "Power Grid Corporation of India Ltd", instrumentType: "EQUITY" },
-  SBILIFE: { securityId: "21808", tradingSymbol: "SBILIFE-EQ", ltp: 1780.0, segment: "NSE_EQ", name: "SBI Life Insurance Co Ltd", instrumentType: "EQUITY" },
-  TATACONSUM: { securityId: "3432", tradingSymbol: "TATACONSUM-EQ", ltp: 1180.0, segment: "NSE_EQ", name: "Tata Consumer Products Ltd", instrumentType: "EQUITY" },
-  TECHM: { securityId: "13538", tradingSymbol: "TECHM-EQ", ltp: 1580.0, segment: "NSE_EQ", name: "Tech Mahindra Ltd", instrumentType: "EQUITY" },
-  ULTRACEMCO: { securityId: "11532", tradingSymbol: "ULTRACEMCO-EQ", ltp: 11200.0, segment: "NSE_EQ", name: "UltraTech Cement Ltd", instrumentType: "EQUITY" },
-  ZOMATO: { securityId: "5097", tradingSymbol: "ZOMATO-EQ", ltp: 255.0, segment: "NSE_EQ", name: "Zomato Ltd", instrumentType: "EQUITY" },
-  PAYTM: { securityId: "6705", tradingSymbol: "PAYTM-EQ", ltp: 645.0, segment: "NSE_EQ", name: "One 97 Communications Ltd (Paytm)", instrumentType: "EQUITY" },
-  TATAPOWER: { securityId: "3426", tradingSymbol: "TATAPOWER-EQ", ltp: 440.0, segment: "NSE_EQ", name: "Tata Power Co Ltd", instrumentType: "EQUITY" },
-  IRCTC: { securityId: "13611", tradingSymbol: "IRCTC-EQ", ltp: 920.0, segment: "NSE_EQ", name: "Indian Railway Catering & Tourism Corp", instrumentType: "EQUITY" },
-  HAL: { securityId: "2303", tradingSymbol: "HAL-EQ", ltp: 4750.0, segment: "NSE_EQ", name: "Hindustan Aeronautics Ltd", instrumentType: "EQUITY" },
-  BEL: { securityId: "383", tradingSymbol: "BEL-EQ", ltp: 305.0, segment: "NSE_EQ", name: "Bharat Electronics Ltd", instrumentType: "EQUITY" },
-  VEDL: { securityId: "3063", tradingSymbol: "VEDL-EQ", ltp: 460.0, segment: "NSE_EQ", name: "Vedanta Ltd", instrumentType: "EQUITY" },
-  PIDILITIND: { securityId: "2664", tradingSymbol: "PIDILITIND-EQ", ltp: 3150.0, segment: "NSE_EQ", name: "Pidilite Industries Ltd", instrumentType: "EQUITY" },
+  TITAN: { securityId: "3506", tradingSymbol: "TITAN-EQ", segment: "NSE_EQ", name: "Titan Company Ltd", instrumentType: "EQUITY" },
+  ADANIENT: { securityId: "25", tradingSymbol: "ADANIENT-EQ", segment: "NSE_EQ", name: "Adani Enterprises Ltd", instrumentType: "EQUITY" },
+  ADANIPORTS: { securityId: "15083", tradingSymbol: "ADANIPORTS-EQ", segment: "NSE_EQ", name: "Adani Ports & SEZ Ltd", instrumentType: "EQUITY" },
+  ASIANPAINT: { securityId: "236", tradingSymbol: "ASIANPAINT-EQ", segment: "NSE_EQ", name: "Asian Paints Ltd", instrumentType: "EQUITY" },
+  "BAJAJ-AUTO": { securityId: "16669", tradingSymbol: "BAJAJ-AUTO-EQ", segment: "NSE_EQ", name: "Bajaj Auto Ltd", instrumentType: "EQUITY" },
+  BAJAJFINSV: { securityId: "16675", tradingSymbol: "BAJAJFINSV-EQ", segment: "NSE_EQ", name: "Bajaj Finserv Ltd", instrumentType: "EQUITY" },
+  BPCL: { securityId: "526", tradingSymbol: "BPCL-EQ", segment: "NSE_EQ", name: "Bharat Petroleum Corporation Ltd", instrumentType: "EQUITY" },
+  BRITANNIA: { securityId: "547", tradingSymbol: "BRITANNIA-EQ", segment: "NSE_EQ", name: "Britannia Industries Ltd", instrumentType: "EQUITY" },
+  DRREDDY: { securityId: "881", tradingSymbol: "DRREDDY-EQ", segment: "NSE_EQ", name: "Dr. Reddy's Laboratories Ltd", instrumentType: "EQUITY" },
+  EICHERMOT: { securityId: "910", tradingSymbol: "EICHERMOT-EQ", segment: "NSE_EQ", name: "Eicher Motors Ltd", instrumentType: "EQUITY" },
+  GRASIM: { securityId: "1232", tradingSymbol: "GRASIM-EQ", segment: "NSE_EQ", name: "Grasim Industries Ltd", instrumentType: "EQUITY" },
+  HDFCLIFE: { securityId: "467", tradingSymbol: "HDFCLIFE-EQ", segment: "NSE_EQ", name: "HDFC Life Insurance Co Ltd", instrumentType: "EQUITY" },
+  HINDALCO: { securityId: "1363", tradingSymbol: "HINDALCO-EQ", segment: "NSE_EQ", name: "Hindalco Industries Ltd", instrumentType: "EQUITY" },
+  HINDUNILVR: { securityId: "1394", tradingSymbol: "HINDUNILVR-EQ", segment: "NSE_EQ", name: "Hindustan Unilever Ltd", instrumentType: "EQUITY" },
+  INDUSINDBK: { securityId: "5258", tradingSymbol: "INDUSINDBK-EQ", segment: "NSE_EQ", name: "IndusInd Bank Ltd", instrumentType: "EQUITY" },
+  JSWSTEEL: { securityId: "11723", tradingSymbol: "JSWSTEEL-EQ", segment: "NSE_EQ", name: "JSW Steel Ltd", instrumentType: "EQUITY" },
+  "M&M": { securityId: "2031", tradingSymbol: "M&M-EQ", segment: "NSE_EQ", name: "Mahindra & Mahindra Ltd", instrumentType: "EQUITY" },
+  NESTLEIND: { securityId: "17963", tradingSymbol: "NESTLEIND-EQ", segment: "NSE_EQ", name: "Nestle India Ltd", instrumentType: "EQUITY" },
+  NTPC: { securityId: "11630", tradingSymbol: "NTPC-EQ", segment: "NSE_EQ", name: "NTPC Ltd", instrumentType: "EQUITY" },
+  ONGC: { securityId: "2475", tradingSymbol: "ONGC-EQ", segment: "NSE_EQ", name: "Oil & Natural Gas Corporation Ltd", instrumentType: "EQUITY" },
+  POWERGRID: { securityId: "14977", tradingSymbol: "POWERGRID-EQ", segment: "NSE_EQ", name: "Power Grid Corporation of India Ltd", instrumentType: "EQUITY" },
+  SBILIFE: { securityId: "21808", tradingSymbol: "SBILIFE-EQ", segment: "NSE_EQ", name: "SBI Life Insurance Co Ltd", instrumentType: "EQUITY" },
+  TATACONSUM: { securityId: "3432", tradingSymbol: "TATACONSUM-EQ", segment: "NSE_EQ", name: "Tata Consumer Products Ltd", instrumentType: "EQUITY" },
+  TECHM: { securityId: "13538", tradingSymbol: "TECHM-EQ", segment: "NSE_EQ", name: "Tech Mahindra Ltd", instrumentType: "EQUITY" },
+  ULTRACEMCO: { securityId: "11532", tradingSymbol: "ULTRACEMCO-EQ", segment: "NSE_EQ", name: "UltraTech Cement Ltd", instrumentType: "EQUITY" },
+  ZOMATO: { securityId: "5097", tradingSymbol: "ZOMATO-EQ", segment: "NSE_EQ", name: "Zomato Ltd", instrumentType: "EQUITY" },
+  PAYTM: { securityId: "6705", tradingSymbol: "PAYTM-EQ", segment: "NSE_EQ", name: "One 97 Communications Ltd (Paytm)", instrumentType: "EQUITY" },
+  TATAPOWER: { securityId: "3426", tradingSymbol: "TATAPOWER-EQ", segment: "NSE_EQ", name: "Tata Power Co Ltd", instrumentType: "EQUITY" },
+  IRCTC: { securityId: "13611", tradingSymbol: "IRCTC-EQ", segment: "NSE_EQ", name: "Indian Railway Catering & Tourism Corp", instrumentType: "EQUITY" },
+  HAL: { securityId: "2303", tradingSymbol: "HAL-EQ", segment: "NSE_EQ", name: "Hindustan Aeronautics Ltd", instrumentType: "EQUITY" },
+  BEL: { securityId: "383", tradingSymbol: "BEL-EQ", segment: "NSE_EQ", name: "Bharat Electronics Ltd", instrumentType: "EQUITY" },
+  VEDL: { securityId: "3063", tradingSymbol: "VEDL-EQ", segment: "NSE_EQ", name: "Vedanta Ltd", instrumentType: "EQUITY" },
+  PIDILITIND: { securityId: "2664", tradingSymbol: "PIDILITIND-EQ", segment: "NSE_EQ", name: "Pidilite Industries Ltd", instrumentType: "EQUITY" },
 };
 
 // Automatically enrich KNOWN_EQUITY_INSTRUMENTS from complete F&O 208 stock universe
@@ -201,7 +201,6 @@ for (const stock of FNO_208_STOCKS) {
     KNOWN_EQUITY_INSTRUMENTS[stock.symbol] = {
       securityId: stock.securityId,
       tradingSymbol: stock.tradingSymbol,
-      ltp: stock.ltp,
       segment: stock.segment || "NSE_EQ",
       name: stock.name,
       instrumentType: "EQUITY",
@@ -220,8 +219,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY 50 INDEX",
-    ltp: 24500.0,
-    changePct: 0.65,
     aliases: ["NIFTY", "NIFTY50", "NIFTY 50", "CNX NIFTY"],
   },
   {
@@ -231,8 +228,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY BANK INDEX",
-    ltp: 52100.0,
-    changePct: -0.25,
     aliases: ["BANKNIFTY", "BANK NIFTY", "NIFTY BANK"],
   },
   {
@@ -242,8 +237,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY FINANCIAL SERVICES INDEX",
-    ltp: 23800.0,
-    changePct: 0.35,
     aliases: ["FINNIFTY", "FIN NIFTY", "NIFTY FIN SERVICE"],
   },
   {
@@ -253,8 +246,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY MIDCAP SELECT INDEX",
-    ltp: 12850.0,
-    changePct: 0.85,
     aliases: ["MIDCPNIFTY", "NIFTY MIDCAP", "MIDCAP NIFTY"],
   },
   {
@@ -264,8 +255,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "BSE SENSEX INDEX",
-    ltp: 81200.0,
-    changePct: 0.55,
     aliases: ["SENSEX", "BSE SENSEX", "BSESENSEX"],
   },
   {
@@ -275,8 +264,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY IT INDEX",
-    ltp: 41250.0,
-    changePct: 1.15,
     aliases: ["NIFTY IT", "NIFTYIT", "CNX IT"],
   },
   {
@@ -286,8 +273,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY AUTO INDEX",
-    ltp: 25400.0,
-    changePct: -0.40,
     aliases: ["NIFTY AUTO", "NIFTYAUTO"],
   },
   {
@@ -297,8 +282,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY MIDCAP 100 INDEX",
-    ltp: 58900.0,
-    changePct: 0.45,
     aliases: ["NIFTY MIDCAP 100", "NIFTY MIDCAP", "MIDCAP 100", "INDICES"],
   },
   {
@@ -308,8 +291,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "BSE BANKEX INDEX",
-    ltp: 58200.0,
-    changePct: -0.15,
     aliases: ["BANKEX", "BSE BANKEX", "INDICES"],
   },
   {
@@ -319,8 +300,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "BSE ALLCAP INDEX",
-    ltp: 10400.0,
-    changePct: 0.30,
     aliases: ["ALLCAP", "BSE ALLCAP", "INDICES"],
   },
   {
@@ -330,8 +309,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY 100 INDEX",
-    ltp: 25100.0,
-    changePct: 0.55,
     aliases: ["NIFTY 100", "NIFTY100", "INDICES"],
   },
   {
@@ -341,8 +318,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY DIVIDEND OPPORTUNITIES 50 INDEX",
-    ltp: 6800.0,
-    changePct: 0.10,
     aliases: ["NIFTY DIV OPPS 50", "DIV OPPS", "INDICES"],
   },
   {
@@ -352,8 +327,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY COMMODITIES INDEX",
-    ltp: 9200.0,
-    changePct: -0.25,
     aliases: ["NIFTY COMMODITIES", "INDICES"],
   },
   {
@@ -363,8 +336,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY CONSUMPTION INDEX",
-    ltp: 11400.0,
-    changePct: 0.40,
     aliases: ["NIFTY CONSUMPTION", "INDICES"],
   },
   {
@@ -374,8 +345,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY50 PR 2X LEVERAGED INDEX",
-    ltp: 15400.0,
-    changePct: 1.30,
     aliases: ["NIFTY50 PR 2X LEV", "INDICES"],
   },
   {
@@ -385,8 +354,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY50 PR 1X INVERSE INDEX",
-    ltp: 3200.0,
-    changePct: -0.65,
     aliases: ["NIFTY50 PR 1X INV", "INDICES"],
   },
   {
@@ -396,8 +363,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY50 TR 2X LEVERAGED INDEX",
-    ltp: 16200.0,
-    changePct: 1.30,
     aliases: ["NIFTY50 TR 2X LEV", "INDICES"],
   },
   {
@@ -407,8 +372,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY50 TR 1X INVERSE INDEX",
-    ltp: 3100.0,
-    changePct: -0.65,
     aliases: ["NIFTY50 TR 1X INV", "INDICES"],
   },
   {
@@ -418,8 +381,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY MIDCAP 50 INDEX",
-    ltp: 16100.0,
-    changePct: 0.70,
     aliases: ["NIFTY MIDCAP 50", "INDICES"],
   },
   {
@@ -429,8 +390,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY REALTY INDEX",
-    ltp: 1050.0,
-    changePct: 1.85,
     aliases: ["NIFTY REALTY", "INDICES"],
   },
   {
@@ -440,8 +399,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "IDX_I",
     instrumentType: "INDEX",
     name: "NIFTY INFRASTRUCTURE INDEX",
-    ltp: 9100.0,
-    changePct: 0.35,
     aliases: ["NIFTY INFRA", "INDICES"],
   },
   // Equities
@@ -452,8 +409,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Reliance Industries Ltd",
-    ltp: 2980.5,
-    changePct: 1.25,
     aliases: ["RELIANCE", "RIL"],
   },
   {
@@ -463,8 +418,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Tata Consultancy Services Ltd",
-    ltp: 4210.0,
-    changePct: -0.45,
     aliases: ["TCS", "TATA CONSULTANCY"],
   },
   {
@@ -474,8 +427,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "HDFC Bank Ltd",
-    ltp: 1640.2,
-    changePct: 0.80,
     aliases: ["HDFCBANK", "HDFC BANK"],
   },
   {
@@ -485,8 +436,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Infosys Ltd",
-    ltp: 1890.1,
-    changePct: -1.10,
     aliases: ["INFY", "INFOSYS"],
   },
   {
@@ -496,8 +445,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "ICICI Bank Ltd",
-    ltp: 1215.3,
-    changePct: 1.40,
     aliases: ["ICICIBANK", "ICICI BANK"],
   },
   {
@@ -507,8 +454,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "State Bank of India",
-    ltp: 815.4,
-    changePct: 1.15,
     aliases: ["SBIN", "SBI", "STATE BANK"],
   },
   {
@@ -518,8 +463,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Bharti Airtel Ltd",
-    ltp: 1620.0,
-    changePct: 0.50,
     aliases: ["BHARTIARTL", "AIRTEL"],
   },
   {
@@ -529,8 +472,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "ITC Ltd",
-    ltp: 495.0,
-    changePct: -0.20,
     aliases: ["ITC"],
   },
   {
@@ -540,8 +481,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Kotak Mahindra Bank Ltd",
-    ltp: 1810.0,
-    changePct: -0.30,
     aliases: ["KOTAK", "KOTAKBANK"],
   },
   {
@@ -551,8 +490,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Larsen & Toubro Ltd",
-    ltp: 3620.0,
-    changePct: 1.80,
     aliases: ["LT", "L&T"],
   },
   {
@@ -562,8 +499,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Axis Bank Ltd",
-    ltp: 1180.0,
-    changePct: 0.60,
     aliases: ["AXISBANK", "AXIS BANK"],
   },
   {
@@ -573,8 +508,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Wipro Ltd",
-    ltp: 540.0,
-    changePct: 0.10,
     aliases: ["WIPRO"],
   },
   {
@@ -584,8 +517,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "HCL Technologies Ltd",
-    ltp: 1780.0,
-    changePct: -0.90,
     aliases: ["HCLTECH", "HCL TECH"],
   },
   {
@@ -595,8 +526,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Bajaj Finance Ltd",
-    ltp: 7100.0,
-    changePct: -0.75,
     aliases: ["BAJFINANCE", "BAJAJ FINANCE"],
   },
   {
@@ -606,8 +535,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Maruti Suzuki India Ltd",
-    ltp: 12400.0,
-    changePct: 0.90,
     aliases: ["MARUTI", "MARUTI SUZUKI"],
   },
   {
@@ -617,8 +544,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Tata Motors Ltd",
-    ltp: 980.0,
-    changePct: 2.10,
     aliases: ["TATAMOTORS", "TATA MOTORS"],
   },
   {
@@ -628,8 +553,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Tata Steel Ltd",
-    ltp: 154.8,
-    changePct: 0.40,
     aliases: ["TATASTEEL", "TATA STEEL"],
   },
   {
@@ -639,8 +562,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Sun Pharmaceutical Industries Ltd",
-    ltp: 1850.0,
-    changePct: 1.05,
     aliases: ["SUNPHARMA", "SUN PHARMA"],
   },
   {
@@ -650,8 +571,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Hero MotoCorp Ltd",
-    ltp: 5300.0,
-    changePct: -0.16,
     aliases: ["HEROMOTOCO", "HERO"],
   },
   {
@@ -661,8 +580,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Mphasis Ltd",
-    ltp: 3012.0,
-    changePct: 0.85,
     aliases: ["MPHASIS"],
   },
   {
@@ -672,8 +589,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Cipla Ltd",
-    ltp: 1385.0,
-    changePct: -0.70,
     aliases: ["CIPLA"],
   },
   {
@@ -683,8 +598,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Coal India Ltd",
-    ltp: 415.35,
-    changePct: -1.12,
     aliases: ["COALINDIA", "COAL INDIA"],
   },
   {
@@ -694,8 +607,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Godfrey Phillips India Ltd",
-    ltp: 2051.0,
-    changePct: 0.29,
     aliases: ["GODFRYPHLP", "GODFREY"],
   },
   {
@@ -705,8 +616,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Techno Electric & Engineering Co Ltd",
-    ltp: 979.50,
-    changePct: 0.60,
     aliases: ["TECHNOE", "TECHNO ELECTRIC"],
   },
   {
@@ -716,8 +625,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "L&T Technology Services Ltd",
-    ltp: 3493.30,
-    changePct: -0.23,
     aliases: ["LTTS"],
   },
   {
@@ -727,8 +634,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Manappuram Finance Ltd",
-    ltp: 339.70,
-    changePct: -0.38,
     aliases: ["MANAPPURAM"],
   },
   {
@@ -738,8 +643,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Bodal Chemicals Ltd",
-    ltp: 155.62,
-    changePct: 3.22,
     aliases: ["BODALCHEM"],
   },
   {
@@ -749,8 +652,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "BLS E-Services Ltd",
-    ltp: 320.05,
-    changePct: -1.11,
     aliases: ["BLSE"],
   },
   {
@@ -760,8 +661,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Morepen Laboratories Ltd",
-    ltp: 113.74,
-    changePct: -3.16,
     aliases: ["MOREPENLAB"],
   },
   {
@@ -771,8 +670,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Tata Motors Commercial Vehicles",
-    ltp: 458.20,
-    changePct: -0.47,
     aliases: ["TMCV"],
   },
   {
@@ -782,8 +679,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Computer Age Management Services Ltd",
-    ltp: 748.80,
-    changePct: 0.19,
     aliases: ["CAMS"],
   },
   {
@@ -793,8 +688,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Delta Corp Ltd",
-    ltp: 56.15,
-    changePct: -0.34,
     aliases: ["DELTACORP", "DELTA CORP"],
   },
   {
@@ -804,8 +697,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "HDFC Asset Management Co Ltd",
-    ltp: 2463.00,
-    changePct: -1.62,
     aliases: ["HDFCAMC", "HDFC AMC"],
   },
   {
@@ -815,8 +706,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Aarti Industries Ltd",
-    ltp: 492.05,
-    changePct: -1.96,
     aliases: ["AARTIIND", "AARTI"],
   },
   {
@@ -826,8 +715,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Indraprastha Gas Ltd",
-    ltp: 158.05,
-    changePct: 5.75,
     aliases: ["IGL"],
   },
   {
@@ -837,8 +724,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "STYRENIX PERFORMANCE",
-    ltp: 2150.0,
-    changePct: 1.20,
     aliases: ["STYRFNIX"],
   },
   {
@@ -848,8 +733,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SHARE IND. SECURITIES",
-    ltp: 1420.0,
-    changePct: -0.30,
     aliases: ["SHAREINDIA"],
   },
   {
@@ -859,8 +742,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SINTERCOM INDIA",
-    ltp: 145.0,
-    changePct: 0.80,
     aliases: ["SINTERCOM"],
   },
   {
@@ -870,8 +751,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SHRADHA REALTY",
-    ltp: 72.50,
-    changePct: -0.50,
     aliases: ["SHRADHA"],
   },
   {
@@ -881,8 +760,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SHALBY LTD",
-    ltp: 245.0,
-    changePct: 0.60,
     aliases: ["SHALBY"],
   },
   {
@@ -892,8 +769,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SUDARSHAN COLORANT IND",
-    ltp: 680.0,
-    changePct: -1.10,
     aliases: ["SUDARCOLOR"],
   },
   {
@@ -903,8 +778,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SHIVA TEXYARN",
-    ltp: 195.0,
-    changePct: 0.20,
     aliases: ["SHIVATEX"],
   },
   {
@@ -914,8 +787,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SUBEX INDIA",
-    ltp: 32.50,
-    changePct: -0.15,
     aliases: ["SUBEXLTD", "SUBEX"],
   },
   {
@@ -925,8 +796,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SCHAEFFLER INDIA",
-    ltp: 3850.0,
-    changePct: 1.40,
     aliases: ["SCHAEFFLER"],
   },
   {
@@ -936,8 +805,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SOM DIST & BREW",
-    ltp: 310.0,
-    changePct: 0.50,
     aliases: ["SDBL"],
   },
   {
@@ -947,8 +814,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SANOFI INDIA",
-    ltp: 6800.0,
-    changePct: -0.25,
     aliases: ["SANOFI"],
   },
   {
@@ -958,8 +823,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Titan Company Ltd",
-    ltp: 3450.0,
-    changePct: 0.75,
     aliases: ["TITAN"],
   },
   {
@@ -969,8 +832,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Adani Enterprises Ltd",
-    ltp: 3020.0,
-    changePct: -0.40,
     aliases: ["ADANIENT", "ADANI"],
   },
   {
@@ -980,8 +841,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Adani Ports & SEZ Ltd",
-    ltp: 1450.0,
-    changePct: 0.90,
     aliases: ["ADANIPORTS"],
   },
   {
@@ -991,8 +850,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Asian Paints Ltd",
-    ltp: 3180.0,
-    changePct: -0.30,
     aliases: ["ASIANPAINT", "ASIAN PAINTS"],
   },
   {
@@ -1002,8 +859,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Bajaj Auto Ltd",
-    ltp: 10400.0,
-    changePct: 1.15,
     aliases: ["BAJAJ AUTO", "BAJAJ-AUTO"],
   },
   {
@@ -1013,8 +868,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Bajaj Finserv Ltd",
-    ltp: 1720.0,
-    changePct: 0.25,
     aliases: ["BAJAJFINSV", "BAJAJ FINSERV"],
   },
   {
@@ -1024,8 +877,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Bharat Petroleum Corporation Ltd",
-    ltp: 350.0,
-    changePct: -0.60,
     aliases: ["BPCL"],
   },
   {
@@ -1035,8 +886,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Britannia Industries Ltd",
-    ltp: 5800.0,
-    changePct: 0.35,
     aliases: ["BRITANNIA"],
   },
   {
@@ -1046,8 +895,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Dr. Reddy's Laboratories Ltd",
-    ltp: 6600.0,
-    changePct: 0.85,
     aliases: ["DRREDDY", "DR REDDY"],
   },
   {
@@ -1057,8 +904,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Eicher Motors Ltd",
-    ltp: 4900.0,
-    changePct: 1.40,
     aliases: ["EICHERMOT", "EICHER"],
   },
   {
@@ -1068,8 +913,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Grasim Industries Ltd",
-    ltp: 2650.0,
-    changePct: -0.20,
     aliases: ["GRASIM"],
   },
   {
@@ -1079,8 +922,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "HDFC Life Insurance Co Ltd",
-    ltp: 710.0,
-    changePct: 0.15,
     aliases: ["HDFCLIFE", "HDFC LIFE"],
   },
   {
@@ -1090,8 +931,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Hindalco Industries Ltd",
-    ltp: 670.0,
-    changePct: 1.10,
     aliases: ["HINDALCO"],
   },
   {
@@ -1101,8 +940,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Hindustan Unilever Ltd",
-    ltp: 2780.0,
-    changePct: -0.45,
     aliases: ["HINDUNILVR", "HUL", "HINDUSTAN UNILEVER"],
   },
   {
@@ -1112,8 +949,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "IndusInd Bank Ltd",
-    ltp: 1420.0,
-    changePct: -0.80,
     aliases: ["INDUSINDBK", "INDUSIND"],
   },
   {
@@ -1123,8 +958,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "JSW Steel Ltd",
-    ltp: 940.0,
-    changePct: 0.50,
     aliases: ["JSWSTEEL", "JSW STEEL"],
   },
   {
@@ -1134,8 +967,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Mahindra & Mahindra Ltd",
-    ltp: 2850.0,
-    changePct: 1.70,
     aliases: ["M&M", "MAHINDRA"],
   },
   {
@@ -1145,8 +976,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Nestle India Ltd",
-    ltp: 2500.0,
-    changePct: -0.10,
     aliases: ["NESTLEIND", "NESTLE"],
   },
   {
@@ -1156,8 +985,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "NTPC Ltd",
-    ltp: 410.0,
-    changePct: 0.90,
     aliases: ["NTPC"],
   },
   {
@@ -1167,8 +994,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Oil & Natural Gas Corporation Ltd",
-    ltp: 320.0,
-    changePct: 0.40,
     aliases: ["ONGC"],
   },
   {
@@ -1178,8 +1003,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Power Grid Corporation of India Ltd",
-    ltp: 330.0,
-    changePct: 0.60,
     aliases: ["POWERGRID", "POWER GRID"],
   },
   {
@@ -1189,8 +1012,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "SBI Life Insurance Co Ltd",
-    ltp: 1780.0,
-    changePct: -0.25,
     aliases: ["SBILIFE", "SBI LIFE"],
   },
   {
@@ -1200,8 +1021,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Tata Consumer Products Ltd",
-    ltp: 1180.0,
-    changePct: 0.10,
     aliases: ["TATACONSUM", "TATA CONSUMER"],
   },
   {
@@ -1211,8 +1030,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Tech Mahindra Ltd",
-    ltp: 1580.0,
-    changePct: -0.50,
     aliases: ["TECHM", "TECH MAHINDRA"],
   },
   {
@@ -1222,8 +1039,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "UltraTech Cement Ltd",
-    ltp: 11200.0,
-    changePct: 0.70,
     aliases: ["ULTRACEMCO", "ULTRATECH"],
   },
   {
@@ -1233,8 +1048,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Zomato Ltd",
-    ltp: 255.0,
-    changePct: 2.30,
     aliases: ["ZOMATO"],
   },
   {
@@ -1244,8 +1057,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "One 97 Communications Ltd (Paytm)",
-    ltp: 645.0,
-    changePct: -1.20,
     aliases: ["PAYTM", "ONE 97"],
   },
   {
@@ -1255,8 +1066,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Tata Power Co Ltd",
-    ltp: 440.0,
-    changePct: 1.50,
     aliases: ["TATAPOWER", "TATA POWER"],
   },
   {
@@ -1266,8 +1075,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Indian Railway Catering & Tourism Corp",
-    ltp: 920.0,
-    changePct: 0.40,
     aliases: ["IRCTC"],
   },
   {
@@ -1277,8 +1084,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Hindustan Aeronautics Ltd",
-    ltp: 4750.0,
-    changePct: 3.10,
     aliases: ["HAL"],
   },
   {
@@ -1288,8 +1093,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Bharat Electronics Ltd",
-    ltp: 305.0,
-    changePct: 1.80,
     aliases: ["BEL"],
   },
   {
@@ -1299,8 +1102,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Vedanta Ltd",
-    ltp: 460.0,
-    changePct: 0.90,
     aliases: ["VEDL", "VEDANTA"],
   },
   {
@@ -1310,8 +1111,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Pidilite Industries Ltd",
-    ltp: 3150.0,
-    changePct: -0.30,
     aliases: ["PIDILITIND", "PIDILITE"],
   },
   {
@@ -1321,8 +1120,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "NIPPON INDIA ETF NIFTY BEES",
-    ltp: 275.50,
-    changePct: 0.65,
     aliases: ["NIFTYBEES", "NIFTY BEES", "ETF"],
   },
   {
@@ -1332,8 +1129,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "NIPPON INDIA ETF BANK BEES",
-    ltp: 532.10,
-    changePct: -0.20,
     aliases: ["BANKBEES", "BANK BEES", "ETF"],
   },
   {
@@ -1343,8 +1138,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "NIPPON INDIA ETF GOLD BEES",
-    ltp: 62.40,
-    changePct: 0.80,
     aliases: ["GOLDBEES", "GOLD BEES", "ETF"],
   },
   {
@@ -1354,8 +1147,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "NIPPON INDIA ETF SILVER BEES",
-    ltp: 88.75,
-    changePct: 1.20,
     aliases: ["SILVERBEES", "SILVER BEES", "ETF"],
   },
   {
@@ -1365,8 +1156,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "NIPPON INDIA ETF NIFTY IT",
-    ltp: 43.15,
-    changePct: -0.40,
     aliases: ["ITBEES", "IT BEES", "ETF"],
   },
   {
@@ -1376,8 +1165,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "NIPPON INDIA ETF JUNIOR BEES",
-    ltp: 745.00,
-    changePct: 0.50,
     aliases: ["JUNIORBEES", "JUNIOR BEES", "ETF"],
   },
   {
@@ -1387,8 +1174,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "NIPPON INDIA ETF LIQUID BEES",
-    ltp: 1000.00,
-    changePct: 0.01,
     aliases: ["LIQUIDBEES", "LIQUID BEES", "ETF"],
   },
   {
@@ -1398,8 +1183,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "BSE_EQ",
     instrumentType: "ETF",
     name: "ZERODHA SILVER ETF",
-    ltp: 88.50,
-    changePct: 0.50,
     aliases: ["SILVERCASF", "ZERODHA SILVER ETF", "ETF"],
   },
   {
@@ -1409,8 +1192,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "ZERODHA AMC - SILCASINAV",
-    ltp: 88.20,
-    changePct: 0.40,
     aliases: ["SILCASINAV", "ETF"],
   },
   {
@@ -1420,8 +1201,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "ZERODHA AMC - SML100NAV",
-    ltp: 55.40,
-    changePct: 0.15,
     aliases: ["SML100INAV", "ETF"],
   },
   {
@@ -1431,8 +1210,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "ZERODHA NIFTY SMALLCAP 100 ETF",
-    ltp: 55.70,
-    changePct: 0.20,
     aliases: ["SML100CASE", "ETF"],
   },
   {
@@ -1442,8 +1219,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "SBI PRIVATE BANK ETF",
-    ltp: 450.0,
-    changePct: 0.35,
     aliases: ["SBIETFPB", "ETF"],
   },
   {
@@ -1453,8 +1228,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "SBI ETF IT ETF",
-    ltp: 42.80,
-    changePct: -0.45,
     aliases: ["SBIETFIT", "ETF"],
   },
   {
@@ -1464,8 +1237,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "Motilal Oswal Nasdaq 100 ETF",
-    ltp: 324.67,
-    changePct: 0.25,
     aliases: ["MON100", "ETF"],
   },
   // MCX Commodities
@@ -1476,8 +1247,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "MCX_COMM",
     instrumentType: "FUTCOM",
     name: "CRUDE OIL MCX FUTURES",
-    ltp: 6150.0,
-    changePct: -0.60,
     lotSize: 100,
     aliases: ["CRUDE OIL", "CRUDEOIL", "MCX CRUDE"],
   },
@@ -1488,8 +1257,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "MCX_COMM",
     instrumentType: "FUTCOM",
     name: "GOLD 1KG MCX FUTURES",
-    ltp: 72450.0,
-    changePct: 0.45,
     lotSize: 100,
     aliases: ["GOLD", "MCX GOLD", "GOLD FUT"],
   },
@@ -1500,8 +1267,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "MCX_COMM",
     instrumentType: "FUTCOM",
     name: "SILVER 30KG MCX FUTURES",
-    ltp: 84200.0,
-    changePct: 1.10,
     lotSize: 30,
     aliases: ["SILVER", "MCX SILVER", "SILVER FUT"],
   },
@@ -1512,8 +1277,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "MCX_COMM",
     instrumentType: "FUTCOM",
     name: "NATURAL GAS MCX FUTURES",
-    ltp: 195.50,
-    changePct: -1.80,
     lotSize: 1250,
     aliases: ["NATURAL GAS", "NATURALGAS", "MCX NG"],
   },
@@ -1524,8 +1287,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "MCX_COMM",
     instrumentType: "FUTCOM",
     name: "COPPER MCX FUTURES",
-    ltp: 825.40,
-    changePct: 0.30,
     lotSize: 2500,
     aliases: ["COPPER", "MCX COPPER"],
   },
@@ -1537,8 +1298,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_CURRENCY",
     instrumentType: "FUTCUR",
     name: "USDINR CURRENCY FUTURES",
-    ltp: 83.92,
-    changePct: 0.05,
     lotSize: 1000,
     aliases: ["USDINR", "USD-INR", "USD"],
   },
@@ -1549,8 +1308,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_CURRENCY",
     instrumentType: "FUTCUR",
     name: "EURINR CURRENCY FUTURES",
-    ltp: 91.45,
-    changePct: -0.12,
     lotSize: 1000,
     aliases: ["EURINR", "EUR-INR", "EUR"],
   },
@@ -1561,8 +1318,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_CURRENCY",
     instrumentType: "FUTCUR",
     name: "GBPINR CURRENCY FUTURES",
-    ltp: 109.80,
-    changePct: 0.22,
     lotSize: 1000,
     aliases: ["GBPINR", "GBP-INR", "GBP"],
   },
@@ -1573,8 +1328,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_CURRENCY",
     instrumentType: "FUTCUR",
     name: "JPYINR CURRENCY FUTURES",
-    ltp: 58.30,
-    changePct: -0.35,
     lotSize: 1000,
     aliases: ["JPYINR", "JPY-INR", "JPY"],
   },
@@ -1585,8 +1338,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_EQ",
     instrumentType: "EQUITY",
     name: "Coin Proxy Demo Stock",
-    ltp: 150.0,
-    changePct: 0.0,
     aliases: ["COIN"],
   },
   // F&O
@@ -1597,8 +1348,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_FNO",
     instrumentType: "FUTIDX",
     name: "NIFTY BANK CURRENT EXPIRY FUTURES",
-    ltp: 52180.0,
-    changePct: -0.20,
     aliases: ["BANKNIFTY FUT", "BANKNIFTYFUT"],
   },
   {
@@ -1608,8 +1357,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_FNO",
     instrumentType: "OPTIDX",
     name: "NIFTY BANK 52000 CALL OPTION",
-    ltp: 340.0,
-    changePct: 4.5,
     strike: 52000,
     optionType: "CE",
     aliases: ["BANKNIFTY 52000 CE", "52000 CE"],
@@ -1621,8 +1368,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_FNO",
     instrumentType: "FUTIDX",
     name: "NIFTY 50 CURRENT EXPIRY FUTURES",
-    ltp: 24530.0,
-    changePct: 0.60,
     aliases: ["NIFTY FUT", "NIFTYFUT"],
   },
   {
@@ -1632,8 +1377,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_FNO",
     instrumentType: "OPTIDX",
     name: "NIFTY 24500 CALL OPTION",
-    ltp: 185.0,
-    changePct: 6.2,
     strike: 24500,
     optionType: "CE",
     aliases: ["NIFTY 24500 CE", "24500 CE"],
@@ -1645,8 +1388,6 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     segment: "NSE_FNO",
     instrumentType: "OPTIDX",
     name: "NIFTY 24500 PUT OPTION",
-    ltp: 140.0,
-    changePct: -8.5,
     strike: 24500,
     optionType: "PE",
     aliases: ["NIFTY 24500 PE", "24500 PE"],
@@ -1744,7 +1485,6 @@ export function resolveCatalogInstrument(
       segment: meta.segment,
       instrumentType: meta.instrumentType,
       name: meta.name,
-      ltp: meta.ltp,
     };
   }
 
@@ -1766,23 +1506,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         tradingSymbol: "MPHASIS-EQ",
         name: "Mphasis Ltd",
         order: 0,
-        ltp: 2357.10,
-        changePct: -2.68,
-        changeAbs: -64.90,
-        volume: 366195,
-        open: 2409.90,
-        prevClose: 2422.00,
-        high: 2409.90,
-        low: 2340.30,
-        avgPrice: 2359.56,
-        lowerCircuit: 2179.80,
-        upperCircuit: 2664.20,
-        ltq: 3,
-        ltt: "2026-09-07 11:40:03",
-        fiftyTwoWeekHigh: 3125.00,
-        fiftyTwoWeekLow: 2180.00,
-        bid: 2357.10,
-        ask: 2357.50,
       },
       {
         symbol: "RELIANCE",
@@ -1791,23 +1514,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         tradingSymbol: "RELIANCE-EQ",
         name: "Reliance Industries Ltd",
         order: 1,
-        ltp: 2980.50,
-        changePct: 1.25,
-        changeAbs: 36.75,
-        volume: 4250000,
-        open: 2955.00,
-        prevClose: 2943.75,
-        high: 2995.00,
-        low: 2950.00,
-        avgPrice: 2972.40,
-        lowerCircuit: 2649.35,
-        upperCircuit: 3238.10,
-        ltq: 15,
-        ltt: "2026-09-07 11:40:03",
-        fiftyTwoWeekHigh: 3217.90,
-        fiftyTwoWeekLow: 2220.30,
-        bid: 2980.00,
-        ask: 2981.00,
       },
       {
         symbol: "TCS",
@@ -1816,23 +1522,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         tradingSymbol: "TCS-EQ",
         name: "Tata Consultancy Services Ltd",
         order: 2,
-        ltp: 4210.00,
-        changePct: -0.45,
-        changeAbs: -19.00,
-        volume: 1850000,
-        open: 4235.00,
-        prevClose: 4229.00,
-        high: 4240.00,
-        low: 4195.00,
-        avgPrice: 4218.10,
-        lowerCircuit: 3806.10,
-        upperCircuit: 4651.90,
-        ltq: 4,
-        ltt: "2026-09-07 11:40:03",
-        fiftyTwoWeekHigh: 4585.00,
-        fiftyTwoWeekLow: 3313.00,
-        bid: 4209.50,
-        ask: 4210.50,
       },
       {
         symbol: "HDFCBANK",
@@ -1841,23 +1530,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         tradingSymbol: "HDFCBANK-EQ",
         name: "HDFC Bank Ltd",
         order: 3,
-        ltp: 1640.20,
-        changePct: 0.80,
-        changeAbs: 13.00,
-        volume: 6800000,
-        open: 1632.00,
-        prevClose: 1627.20,
-        high: 1655.00,
-        low: 1630.00,
-        avgPrice: 1642.50,
-        lowerCircuit: 1464.50,
-        upperCircuit: 1789.90,
-        ltq: 10,
-        ltt: "2026-09-07 11:40:03",
-        fiftyTwoWeekHigh: 1794.00,
-        fiftyTwoWeekLow: 1363.55,
-        bid: 1640.00,
-        ask: 1640.50,
       },
       {
         symbol: "INFY",
@@ -1866,23 +1538,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         tradingSymbol: "INFY-EQ",
         name: "Infosys Ltd",
         order: 4,
-        ltp: 1890.10,
-        changePct: -1.10,
-        changeAbs: -21.00,
-        volume: 3100000,
-        open: 1912.00,
-        prevClose: 1911.10,
-        high: 1915.00,
-        low: 1882.00,
-        avgPrice: 1898.30,
-        lowerCircuit: 1720.00,
-        upperCircuit: 2102.20,
-        ltq: 25,
-        ltt: "2026-09-07 11:40:03",
-        fiftyTwoWeekHigh: 1991.45,
-        fiftyTwoWeekLow: 1358.35,
-        bid: 1889.50,
-        ask: 1890.50,
       },
       {
         symbol: "ICICIBANK",
@@ -1891,23 +1546,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         tradingSymbol: "ICICIBANK-EQ",
         name: "ICICI Bank Ltd",
         order: 5,
-        ltp: 1215.30,
-        changePct: 1.65,
-        changeAbs: 19.70,
-        volume: 5400000,
-        open: 1205.00,
-        prevClose: 1195.60,
-        high: 1222.00,
-        low: 1201.00,
-        avgPrice: 1211.20,
-        lowerCircuit: 1076.00,
-        upperCircuit: 1315.15,
-        ltq: 50,
-        ltt: "2026-09-07 11:40:03",
-        fiftyTwoWeekHigh: 1335.00,
-        fiftyTwoWeekLow: 980.00,
-        bid: 1215.00,
-        ask: 1215.50,
       },
     ],
   },
@@ -1925,12 +1563,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         tradingSymbol: "BANKNIFTY26SEPFUT",
         order: 0,
         expiry: "2026-09-30",
-        ltp: 52150.00,
-        changePct: 0.65,
-        changeAbs: 335.00,
-        volume: 850000,
-        oi: 2450000,
-        oiChangePct: 3.2,
       },
       {
         symbol: "BANKNIFTY-52000-CE",
@@ -1941,12 +1573,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         expiry: "2026-09-30",
         strike: 52000,
         optionType: "CE",
-        ltp: 385.50,
-        changePct: 12.50,
-        changeAbs: 42.80,
-        volume: 1250000,
-        oi: 3800000,
-        oiChangePct: 8.5,
       },
       {
         symbol: "BANKNIFTY-51500-PE",
@@ -1957,12 +1583,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         expiry: "2026-09-30",
         strike: 51500,
         optionType: "PE",
-        ltp: 145.20,
-        changePct: -18.40,
-        changeAbs: -32.80,
-        volume: 980000,
-        oi: 2900000,
-        oiChangePct: -4.1,
       },
     ],
   },
@@ -1980,16 +1600,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         tradingSymbol: "TATASTEEL-EQ",
         name: "Tata Steel Ltd",
         order: 0,
-        ltp: 154.80,
-        changePct: 2.85,
-        changeAbs: 4.30,
-        volume: 12400000,
-        high: 156.50,
-        low: 150.20,
-        open: 151.00,
-        prevClose: 150.50,
-        fiftyTwoWeekHigh: 184.60,
-        fiftyTwoWeekLow: 114.60,
       },
       {
         symbol: "SBIN",
@@ -1998,16 +1608,6 @@ export const DEFAULT_WATCHLISTS: Watchlist[] = [
         tradingSymbol: "SBIN-EQ",
         name: "State Bank of India",
         order: 1,
-        ltp: 815.40,
-        changePct: 1.15,
-        changeAbs: 9.25,
-        volume: 7600000,
-        high: 822.00,
-        low: 808.00,
-        open: 810.00,
-        prevClose: 806.15,
-        fiftyTwoWeekHigh: 912.00,
-        fiftyTwoWeekLow: 555.00,
       },
     ],
   },
@@ -2022,8 +1622,9 @@ export function loadWatchlists(): Watchlist[] {
       if (raw) isMigratingV1 = true;
     }
     if (!raw) {
-      saveWatchlists(DEFAULT_WATCHLISTS);
-      return DEFAULT_WATCHLISTS;
+      const defaults = markUnavailable(DEFAULT_WATCHLISTS);
+      saveWatchlists(defaults);
+      return defaults;
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
@@ -2044,15 +1645,14 @@ export function loadWatchlists(): Watchlist[] {
           columns: cols,
           items: (wl.items || []).map((it) => {
             const known = KNOWN_EQUITY_INSTRUMENTS[it.symbol];
+            const clean = unavailableReference(it);
             return {
-              ...it,
+              ...clean,
               securityId:
                 (!it.securityId || it.securityId.trim() === "") && known
                   ? known.securityId
                   : it.securityId,
               tradingSymbol: it.tradingSymbol || known?.tradingSymbol,
-              fiftyTwoWeekHigh: it.fiftyTwoWeekHigh ?? known?.fiftyTwoWeekHigh,
-              fiftyTwoWeekLow: it.fiftyTwoWeekLow ?? known?.fiftyTwoWeekLow,
             };
           }),
         };
@@ -2065,15 +1665,66 @@ export function loadWatchlists(): Watchlist[] {
   } catch {
     // Fall back gracefully on corrupt storage
   }
-  return DEFAULT_WATCHLISTS;
+  return markUnavailable(DEFAULT_WATCHLISTS);
 }
 
 export function saveWatchlists(watchlists: Watchlist[]): void {
   try {
-    localStorage.setItem(WATCHLISTS_STORAGE_KEY_V2, JSON.stringify(watchlists));
+    const referenceOnly = watchlists.map((watchlist) => ({
+      ...watchlist,
+      items: watchlist.items.map(stripMarketData),
+    }));
+    localStorage.setItem(WATCHLISTS_STORAGE_KEY_V2, JSON.stringify(referenceOnly));
   } catch (err) {
     console.error("Failed to save watchlists to localStorage:", err);
   }
+}
+
+function stripMarketData(item: WatchlistItem): WatchlistItem {
+  const {
+    ltp: _ltp,
+    changePct: _changePct,
+    changeAbs: _changeAbs,
+    volume: _volume,
+    oi: _oi,
+    oiChangePct: _oiChangePct,
+    high: _high,
+    low: _low,
+    fiftyTwoWeekHigh: _fiftyTwoWeekHigh,
+    fiftyTwoWeekLow: _fiftyTwoWeekLow,
+    prevClose: _prevClose,
+    open: _open,
+    close: _close,
+    avgPrice: _avgPrice,
+    lowerCircuit: _lowerCircuit,
+    upperCircuit: _upperCircuit,
+    ltq: _ltq,
+    ltt: _ltt,
+    bid: _bid,
+    ask: _ask,
+    isStale: _isStale,
+    marketDataState: _marketDataState,
+    marketDataSource: _marketDataSource,
+    marketDataReceivedAt: _marketDataReceivedAt,
+    marketDataError: _marketDataError,
+    ...reference
+  } = item;
+  return reference;
+}
+
+function unavailableReference(item: WatchlistItem): WatchlistItem {
+  return {
+    ...stripMarketData(item),
+    marketDataState: "UNAVAILABLE",
+    marketDataError: "Waiting for a verified Dhan quote",
+  };
+}
+
+function markUnavailable(watchlists: Watchlist[]): Watchlist[] {
+  return watchlists.map((watchlist) => ({
+    ...watchlist,
+    items: watchlist.items.map(unavailableReference),
+  }));
 }
 
 export function createWatchlist(

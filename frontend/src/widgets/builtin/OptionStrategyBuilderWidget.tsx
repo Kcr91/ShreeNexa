@@ -142,7 +142,7 @@ export const OptionStrategyBuilderWidget: React.FC<
         }
         return tick.ltp;
       });
-      setPriceChangePct(tick.changePct);
+      if (tick.changePct !== undefined) setPriceChangePct(tick.changePct);
       setIsLiveConnected(true);
       const d = new Date();
       setLastTickTime(d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
@@ -155,6 +155,7 @@ export const OptionStrategyBuilderWidget: React.FC<
     return () => {
       unsubscribeTick();
       unsubscribeState();
+      defaultWebSocketClient.unsubscribeChannels(["quotes"], [underlying]);
     };
   }, [underlying, targetPrice]);
 

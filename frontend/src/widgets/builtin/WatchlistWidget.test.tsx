@@ -267,17 +267,17 @@ describe("WatchlistWidget Component", () => {
     expect(screen.getByText("BAJFINANCE")).toBeInTheDocument();
   });
 
-  it("sorts watchlist items by clicking arrow button beside column title (symbol, change, price)", () => {
+  it("keeps unavailable market fields empty while identity sorting still works", () => {
     render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
 
     const chgPctSortBtn = screen.getByLabelText("Sort by Chg %");
     expect(chgPctSortBtn).toBeInTheDocument();
 
-    // Click Chg % sort button -> sorts descending (High to Low - biggest gainers first)
+    // Market values have not arrived, so clicking market sorts cannot invent values.
     fireEvent.click(chgPctSortBtn);
     let rows = screen.getAllByRole("row");
-    // Row 0 is header, Row 1 should be ICICIBANK (+1.40%)
-    expect(rows[1]).toHaveTextContent("ICICIBANK");
+    expect(rows[1]).toHaveTextContent("MPHASIS");
+    expect(rows[1]).toHaveTextContent("N/A");
 
     // Click Chg % again -> sorts ascending (Low to High - biggest losers first)
     fireEvent.click(chgPctSortBtn);
@@ -290,11 +290,12 @@ describe("WatchlistWidget Component", () => {
     rows = screen.getAllByRole("row");
     expect(rows[1]).toHaveTextContent("HDFCBANK");
 
-    // Click LTP sort button -> sorts by Current Price (High to Low)
+    // LTP remains unavailable until a Dhan tick or verified close is received.
     const ltpSortBtn = screen.getByLabelText("Sort by LTP (₹)");
     fireEvent.click(ltpSortBtn);
     rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("TCS");
+    expect(rows[1]).toHaveTextContent("MPHASIS");
+    expect(rows[1]).toHaveTextContent("N/A");
   });
 
   it("sorts watchlist items by 52W High (descending then ascending)", () => {
@@ -303,15 +304,16 @@ describe("WatchlistWidget Component", () => {
     const highSortBtn = screen.getByLabelText("Sort by 52W High");
     expect(highSortBtn).toBeInTheDocument();
 
-    // 1st click -> descending (highest 52W High first: TCS at 4585.00)
+    // No verified 52-week values are present; sort remains stable and shows N/A.
     fireEvent.click(highSortBtn);
     let rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("TCS");
+    expect(rows[1]).toHaveTextContent("MPHASIS");
+    expect(rows[1]).toHaveTextContent("N/A");
 
-    // 2nd click -> ascending (lowest 52W High first: ICICIBANK at 1335.00)
+    // The second direction remains stable while every value is missing.
     fireEvent.click(highSortBtn);
     rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("ICICIBANK");
+    expect(rows[1]).toHaveTextContent("MPHASIS");
   });
 
   it("sorts watchlist items by 52W Low (descending then ascending)", () => {
@@ -320,15 +322,16 @@ describe("WatchlistWidget Component", () => {
     const lowSortBtn = screen.getByLabelText("Sort by 52W Low");
     expect(lowSortBtn).toBeInTheDocument();
 
-    // 1st click -> descending (highest 52W Low first: TCS at 3313.00)
+    // No verified 52-week values are present; sort remains stable and shows N/A.
     fireEvent.click(lowSortBtn);
     let rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("TCS");
+    expect(rows[1]).toHaveTextContent("MPHASIS");
+    expect(rows[1]).toHaveTextContent("N/A");
 
-    // 2nd click -> ascending (lowest 52W Low first: ICICIBANK at 980.00)
+    // The second direction remains stable while every value is missing.
     fireEvent.click(lowSortBtn);
     rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("ICICIBANK");
+    expect(rows[1]).toHaveTextContent("MPHASIS");
   });
 
   it("does not render sort buttons or sort indicators on composite columns (52WH/L, High/Low, Bid/Ask)", () => {
@@ -346,19 +349,17 @@ describe("WatchlistWidget Component", () => {
     expect(highLowHeader.closest("th")).not.toHaveAttribute("aria-sort", "descending");
   });
 
-  it("displays 52W High and Low with percentage distance from current price", () => {
+  it("displays unavailable 52W fields without deriving synthetic values", () => {
     render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
 
     // Check table headers for 52W High and 52W Low
     expect(screen.getByText("52W High")).toBeInTheDocument();
     expect(screen.getByText("52W Low")).toBeInTheDocument();
 
-    // Verify formatted distance percentage rendered for MPHASIS
-    // MPHASIS: ltp 2357.10, 52W High 3125.00 (-24.57%), 52W Low 2180.00 (+8.12%)
-    expect(screen.getByText(/3,125\.00/i)).toBeInTheDocument();
-    expect(screen.getByText(/-24\.57%/i)).toBeInTheDocument();
-    expect(screen.getByText(/2,180\.00/i)).toBeInTheDocument();
-    expect(screen.getByText(/\+8\.12%/i)).toBeInTheDocument();
+    const mphasisRow = screen.getByText("MPHASIS").closest("tr")!;
+    expect(mphasisRow).toHaveTextContent("N/A");
+    expect(mphasisRow).not.toHaveTextContent("3,125.00");
+    expect(mphasisRow).not.toHaveTextContent("2,180.00");
   });
 
   it("places price change (Chg ₹) column immediately before percentage change (Chg %)", () => {
@@ -388,7 +389,8 @@ describe("WatchlistWidget Component", () => {
 
     expect(capturedEvent).not.toBeNull();
     expect(capturedEvent.symbol).toBe("MPHASIS");
-    expect(capturedEvent.item.ltp).toBe(2357.10);
+    expect(capturedEvent.item.ltp).toBeUndefined();
+    expect(capturedEvent.item.marketDataState).toBe("UNAVAILABLE");
 
     window.removeEventListener("shreenexa:select-symbol", listener);
   });

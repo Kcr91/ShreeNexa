@@ -130,6 +130,15 @@ def test_public_routes_accessible_without_auth() -> None:
 
 
 @pytest.mark.no_auth_override
+def test_demo_session_cannot_read_live_market_data() -> None:
+    client = TestClient(app)
+    client.cookies.set("shreenexa_session", "demo-session-token")
+
+    assert client.get("/api/v1/feed/status").status_code == 403
+    assert client.get("/api/v1/heatmap/indices").status_code == 403
+
+
+@pytest.mark.no_auth_override
 def test_cookie_mutating_request_rejected_without_csrf_403() -> None:
     """Session cookie caller without valid X-CSRF-Token must be rejected with 403."""
     # Seed a valid session into auth_service

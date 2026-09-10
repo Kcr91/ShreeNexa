@@ -54,6 +54,18 @@ async def require_session(
     return session
 
 
+async def require_non_demo_session(
+    session: Annotated[SessionInfo, Depends(require_session)],
+) -> SessionInfo:
+    """Require a real master-login session for live broker market data."""
+    if session.username == "Demo Trader":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Live Dhan market data requires master password and TOTP login.",
+        )
+    return session
+
+
 async def require_csrf(
     request: Request,
     session: Annotated[SessionInfo, Depends(get_current_session)],

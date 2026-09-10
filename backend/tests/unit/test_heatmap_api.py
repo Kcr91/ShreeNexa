@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Generator
 
 import pytest
 from app.api.heatmap import load_official_records_for_index
 from app.api.universe import get_db_engine
+from app.api.ws import configure_market_data_hot_cache, get_market_data_fanout_manager
 from app.contracts import heartbeat as hb
+from app.feedd import CachedQuote
 from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import text
@@ -29,6 +32,18 @@ def db_engine() -> Generator[Engine]:
 
 
 def test_index_level_heatmap_endpoint() -> None:
+    configure_market_data_hot_cache(use_redis=False)
+    get_market_data_fanout_manager().hot_cache.set_quote(
+        CachedQuote(
+            segment="0",
+            security_id="13",
+            ltp=22550.0,
+            previous_close=22000.0,
+            received_at=time.time(),
+            source="DHAN_REST",
+            market_state="MARKET_CLOSED",
+        )
+    )
     resp = client.get("/api/v1/heatmap/indices")
     assert resp.status_code == 200
     cells = resp.json()
@@ -39,12 +54,17 @@ def test_index_level_heatmap_endpoint() -> None:
     assert "NIFTY BANK" in names
     assert "NIFTY IT" in names
 
-    for c in cells:
-        assert "futures_basis" in c
-        assert "oi_change_pct" in c
-        assert "weighting_source" in c
-        assert c["weight"] > 0
-        assert c["advances"] + c["declines"] + c["unchanged"] > 0
+    nifty = next(c for c in cells if c["index_name"] == "NIFTY 50")
+    assert nifty["ltp"] == 22550.0
+    assert nifty["change_pct"] == 2.5
+    assert nifty["source"] == "DHAN_REST"
+    assert nifty["market_state"] == "MARKET_CLOSED"
+
+    unavailable = next(c for c in cells if c["index_name"] == "NIFTY BANK")
+    assert unavailable["ltp"] is None
+    assert unavailable["change_pct"] is None
+    assert unavailable["market_state"] == "UNAVAILABLE"
+    assert unavailable["error"]
 
 
 def test_constituent_level_heatmap_and_breadth(db_engine: Engine) -> None:
@@ -66,19 +86,17 @@ def test_constituent_level_heatmap_and_breadth(db_engine: Engine) -> None:
         assert total_weight == pytest.approx(100.0, abs=0.1)
         assert data["cell_total_weight"] == pytest.approx(100.0, abs=0.1)
 
-        # Invariant: Market breadth matches exact sum
+        # No quote cache was populated for constituents: breadth and values must
+        # remain explicitly unavailable rather than becoming seeded market data.
         breadth = data["breadth"]
-        assert breadth["total_count"] == len(constituents)
-        assert breadth["advances"] + breadth["declines"] + breadth["unchanged"] == len(constituents)
-        assert breadth["advance_decline_ratio"] >= 0.0
-        assert 0.0 <= breadth["pct_above_prev_close"] <= 100.0
-        assert breadth["sentiment_posture"] in {
-            "Strong Bullish",
-            "Moderate Bullish",
-            "Neutral",
-            "Moderate Bearish",
-            "Strong Bearish",
-        }
+        assert breadth["total_count"] == 0
+        assert breadth["advances"] == 0
+        assert breadth["declines"] == 0
+        assert breadth["unchanged"] == 0
+        assert data["market_state"] == "UNAVAILABLE"
+        assert data["error"]
+        assert all(c["ltp"] is None for c in constituents)
+        assert all(c["change_pct"] is None for c in constituents)
 
         # Invariant: transparent weighting source & fallback labelling
         for c in constituents:

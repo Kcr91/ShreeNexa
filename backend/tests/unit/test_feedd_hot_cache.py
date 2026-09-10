@@ -12,6 +12,7 @@ from app.dhan import (
     MarketDepth5,
     OIPacket,
     PacketHeader,
+    PrevClosePacket,
     QuotePacket,
 )
 from app.feedd import (
@@ -253,3 +254,48 @@ def test_feed_health_tracking() -> None:
     assert len(all_records) == 1
     assert all_records[0].is_stale is True
     assert pytest.approx(all_records[0].staleness_seconds, 0.01) == 15.0
+
+
+@pytest.mark.parametrize("cache_type", ["in_memory", "redis_mock"])
+def test_previous_close_never_replaces_last_traded_price(cache_type: str) -> None:
+    """Dhan's previous-close packet enriches a quote; it is not a price tick."""
+    fake_storage: dict[str, str] = {}
+    if cache_type == "in_memory":
+        cache: HotCache = InMemoryHotCache()
+    else:
+        mock_redis = MagicMock()
+        mock_redis.get.side_effect = lambda key: fake_storage.get(key)
+        mock_redis.set.side_effect = lambda key, value, ex=None: fake_storage.update({key: value})
+        pipe = MagicMock()
+        pipe.set.side_effect = lambda key, value, ex=None: fake_storage.update({key: value})
+        mock_redis.pipeline.return_value = pipe
+        cache = RedisHotCache(redis_client=mock_redis)
+
+    cache.update_from_packet(_make_quote_packet(1, 1333, 2450.5), now=1000.0)
+    cache.update_from_packet(
+        PrevClosePacket(
+            header=PacketHeader(
+                response_code=FeedResponseCode.PREV_CLOSE,
+                msg_length=16,
+                exchange_segment=1,
+                security_id=1333,
+            ),
+            prev_close=2442.0,
+            prev_oi=0,
+        ),
+        now=1001.0,
+    )
+
+    quote = cache.get_quote("1", "1333", now=1001.0)
+    assert quote is not None
+    assert quote.ltp == 2450.5
+    assert quote.previous_close == 2442.0
+
+
+def test_requested_subscription_set_is_dynamic_and_releasable() -> None:
+    cache = InMemoryHotCache()
+    cache.request_subscriptions([("1", "2885"), ("0", "13")])
+    assert cache.get_requested_subscriptions() == {("1", "2885"), ("0", "13")}
+
+    cache.release_subscriptions([("1", "2885")])
+    assert cache.get_requested_subscriptions() == {("0", "13")}

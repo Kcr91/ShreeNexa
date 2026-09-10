@@ -24,7 +24,7 @@ describe("MarketHeatmapWidget - NSE India Heatmap Component", () => {
     expect(screen.getByText("5")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("0%")).toBeInTheDocument();
+    expect(screen.getAllByText("0%").length).toBeGreaterThan(0);
     expect(screen.getByText("-1")).toBeInTheDocument();
     expect(screen.getByText("-3")).toBeInTheDocument();
     expect(screen.getByText("-5")).toBeInTheDocument();
@@ -204,7 +204,7 @@ describe("MarketHeatmapWidget - NSE India Heatmap Component", () => {
     expect(tilesReversed[0]).toHaveTextContent("HDFCBANK");
   });
 
-  it("sorts constituent stocks by % change high to low and low to high", () => {
+  it("does not fabricate constituent percentage changes when live data is absent", () => {
     render(<MarketHeatmapWidget instanceId="inst-heatmap-test" settings={{}} />);
 
     // Drill down into NIFTY 50
@@ -217,23 +217,23 @@ describe("MarketHeatmapWidget - NSE India Heatmap Component", () => {
     expect(sortSelect).toHaveValue("CHANGE_DESC");
 
     const gainerTiles = screen.getAllByTestId("constituent-card");
-    // APOLLOHOSP has highest change (+1.27%), followed by LT (+0.89%)
-    expect(gainerTiles[0]).toHaveTextContent("APOLLOHOSP");
-    expect(gainerTiles[0]).toHaveTextContent("+1.27%");
-    expect(gainerTiles[1]).toHaveTextContent("LT");
-    expect(gainerTiles[1]).toHaveTextContent("+0.89%");
+    expect(gainerTiles.every((tile) => tile.textContent?.includes("N/A"))).toBe(true);
+    expect(
+      screen.getByText("APOLLOHOSP").closest('[data-testid="constituent-card"]')
+    ).not.toHaveTextContent("+1.27%");
 
     // Sort by % Change: Low to High (Losers first)
     fireEvent.change(sortSelect, { target: { value: "CHANGE_ASC" } });
     expect(sortSelect).toHaveValue("CHANGE_ASC");
 
     const loserTiles = screen.getAllByTestId("constituent-card");
-    // INFY has lowest change (-3.78%)
-    expect(loserTiles[0]).toHaveTextContent("INFY");
-    expect(loserTiles[0]).toHaveTextContent("-3.78%");
+    expect(loserTiles.every((tile) => tile.textContent?.includes("N/A"))).toBe(true);
+    expect(
+      screen.getByText("INFY").closest('[data-testid="constituent-card"]')
+    ).not.toHaveTextContent("-3.78%");
   });
 
-  it("sorts indices view by % change high to low and low to high", () => {
+  it("does not fabricate index percentage changes when live data is absent", () => {
     render(<MarketHeatmapWidget instanceId="inst-heatmap-test" settings={{}} />);
 
     const sortSelect = screen.getByLabelText("Sort order");
@@ -244,9 +244,10 @@ describe("MarketHeatmapWidget - NSE India Heatmap Component", () => {
     expect(sortSelect).toHaveValue("CHANGE_DESC");
 
     const indexTiles = screen.getAllByTestId("index-card");
-    // NIFTY MICROCAP 250 has highest change (+0.42%) in Broad Market
-    expect(indexTiles[0]).toHaveTextContent("NIFTY MICROCAP 250");
-    expect(indexTiles[0]).toHaveTextContent("+0.42%");
+    expect(indexTiles.every((tile) => tile.textContent?.includes("N/A"))).toBe(true);
+    expect(
+      screen.getByText("NIFTY MICROCAP 250").closest('[data-testid="index-card"]')
+    ).not.toHaveTextContent("+0.42%");
 
     // Reverse sort direction to CHANGE_ASC (Losers first)
     const reverseBtn = screen.getByRole("button", { name: "Reverse sort direction" });
@@ -254,8 +255,9 @@ describe("MarketHeatmapWidget - NSE India Heatmap Component", () => {
     expect(sortSelect).toHaveValue("CHANGE_ASC");
 
     const loserIndexTiles = screen.getAllByTestId("index-card");
-    // NIFTY INDIA FPI 150 has lowest change (-0.55%)
-    expect(loserIndexTiles[0]).toHaveTextContent("NIFTY INDIA FPI 150");
-    expect(loserIndexTiles[0]).toHaveTextContent("-0.55%");
+    expect(loserIndexTiles.every((tile) => tile.textContent?.includes("N/A"))).toBe(true);
+    expect(
+      screen.getByText("NIFTY INDIA FPI 150").closest('[data-testid="index-card"]')
+    ).not.toHaveTextContent("-0.55%");
   });
 });

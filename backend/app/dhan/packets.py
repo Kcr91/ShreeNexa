@@ -15,6 +15,7 @@ class FeedResponseCode(IntEnum):
     QUOTE = 4
     OI = 5
     PREV_CLOSE = 6
+    MARKET_STATUS = 7
     FULL = 8
     DISCONNECT = 50
 
@@ -143,12 +144,20 @@ class PrevClosePacket:
     prev_oi: int
 
 
+@dataclass(frozen=True, slots=True)
+class MarketStatusPacket:
+    """Dhan market-status notification retained for stream framing."""
+
+    header: PacketHeader
+
+
 FeedPacket = (
     IndexPacket
     | TickerPacket
     | QuotePacket
     | OIPacket
     | PrevClosePacket
+    | MarketStatusPacket
     | FullPacket
     | DisconnectPacket
 )
@@ -166,8 +175,14 @@ class DhanFeedParser:
     TICKER_PAYLOAD_FORMAT = "<fi"
     TICKER_PACKET_SIZE = 16
 
-    QUOTE_PAYLOAD_FORMAT = "<fHifIffffff"
+    # Dhan v2: LTP, LTQ, LTT, ATP, volume, total sell, total buy,
+    # day open, day close, day high, day low.
+    QUOTE_PAYLOAD_FORMAT = "<fHifIIIffff"
     QUOTE_PACKET_SIZE = 50
+
+    # F7.8 does not consume Full packets. Retain the established synthetic
+    # fixture layout until the separately scoped 162-byte Full decoder is upgraded.
+    LEGACY_FULL_QUOTE_PAYLOAD_FORMAT = "<fHifIffffff"
 
     OI_PAYLOAD_FORMAT = "<I"
     OI_PACKET_SIZE = 12
@@ -218,6 +233,8 @@ class DhanFeedParser:
             return cls._parse_full(data, header)
         elif header.response_code == FeedResponseCode.PREV_CLOSE:
             return cls._parse_prev_close(data, header)
+        elif header.response_code == FeedResponseCode.MARKET_STATUS:
+            return MarketStatusPacket(header=header)
         elif header.response_code == FeedResponseCode.DISCONNECT:
             return cls._parse_disconnect(data, header)
         else:
@@ -265,12 +282,12 @@ class DhanFeedParser:
             ltt,
             avg_price,
             volume,
-            tot_buy,
             tot_sell,
+            tot_buy,
             day_open,
+            day_close,
             day_high,
             day_low,
-            day_close,
         ) = struct.unpack_from(cls.QUOTE_PAYLOAD_FORMAT, data, cls.HEADER_SIZE)
 
         return QuotePacket(
@@ -317,7 +334,7 @@ class DhanFeedParser:
             day_high,
             day_low,
             day_close,
-        ) = struct.unpack_from(cls.QUOTE_PAYLOAD_FORMAT, data, cls.HEADER_SIZE)
+        ) = struct.unpack_from(cls.LEGACY_FULL_QUOTE_PAYLOAD_FORMAT, data, cls.HEADER_SIZE)
 
         # 2. Parse 5 bids + 5 asks
         offset = cls.QUOTE_PACKET_SIZE
@@ -422,12 +439,12 @@ class DhanFeedParser:
             ltt,
             avg_price,
             volume,
-            float(total_buy_qty),
-            float(total_sell_qty),
+            int(total_sell_qty),
+            int(total_buy_qty),
             day_open,
+            day_close,
             day_high,
             day_low,
-            day_close,
         )
         return header + payload
 
@@ -462,7 +479,7 @@ class DhanFeedParser:
             FeedResponseCode.FULL, cls.FULL_PACKET_SIZE, exchange_segment, security_id
         )
         quote_part = struct.pack(
-            cls.QUOTE_PAYLOAD_FORMAT,
+            cls.LEGACY_FULL_QUOTE_PAYLOAD_FORMAT,
             ltp,
             ltq,
             ltt,

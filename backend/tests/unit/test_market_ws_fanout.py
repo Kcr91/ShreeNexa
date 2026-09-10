@@ -191,6 +191,17 @@ def test_unauthenticated_websocket_rejected() -> None:
     assert exc_info.value.code == 4401
 
 
+def test_demo_websocket_rejected_for_live_market_data() -> None:
+    client = TestClient(app)
+    with pytest.raises(WebSocketDisconnect) as exc_info:
+        with client.websocket_connect(
+            "/api/v1/feed/ws",
+            cookies={"shreenexa_session": "demo-session-token"},
+        ):
+            pass
+    assert exc_info.value.code == 4403
+
+
 def test_fastapi_websocket_endpoint_integration() -> None:
     """QA-05: Authenticated browser WebSocket connects and exchanges frames."""
     from app.auth.service import auth_service

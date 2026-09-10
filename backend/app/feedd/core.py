@@ -8,13 +8,28 @@ with F7.1+ (F0.9 first builds the connection-budget manager this will use).
 
 from __future__ import annotations
 
-from app.contracts.process_loop import main_for
+import asyncio
+import threading
+
+from app.contracts.process_loop import run_heartbeat_loop
+from app.dhan.live_feed_service import get_dhan_live_feed_service
 
 PROCESS_NAME = "feedd"
 
 
 def run() -> None:
-    main_for(PROCESS_NAME)
+    service = get_dhan_live_feed_service()
+    feed_thread = threading.Thread(
+        target=lambda: asyncio.run(service.run()),
+        name="dhan-market-feed",
+        daemon=True,
+    )
+    feed_thread.start()
+    try:
+        run_heartbeat_loop(PROCESS_NAME)
+    finally:
+        service.stop()
+        feed_thread.join(timeout=10.0)
 
 
 if __name__ == "__main__":

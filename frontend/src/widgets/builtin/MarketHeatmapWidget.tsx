@@ -17,7 +17,6 @@ import {
   SECTORAL_INDICES,
   THEMATIC_INDICES,
   STRATEGY_INDICES,
-  NIFTY_50_AUTHENTIC_CONSTITUENTS,
   getConstituentsForIndex,
 } from "../../heatmap/indicesCatalog";
 import { defaultWebSocketClient } from "../../websocket/client";
@@ -66,6 +65,12 @@ function formatNseTimestamp(date: Date): string {
   return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
+function marketDataApiError(status: number): Error {
+  return new Error(status === 403
+    ? "Live Dhan market data requires master password and TOTP login"
+    : `Authoritative Dhan market-data request failed (${status})`);
+}
+
 export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>> = ({
   settings,
 }) => {
@@ -92,17 +97,18 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
     STRATEGY: STRATEGY_INDICES,
   });
 
-  const [constituentsCache, setConstituentsCache] = useState<Record<string, ConstituentHeatmapItem[]>>({
-    "NIFTY 50": NIFTY_50_AUTHENTIC_CONSTITUENTS,
-  });
+  const [constituentsCache, setConstituentsCache] = useState<Record<string, ConstituentHeatmapItem[]>>({});
 
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   // Attempt backend fetch if API is reachable
   useEffect(() => {
-    fetch("/api/v1/heatmap/indices")
-      .then((res) => (res.ok ? res.json() : null))
+    fetch("/api/v1/heatmap/indices", { credentials: "include" })
+      .then((res) => {
+        if (!res.ok) throw marketDataApiError(res.status);
+        return res.json();
+      })
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setCategoryData((prev) => {
@@ -121,6 +127,12 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                     unchanged: d.unchanged,
                     futuresBasis: d.futures_basis,
                     oiChangePct: d.oi_change_pct,
+                    securityId: d.security_id,
+                    segment: d.segment,
+                    marketState: d.market_state,
+                    source: d.source,
+                    receivedAt: d.received_at,
+                    error: d.error,
                   };
                 }
               }
@@ -129,15 +141,28 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
           });
         }
       })
-      .catch(() => {});
+      .catch((reason: unknown) => {
+        const error = reason instanceof Error ? reason.message : "Authoritative Dhan market data is unavailable";
+        setCategoryData((previous) => Object.fromEntries(
+          Object.entries(previous).map(([category, items]) => [
+            category,
+            items.map((item) => ({ ...item, marketState: "ERROR", error })),
+          ]),
+        ) as Record<IndexCategory, IndexHeatmapItem[]>);
+      });
   }, []);
 
   // Fetch or resolve constituents when selectedIndex changes
   useEffect(() => {
     if (!constituentsCache[selectedIndex]) {
       // First try backend API
-      fetch(`/api/v1/heatmap/${encodeURIComponent(selectedIndex)}/constituents`)
-        .then((res) => (res.ok ? res.json() : null))
+      fetch(`/api/v1/heatmap/${encodeURIComponent(selectedIndex)}/constituents`, {
+        credentials: "include",
+      })
+        .then((res) => {
+          if (!res.ok) throw marketDataApiError(res.status);
+          return res.json();
+        })
         .then((data) => {
           if (data && Array.isArray(data.constituents) && data.constituents.length > 0) {
             setConstituentsCache((prev) => ({
@@ -151,10 +176,16 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                 changePct: c.change_pct,
                 ltp: c.ltp,
                 volume: c.volume,
+                securityId: c.security_id,
+                segment: c.segment,
+                marketState: c.market_state,
+                source: c.source,
+                receivedAt: c.received_at,
+                error: c.error,
               })),
             }));
           } else {
-            // Use authentic / realistic generated fallback
+            // Identity-only fallback. No market value is synthesized.
             const generated = getConstituentsForIndex(selectedIndex);
             setConstituentsCache((prev) => ({
               ...prev,
@@ -162,8 +193,13 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
             }));
           }
         })
-        .catch(() => {
-          const generated = getConstituentsForIndex(selectedIndex);
+        .catch((reason: unknown) => {
+          const error = reason instanceof Error ? reason.message : "Authoritative Dhan market data is unavailable";
+          const generated = getConstituentsForIndex(selectedIndex).map((item) => ({
+            ...item,
+            marketState: "ERROR" as const,
+            error,
+          }));
           setConstituentsCache((prev) => ({
             ...prev,
             [selectedIndex]: generated,
@@ -177,10 +213,23 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
     // 1. Subscribe to active constituents and indices
     const activeConstituents = constituentsCache[selectedIndex] || [];
     const symbols = activeConstituents.map((c) => c.symbol);
-    defaultWebSocketClient.subscribeChannels(
-      ["quotes"],
-      [...symbols, "NIFTY", "BANKNIFTY", "NIFTY 50", "NIFTY BANK", "RELIANCE", "TCS", "HDFCBANK", "INFY"]
-    );
+    const instruments = [
+      ...activeConstituents
+        .filter((item) => item.segment && item.securityId)
+        .map((item) => ({
+          segment: item.segment!,
+          securityId: item.securityId!,
+          symbol: item.symbol,
+        })),
+      ...Object.values(categoryData).flat().filter((item) => item.segment && item.securityId)
+        .map((item) => ({
+          segment: item.segment!,
+          securityId: item.securityId!,
+          symbol: item.indexName,
+        })),
+    ];
+    defaultWebSocketClient.connect();
+    defaultWebSocketClient.subscribeChannels(["quotes"], symbols, instruments);
 
     // 2. Listen to quote ticks from live feed
     const unsub = defaultWebSocketClient.onChannel("quotes", (data: unknown) => {
@@ -208,7 +257,10 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
               ...old,
               ltp: tick.ltp ?? old.ltp,
               changePct: tick.changePct ?? old.changePct,
-              volume: tick.volume || old.volume,
+              volume: tick.volume ?? old.volume,
+              marketState: tick.marketState,
+              source: tick.source,
+              receivedAt: tick.timestamp / 1000,
             };
             updatedCache[indexName] = updatedList;
           }
@@ -245,6 +297,9 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
               ...old,
               ltp: tick.ltp ?? old.ltp,
               changePct: tick.changePct ?? old.changePct,
+              marketState: tick.marketState,
+              source: tick.source,
+              receivedAt: tick.timestamp / 1000,
             };
             updatedCatData[cat] = updatedList;
           }
@@ -254,87 +309,37 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
       });
     });
 
+    const unsubState = defaultWebSocketClient.onStateChange((state) => {
+      if (state !== "ERROR") return;
+      const error = "Authoritative Dhan market-data feed is unavailable";
+      setCategoryData((previous) => Object.fromEntries(
+        Object.entries(previous).map(([category, items]) => [
+          category,
+          items.map((item) => ({
+            ...item,
+            marketState: item.ltp === undefined ? "ERROR" : "STALE",
+            error,
+          })),
+        ]),
+      ) as Record<IndexCategory, IndexHeatmapItem[]>);
+      setConstituentsCache((previous) => Object.fromEntries(
+        Object.entries(previous).map(([indexName, items]) => [
+          indexName,
+          items.map((item) => ({
+            ...item,
+            marketState: item.ltp === undefined ? "ERROR" : "STALE",
+            error,
+          })),
+        ]),
+      ));
+    });
+
     return () => {
       unsub();
+      unsubState();
+      defaultWebSocketClient.unsubscribeChannels(["quotes"], symbols, instruments);
     };
   }, [selectedIndex, constituentsCache[selectedIndex]?.length]);
-
-  // Fetch real Dhan live/closing quotes on mount and apply to heatmap
-  const syncDhanQuotes = useCallback(() => {
-    fetch("/api/v1/feed/quotes", {
-      headers: { Authorization: "Bearer demo-session-token" },
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data || !data.quotes) return;
-        setLastUpdated(new Date());
-        const quotes = data.quotes;
-
-        // 1. Update constituents cache with authentic quotes
-        setConstituentsCache((prevCache) => {
-          const updatedCache = { ...prevCache };
-          for (const indexName of Object.keys(updatedCache)) {
-            const list = updatedCache[indexName];
-            if (!list || list.length === 0) continue;
-            updatedCache[indexName] = list.map((c) => {
-              const q = quotes[c.symbol] || quotes[c.symbol.toUpperCase()];
-              if (!q) return c;
-              const ltp = Number(q.ltp);
-              const close = Number(q.close || ltp);
-              const open = Number(q.open || ltp);
-              const change = close !== ltp ? ltp - close : open > 0 && open !== ltp ? ltp - open : 0;
-              const changePct =
-                close > 0 && close !== ltp
-                  ? Number(((change / close) * 100).toFixed(2))
-                  : open > 0 && open !== ltp
-                  ? Number((((ltp - open) / open) * 100).toFixed(2))
-                  : 0;
-              return {
-                ...c,
-                ltp,
-                changePct,
-                volume: Number(q.volume || c.volume),
-              };
-            });
-          }
-          return updatedCache;
-        });
-
-        // 2. Update category index items with authentic quotes
-        setCategoryData((prevCatData) => {
-          const updatedCatData = { ...prevCatData };
-          for (const cat of Object.keys(updatedCatData) as IndexCategory[]) {
-            const list = updatedCatData[cat];
-            if (!list || list.length === 0) continue;
-            updatedCatData[cat] = list.map((item) => {
-              const q = quotes[item.indexName] || quotes[item.indexName.toUpperCase()];
-              if (!q) return item;
-              const ltp = Number(q.ltp);
-              const close = Number(q.close || ltp);
-              const open = Number(q.open || ltp);
-              const change = close !== ltp ? ltp - close : open > 0 && open !== ltp ? ltp - open : 0;
-              const changePct =
-                close > 0 && close !== ltp
-                  ? Number(((change / close) * 100).toFixed(2))
-                  : open > 0 && open !== ltp
-                  ? Number((((ltp - open) / open) * 100).toFixed(2))
-                  : 0;
-              return {
-                ...item,
-                ltp,
-                changePct,
-              };
-            });
-          }
-          return updatedCatData;
-        });
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    syncDhanQuotes();
-  }, [syncDhanQuotes]);
 
   // Toggle sort direction helper
   const toggleSortDirection = useCallback(() => {
@@ -365,9 +370,9 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
     const list = [...(categoryData[activeCategory] || ALL_INDICES_BY_CATEGORY[activeCategory])];
     switch (indexSort) {
       case "CHANGE_DESC":
-        return list.sort((a, b) => b.changePct - a.changePct || a.indexName.localeCompare(b.indexName));
+        return list.sort((a, b) => (b.changePct ?? -Infinity) - (a.changePct ?? -Infinity) || a.indexName.localeCompare(b.indexName));
       case "CHANGE_ASC":
-        return list.sort((a, b) => a.changePct - b.changePct || a.indexName.localeCompare(b.indexName));
+        return list.sort((a, b) => (a.changePct ?? Infinity) - (b.changePct ?? Infinity) || a.indexName.localeCompare(b.indexName));
       case "WEIGHT_DESC":
         return list.sort((a, b) => b.weight - a.weight || a.indexName.localeCompare(b.indexName));
       case "WEIGHT_ASC":
@@ -393,9 +398,9 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
       case "WEIGHT_ASC":
         return sorted.sort((a, b) => a.weight - b.weight || a.symbol.localeCompare(b.symbol));
       case "CHANGE_DESC":
-        return sorted.sort((a, b) => b.changePct - a.changePct || a.symbol.localeCompare(b.symbol));
+        return sorted.sort((a, b) => (b.changePct ?? -Infinity) - (a.changePct ?? -Infinity) || a.symbol.localeCompare(b.symbol));
       case "CHANGE_ASC":
-        return sorted.sort((a, b) => a.changePct - b.changePct || a.symbol.localeCompare(b.symbol));
+        return sorted.sort((a, b) => (a.changePct ?? Infinity) - (b.changePct ?? Infinity) || a.symbol.localeCompare(b.symbol));
       case "NAME_ASC":
         return sorted.sort((a, b) => a.symbol.localeCompare(b.symbol));
       case "NAME_DESC":
@@ -435,8 +440,18 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
 
   const handleManualRefresh = useCallback(() => {
     setLastUpdated(new Date());
-    syncDhanQuotes();
-  }, [syncDhanQuotes]);
+    defaultWebSocketClient.resync();
+  }, []);
+
+  const visibleMarketState = useMemo(() => {
+    const items = viewMode === "INDICES" ? currentIndicesList : currentConstituents;
+    const states = items.map((item) => item.marketState);
+    if (states.includes("LIVE")) return "LIVE";
+    if (states.includes("MARKET_CLOSED")) return "MARKET CLOSED";
+    if (states.includes("STALE")) return "STALE";
+    if (states.includes("ERROR")) return "ERROR";
+    return "UNAVAILABLE";
+  }, [viewMode, currentIndicesList, currentConstituents]);
 
   // Header Title calculation
   const headerTitle = useMemo(() => {
@@ -772,7 +787,7 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                     boxShadow: "0 0 5px var(--color-up, #3fb950)",
                   }}
                 />
-                <span>LIVE FEED</span>
+                <span>{visibleMarketState}</span>
               </div>
               <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Streaming</span>
               <button
@@ -940,8 +955,9 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
           {viewMode === "INDICES" ? (
             // Category Indices Heatmap (Images 1, 2, 3)
             currentIndicesList.map((item) => {
-              const isUp = item.changePct >= 0;
-              const bgColor = getNseColorForPct(item.changePct);
+              const hasValue = typeof item.changePct === "number";
+              const isUp = hasValue && item.changePct! >= 0;
+              const bgColor = hasValue ? getNseColorForPct(item.changePct!) : "#596273";
 
               return (
                 <div
@@ -961,7 +977,7 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                     boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
                     transition: "transform 0.12s ease, box-shadow 0.12s ease",
                   }}
-                  title={`Click to view constituents of ${item.indexName}`}
+                  title={item.error || `Click to view constituents of ${item.indexName}`}
                 >
                   <div
                     style={{
@@ -1018,10 +1034,10 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                         fontWeight: 700,
                       }}
                     >
-                      {item.ltp.toLocaleString("en-IN", {
+                      {typeof item.ltp === "number" ? item.ltp.toLocaleString("en-IN", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
-                      })}
+                      }) : "N/A"}
                     </span>
                     <span
                       style={{
@@ -1030,8 +1046,7 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                         fontWeight: 700,
                       }}
                     >
-                      {isUp ? "+" : ""}
-                      {item.changePct.toFixed(2)}%
+                      {hasValue ? `${isUp ? "+" : ""}${item.changePct!.toFixed(2)}%` : "N/A"}
                     </span>
                   </div>
                 </div>
@@ -1040,8 +1055,9 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
           ) : (
             // Constituent Drill-In Heatmap (Image 4)
             currentConstituents.map((stock) => {
-              const isUp = stock.changePct >= 0;
-              const bgColor = getNseColorForPct(stock.changePct);
+              const hasValue = typeof stock.changePct === "number";
+              const isUp = hasValue && stock.changePct! >= 0;
+              const bgColor = hasValue ? getNseColorForPct(stock.changePct!) : "#596273";
 
               return (
                 <div
@@ -1062,7 +1078,7 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                     position: "relative",
                     transition: "transform 0.12s ease, box-shadow 0.12s ease",
                   }}
-                  title={`${stock.name || stock.symbol} (${stock.sector}) - Weight: ${stock.weight.toFixed(2)}%`}
+                  title={stock.error || `${stock.name || stock.symbol} (${stock.sector}) - Weight: ${stock.weight.toFixed(2)}%`}
                 >
                   <div
                     style={{
@@ -1131,10 +1147,10 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                         fontWeight: 700,
                       }}
                     >
-                      {stock.ltp.toLocaleString("en-IN", {
+                      {typeof stock.ltp === "number" ? stock.ltp.toLocaleString("en-IN", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
-                      })}
+                      }) : "N/A"}
                     </span>
                     <span
                       style={{
@@ -1143,8 +1159,7 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                         fontWeight: 700,
                       }}
                     >
-                      {isUp ? "+" : ""}
-                      {stock.changePct.toFixed(2)}%
+                      {hasValue ? `${isUp ? "+" : ""}${stock.changePct!.toFixed(2)}%` : "N/A"}
                     </span>
                   </div>
                 </div>

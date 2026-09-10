@@ -60,7 +60,7 @@ export const WebSocketProvider: React.FC<{
   };
 
   const unsubscribeSymbol = (symbol: string) => {
-    client.unsubscribeChannels([], [symbol]);
+    client.unsubscribeChannels(["quotes"], [symbol]);
     setSubscribedSymbols(client.getSubscribedSymbols());
     setSubscribedChannels(client.getSubscribedChannels());
   };

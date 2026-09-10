@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.ws import get_market_data_fanout_manager
 from app.feedd.budget import (
@@ -42,39 +42,37 @@ def get_fanout_metrics() -> dict[str, Any]:
 
 @router.get("/status")
 def get_feed_status() -> dict[str, Any]:
-    """Retrieve Dhan live feed connection status and total packets received."""
-    from app.dhan.live_feed_service import get_dhan_live_feed_service
-
-    service = get_dhan_live_feed_service()
+    """Retrieve measured feedd health from shared hot state."""
+    records = get_market_data_fanout_manager().hot_cache.get_all_feed_health()
+    connected = any(record.is_connected and not record.is_stale for record in records)
     return {
-        "is_running": service.is_running,
-        "total_packets": service.total_packets,
-        "subscriptions_count": len(service.subscriptions),
+        "status": "LIVE" if connected else "UNAVAILABLE",
+        "is_connected": connected,
+        "total_packets": sum(record.total_packets for record in records),
+        "subscriptions_count": sum(record.subscribed_count for record in records),
+        "sockets": [record.model_dump() for record in records],
     }
 
 
 @router.get("/quotes")
 def get_feed_quotes() -> dict[str, Any]:
-    """Retrieve authentic Dhan real-time / today's closing OHLC quotes."""
-    from app.dhan.live_feed_service import get_dhan_live_feed_service
-
-    service = get_dhan_live_feed_service()
+    """Retrieve only requested, verified Dhan quote records."""
+    cache = get_market_data_fanout_manager().hot_cache
+    requested = sorted(cache.get_requested_subscriptions())
+    quotes = cache.get_multi_quotes(requested)
     return {
-        "status": "success",
-        "updated_at": service.last_quote_sync_time,
-        "quotes": service.get_latest_quotes(),
+        "status": "success" if quotes else "unavailable",
+        "quotes": {
+            f"{segment}:{security_id}": quote.model_dump()
+            for (segment, security_id), quote in quotes.items()
+        },
     }
 
 
 @router.post("/quotes/sync")
 async def trigger_quotes_sync() -> dict[str, Any]:
-    """Manually trigger immediate resync of quotes from Dhan REST API."""
-    from app.dhan.live_feed_service import get_dhan_live_feed_service
-
-    service = get_dhan_live_feed_service()
-    await service.sync_ohlc_quotes()
-    return {
-        "status": "success",
-        "updated_at": service.last_quote_sync_time,
-        "count": len(service.cached_quotes),
-    }
+    """Reject API-owned broker synchronization; feedd owns all Dhan calls."""
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Quote synchronization is owned by feedd and follows active subscriptions",
+    )

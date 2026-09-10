@@ -12,7 +12,6 @@ import {
 } from "../../depth/engine";
 import {
   loadWatchlists,
-  saveWatchlists,
   createWatchlist,
   deleteWatchlist,
   addSymbolToWatchlist,
@@ -46,13 +45,22 @@ export const NON_SORTABLE_COLUMNS: readonly WatchlistColumn[] = [
 ];
 
 export const getFiftyTwoWeekHigh = (item: WatchlistItem): number => {
-  const ltp = item.ltp ?? 0;
-  return item.fiftyTwoWeekHigh ?? (item.high ? Math.max(item.high * 1.15, ltp * 1.12) : ltp * 1.18);
+  return item.fiftyTwoWeekHigh ?? Number.NaN;
 };
 
 export const getFiftyTwoWeekLow = (item: WatchlistItem): number => {
-  const ltp = item.ltp ?? 0;
-  return item.fiftyTwoWeekLow ?? (item.low ? Math.min(item.low * 0.85, ltp * 0.82) : ltp * 0.78);
+  return item.fiftyTwoWeekLow ?? Number.NaN;
+};
+
+const FEED_SEGMENTS: Record<string, string> = {
+  IDX_I: "0",
+  NSE_EQ: "1",
+  NSE_FNO: "2",
+  NSE_CURRENCY: "3",
+  BSE_EQ: "4",
+  MCX_COMM: "5",
+  BSE_CURRENCY: "7",
+  BSE_FNO: "8",
 };
 
 export interface WatchlistSettings {
@@ -122,69 +130,31 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
     return watchlists.find((w) => w.id === activeWatchlistId) || watchlists[0];
   }, [watchlists, activeWatchlistId]);
 
+  const marketStateLabel = useMemo(() => {
+    const states = activeWatchlist?.items.map((item) => item.marketDataState) ?? [];
+    if (states.includes("LIVE")) return "LIVE";
+    if (states.includes("MARKET_CLOSED")) return "MARKET CLOSED";
+    if (states.includes("STALE")) return "STALE";
+    if (states.includes("ERROR")) return "ERROR";
+    return "UNAVAILABLE";
+  }, [activeWatchlist]);
+
   // Flash state map for dynamic tick animation
   const [priceFlashes, setPriceFlashes] = useState<Record<string, "up" | "down">>({});
-
-  // Sync authentic Dhan live/closing quotes on mount and apply to all watchlist items
-  useEffect(() => {
-    fetch("/api/v1/feed/quotes", {
-      headers: { Authorization: "Bearer demo-session-token" },
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data || !data.quotes) return;
-        const quotes = data.quotes;
-
-        setWatchlists((prev) => {
-          let updated = false;
-          const next = prev.map((wl) => {
-            const nextItems = wl.items.map((it) => {
-              const q =
-                quotes[it.symbol] ||
-                quotes[it.symbol.toUpperCase()] ||
-                (it.securityId ? quotes[it.securityId] : null);
-              if (!q) return it;
-              updated = true;
-              const ltp = Number(q.ltp);
-              const close = Number(q.close || ltp);
-              const open = Number(q.open || ltp);
-              const changeAbs =
-                close !== ltp
-                  ? Number((ltp - close).toFixed(2))
-                  : open > 0 && open !== ltp
-                  ? Number((ltp - open).toFixed(2))
-                  : 0;
-              const changePct =
-                close > 0 && close !== ltp
-                  ? Number(((changeAbs / close) * 100).toFixed(2))
-                  : open > 0 && open !== ltp
-                  ? Number((((ltp - open) / open) * 100).toFixed(2))
-                  : 0;
-              return {
-                ...it,
-                ltp,
-                changeAbs,
-                changePct,
-                volume: Number(q.volume || it.volume),
-              };
-            });
-            return { ...wl, items: nextItems };
-          });
-          if (updated) {
-            saveWatchlists(next);
-            return next;
-          }
-          return prev;
-        });
-      })
-      .catch(() => {});
-  }, []);
 
   // Real-time live feed subscription and quote tick processing
   useEffect(() => {
     if (activeWatchlist && activeWatchlist.items.length > 0) {
       const symbols = activeWatchlist.items.map((i) => i.symbol);
-      defaultWebSocketClient.subscribeChannels(["quotes", "depth"], symbols);
+      const instruments = activeWatchlist.items
+        .filter((item) => item.securityId && FEED_SEGMENTS[item.segment])
+        .map((item) => ({
+          segment: FEED_SEGMENTS[item.segment],
+          securityId: item.securityId,
+          symbol: item.symbol,
+        }));
+      defaultWebSocketClient.connect();
+      defaultWebSocketClient.subscribeChannels(["quotes"], symbols, instruments);
     }
 
     const unsub = defaultWebSocketClient.onChannel("quotes", (data: unknown) => {
@@ -211,10 +181,10 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
           changed = true;
           const updatedItems = [...wl.items];
           const oldItem = updatedItems[itemIdx];
-          const oldLtp = oldItem.ltp ?? 0;
-          const newLtp = tick.ltp ?? oldLtp;
+          const oldLtp = oldItem.ltp;
+          const newLtp = tick.ltp;
 
-          if (newLtp !== oldLtp) {
+          if (oldLtp !== undefined && newLtp !== oldLtp) {
             const flashDir = newLtp >= oldLtp ? "up" : "down";
             setPriceFlashes((prev) => ({ ...prev, [oldItem.symbol]: flashDir }));
             setTimeout(() => {
@@ -231,7 +201,15 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
             ltp: newLtp,
             changeAbs: tick.change ?? oldItem.changeAbs,
             changePct: tick.changePct ?? oldItem.changePct,
-            volume: tick.volume || oldItem.volume,
+            volume: tick.volume ?? oldItem.volume,
+            ltt: tick.sourceTimestamp !== undefined
+              ? String(tick.sourceTimestamp)
+              : oldItem.ltt,
+            isStale: tick.isStale,
+            marketDataState: tick.marketState,
+            marketDataSource: tick.source,
+            marketDataReceivedAt: tick.timestamp / 1000,
+            marketDataError: undefined,
           };
           return { ...wl, items: updatedItems };
         });
@@ -240,8 +218,34 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
       });
     });
 
+    const unsubState = defaultWebSocketClient.onStateChange((state) => {
+      if (state !== "ERROR") return;
+      setWatchlists((previous) => previous.map((watchlist) => watchlist.id === activeWatchlistId
+        ? {
+            ...watchlist,
+            items: watchlist.items.map((item) => ({
+              ...item,
+              marketDataState: item.ltp === undefined ? "ERROR" : "STALE",
+              marketDataError: "Authoritative Dhan market-data feed is unavailable",
+            })),
+          }
+        : watchlist));
+    });
+
     return () => {
       unsub();
+      unsubState();
+      if (activeWatchlist) {
+        const symbols = activeWatchlist.items.map((item) => item.symbol);
+        const instruments = activeWatchlist.items
+          .filter((item) => item.securityId && FEED_SEGMENTS[item.segment])
+          .map((item) => ({
+            segment: FEED_SEGMENTS[item.segment],
+            securityId: item.securityId,
+            symbol: item.symbol,
+          }));
+        defaultWebSocketClient.unsubscribeChannels(["quotes"], symbols, instruments);
+      }
     };
   }, [activeWatchlistId, activeWatchlist?.items.length]);
 
@@ -370,10 +374,6 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
       tradingSymbol: item.tradingSymbol,
       name: item.name,
       instrumentType: item.instrumentType,
-      ltp: item.ltp ?? 0,
-      changePct: item.changePct ?? 0,
-      changeAbs: 0,
-      volume: 0,
       fiftyTwoWeekHigh: item.fiftyTwoWeekHigh,
       fiftyTwoWeekLow: item.fiftyTwoWeekLow,
       expiry: item.expiry,
@@ -443,10 +443,6 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
               segment: match.exchange_segment || "NSE_EQ",
               instrumentType: match.instrument_type || "EQUITY",
               name: match.name || match.trading_symbol || sym,
-              ltp: match.ltp ?? 0,
-              changePct: match.change_pct ?? 0,
-              fiftyTwoWeekHigh: match.fifty_two_week_high ?? match.fiftyTwoWeekHigh,
-              fiftyTwoWeekLow: match.fifty_two_week_low ?? match.fiftyTwoWeekLow,
               expiry: match.expiry_date,
               strike: match.strike_price,
               optionType: match.option_type,
@@ -675,25 +671,25 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
               alignItems: "center",
               gap: "5px",
               fontSize: "11px",
-              color: "var(--color-up, #3fb950)",
-              backgroundColor: "rgba(46, 160, 67, 0.15)",
+              color: marketStateLabel === "LIVE" ? "var(--color-up, #3fb950)" : "var(--text-muted)",
+              backgroundColor: marketStateLabel === "LIVE" ? "rgba(46, 160, 67, 0.15)" : "var(--bg-elevated)",
               padding: "2px 8px",
               borderRadius: "12px",
               border: "1px solid rgba(46, 160, 67, 0.3)",
               fontWeight: 600,
             }}
-            title="Connected to Dhan Live Feed WebSocket"
+            title={`Dhan market data: ${marketStateLabel}`}
           >
             <span
               style={{
                 width: "6px",
                 height: "6px",
                 borderRadius: "50%",
-                backgroundColor: "var(--color-up, #3fb950)",
-                boxShadow: "0 0 6px var(--color-up, #3fb950)",
+                backgroundColor: marketStateLabel === "LIVE" ? "var(--color-up, #3fb950)" : "var(--text-muted)",
+                boxShadow: marketStateLabel === "LIVE" ? "0 0 6px var(--color-up, #3fb950)" : "none",
               }}
             />
-            <span>LIVE FEED</span>
+            <span>{marketStateLabel}</span>
           </div>
 
           <button
@@ -960,9 +956,9 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
             </thead>
             <tbody>
               {sortedItems.map((item, idx) => {
-                const changePct = item.changePct ?? 0;
-                const isUp = changePct >= 0;
-                const ltp = item.ltp ?? 0;
+                const changePct = item.changePct;
+                const isUp = typeof changePct === "number" && changePct >= 0;
+                const ltp = item.ltp;
                 const isIndex = item.instrumentType === "INDEX" || item.segment === "IDX_I";
                 const isRowHovered = hoveredSymbol === item.symbol;
                 const isRowSelected = selectedSymbol === item.symbol;
@@ -1172,7 +1168,9 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                               transition: "background-color 0.35s ease",
                             }}
                           >
-                            ₹{ltp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            {typeof ltp === "number"
+                              ? `₹${ltp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                              : "N/A"}
                           </td>
                         );
                       }
@@ -1196,15 +1194,16 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                                 fontWeight: 600,
                               }}
                             >
-                              {isUp ? "+" : ""}
-                              {changePct.toFixed(2)}%
+                              {typeof changePct === "number"
+                                ? `${isUp ? "+" : ""}${changePct.toFixed(2)}%`
+                                : "N/A"}
                             </span>
                           </td>
                         );
                       }
 
                       if (col.id === "changeAbs") {
-                        const changeAbs = item.changeAbs ?? 0;
+                        const changeAbs = item.changeAbs;
                         return (
                           <td
                             key={col.id}
@@ -1215,8 +1214,9 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                               color: isUp ? "var(--color-up)" : "var(--color-down)",
                             }}
                           >
-                            {isUp ? "+" : ""}
-                            {changeAbs.toFixed(2)}
+                            {typeof changeAbs === "number"
+                              ? `${isUp ? "+" : ""}${changeAbs.toFixed(2)}`
+                              : "N/A"}
                           </td>
                         );
                       }
@@ -1232,7 +1232,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                               color: "var(--text-muted)",
                             }}
                           >
-                            {(item.volume ?? 0).toLocaleString("en-IN")}
+                            {typeof item.volume === "number" ? item.volume.toLocaleString("en-IN") : "N/A"}
                           </td>
                         );
                       }
@@ -1278,6 +1278,9 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
 
                       if (col.id === "fiftyTwoWeekHigh") {
                         const high52 = getFiftyTwoWeekHigh(item);
+                        if (ltp === undefined || !Number.isFinite(high52)) {
+                          return <td key={col.id} style={{ textAlign: "right" }}>N/A</td>;
+                        }
                         const diffPct = ((ltp - high52) / high52) * 100;
                         return (
                           <td
@@ -1305,6 +1308,9 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
 
                       if (col.id === "fiftyTwoWeekLow") {
                         const low52 = getFiftyTwoWeekLow(item);
+                        if (ltp === undefined || !Number.isFinite(low52)) {
+                          return <td key={col.id} style={{ textAlign: "right" }}>N/A</td>;
+                        }
                         const diffPct = ((ltp - low52) / low52) * 100;
                         return (
                           <td
@@ -1333,6 +1339,13 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                       if (col.id === "fiftyTwoWeek") {
                         const high52 = getFiftyTwoWeekHigh(item);
                         const low52 = getFiftyTwoWeekLow(item);
+                        if (
+                          ltp === undefined ||
+                          !Number.isFinite(high52) ||
+                          !Number.isFinite(low52)
+                        ) {
+                          return <td key={col.id} style={{ textAlign: "right" }}>N/A</td>;
+                        }
                         const diffHigh = ((ltp - high52) / high52) * 100;
                         const diffLow = ((ltp - low52) / low52) * 100;
                         return (

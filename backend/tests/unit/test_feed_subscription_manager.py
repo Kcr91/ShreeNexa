@@ -118,7 +118,7 @@ def test_deduplication_and_multi_subscriber_ref_counting() -> None:
     # Widget B unsubscribes -> instrument released and unsub message emitted
     unsub_b = manager.unsubscribe([("NSE_EQ", "2885")], requester_id="widget_chart")
     assert len(unsub_b) == 1
-    assert unsub_b[0]["IsUnsubscribe"] is True
+    assert unsub_b[0]["RequestCode"] == 18
     assert unsub_b[0]["InstrumentCount"] == 1
     assert key not in manager.subscriptions
 

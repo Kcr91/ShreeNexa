@@ -167,7 +167,8 @@ export const LiveFeedStatusWidget: React.FC<WidgetComponentProps<LiveFeedWidgetS
               </tr>
             ) : (
               streamTicks.map((t, idx) => {
-                const isUp = t.change >= 0;
+                const hasChange = typeof t.changePct === "number";
+                const isUp = hasChange && t.changePct! >= 0;
                 return (
                   <tr
                     key={`${t.symbol}-${t.timestamp}-${idx}`}
@@ -189,11 +190,10 @@ export const LiveFeedStatusWidget: React.FC<WidgetComponentProps<LiveFeedWidgetS
                         color: isUp ? "var(--color-up)" : "var(--color-down)",
                       }}
                     >
-                      {isUp ? "+" : ""}
-                      {t.changePct}%
+                      {hasChange ? `${isUp ? "+" : ""}${t.changePct}%` : "N/A"}
                     </td>
                     <td style={{ padding: "4px", textAlign: "right", fontFamily: "var(--font-family-mono)", color: "var(--text-muted)" }}>
-                      {t.volume.toLocaleString()}
+                      {typeof t.volume === "number" ? t.volume.toLocaleString() : "N/A"}
                     </td>
                     <td style={{ padding: "4px", textAlign: "right", color: "var(--text-muted)", fontFamily: "var(--font-family-mono)" }}>
                       {new Date(t.timestamp).toLocaleTimeString()}

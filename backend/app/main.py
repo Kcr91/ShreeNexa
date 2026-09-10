@@ -21,7 +21,7 @@ from app.api.ai import router as ai_router
 from app.api.auth import router as auth_router
 from app.api.backtests import router as backtests_router
 from app.api.calibration import router as calibration_router
-from app.api.deps import require_csrf, require_session
+from app.api.deps import require_csrf, require_non_demo_session, require_session
 from app.api.depth import router as depth_router
 from app.api.feature_builder import router as feature_builder_router
 from app.api.feed import router as feed_router
@@ -42,12 +42,12 @@ from app.api.strategy_builder import router as strategy_builder_router
 from app.api.strategy_ir import router as strategy_ir_router
 from app.api.universe import router as universe_router
 from app.api.watchlists import router as watchlists_router
+from app.api.ws import configure_market_data_hot_cache
 from app.api.ws import router as ws_router
 from app.contracts import heartbeat as hb
 from app.contracts.process_loop import HEARTBEAT_INTERVAL_S
 from app.dhan.credentials import resolve_dhan_credentials
 from app.dhan.health import DhanTokenHealth, check_token_health
-from app.dhan.live_feed_service import get_dhan_live_feed_service
 
 PROCESS_NAME = "api"
 
@@ -80,17 +80,17 @@ async def _heartbeat_task() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    # feedd is the sole Dhan socket owner. The API only reads its Redis hot state.
+    configure_market_data_hot_cache(
+        use_redis=os.environ.get("SHREENEXA_HOT_CACHE_BACKEND") != "memory"
+    )
     hb_task = asyncio.create_task(_heartbeat_task())
-    feed_service = get_dhan_live_feed_service()
-    feed_task = asyncio.create_task(feed_service.run())
     try:
         yield
     finally:
-        feed_service.stop()
-        feed_task.cancel()
         hb_task.cancel()
         try:
-            await asyncio.gather(hb_task, feed_task, return_exceptions=True)
+            await asyncio.gather(hb_task, return_exceptions=True)
         except asyncio.CancelledError:
             pass
 
@@ -110,6 +110,7 @@ app.add_middleware(
 )
 
 _AUTH_DEPS = [Depends(require_session)]
+_LIVE_MARKET_DEPS = [Depends(require_session), Depends(require_non_demo_session)]
 _STATE_MUTATING_DEPS = [Depends(require_session), Depends(require_csrf)]
 
 # 1. Self-authenticating or public routers
@@ -119,10 +120,10 @@ app.include_router(ws_router)
 # 2. Read-only protected routers (require authenticated session)
 app.include_router(instruments_router, dependencies=_AUTH_DEPS)
 app.include_router(universe_router, dependencies=_AUTH_DEPS)
-app.include_router(feed_router, dependencies=_AUTH_DEPS)
+app.include_router(feed_router, dependencies=_LIVE_MARKET_DEPS)
 app.include_router(indicators_router, dependencies=_AUTH_DEPS)
 app.include_router(indicators_alias_router, dependencies=_AUTH_DEPS)
-app.include_router(heatmap_router, dependencies=_AUTH_DEPS)
+app.include_router(heatmap_router, dependencies=_LIVE_MARKET_DEPS)
 app.include_router(depth_router, dependencies=_AUTH_DEPS)
 app.include_router(options_router, dependencies=_AUTH_DEPS)
 app.include_router(options_analytics_router, dependencies=_AUTH_DEPS)
