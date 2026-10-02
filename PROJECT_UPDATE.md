@@ -4023,3 +4023,42 @@ passing in the external DPAPI environment, with the sole failure caused by neste
 discovery in that elevated context; the same control-plane test passed in its intended
 sandbox context, completing coverage of all 948 collected tests. No protected path or
 credential material changed.
+
+### 2026-09-11 — Dhan live feed outage: reconnect storm, expired token, and HTTP 429 block
+
+Terminal prices stopped tracking the market because `feedd` had been disconnected since
+2026-09-10 18:32 IST (6,258 failed reconnects). Diagnosis against the live stack:
+
+- The `.env` access token expired at 2026-09-10 20:05 UTC. Dhan accepts the WebSocket
+  handshake before rejecting a bad token, and `feedd` reset its backoff to 1 s on every
+  handshake and ignored Dhan's disconnect packet, so it reconnected in a tight loop.
+- Dhan then blocked the client ID/IP: the handshake now returns
+  `HTTP 429 "Too many requests from this IP hence client id is blocked"`.
+- The disconnect log carried only the exception class name, hiding both causes.
+
+Fix in `app/dhan/live_feed_service.py`: never connect with a token already past its
+`exp`; treat disconnect codes 806–810 and HTTP 401/403 as a rejected token and wait for a
+different token instead of retrying; back off 300 s on HTTP 429 or code 805; reset backoff
+only after a connection stays up 60 s (max 120 s). The reason is published as
+`last_error` in feed health and surfaced by `GET /api/v1/feed/status` as `error`.
+
+**Verification:** 4 new regression tests (backoff not reset by dropped handshakes, 429
+window, expired token never connects, 807 stops retrying the same token); 38/38 feed
+tests pass; Ruff and mypy clean. Restarted `feedd` makes zero Dhan connection attempts
+and reports the expired-token reason. **Operator action required:** generate a new Dhan
+token and store it with `python -m app.dhan.token set` (picked up live from DPAPI); if the
+429 block persists after the new token, Dhan support must lift it.
+
+### 2026-10-02 — Strategy Builder Feature 1: Data Engine & Storage Pipeline
+
+Implemented the complete backend architecture for **Feature 1: Data Engine & Storage Pipeline** (`feature/sb-f1-data-engine`):
+
+- **Models & Schemas:** Defined PostgreSQL schemas and Pydantic models for `mkt_ohlcv_equity`, `mkt_ohlcv_futures`, `mkt_ohlcv_options`, `mkt_download_state`, `mkt_api_quota`, `mkt_segment`, and `mkt_segment_constituent` in `backend/app/worker/data_engine/models.py`.
+- **Alembic Migration:** Authored `backend/alembic/versions/d4e5f6a7b8c9_create_mkt_data_engine_tables.py` managing all table definitions and indexes.
+- **Quota Budget Manager:** Implemented `backend/app/worker/data_engine/quota_manager.py` enforcing the 100,000 requests/day shared Redis budget (`mkt:quota:{YYYY-MM-DD}`) with automatic reservation for live feeds.
+- **27 NSE Segments Seeder:** Implemented `backend/app/worker/data_engine/segment_seeder.py` populating benchmark indices, sectoral groups, and the 208 F&O universe.
+- **Parquet Partition Archiver:** Implemented `backend/app/worker/data_engine/parquet_archiver.py` for high-performance monthly and strike-level partitioning under `data/market/`.
+- **Bulk CSV Importer:** Built `backend/app/worker/data_engine/bulk_importer.py` parsing `{SYMBOL}/Month_{N}/ATM±X_Call.csv` directory structures into PostgreSQL and Parquet.
+- **Incremental Updater:** Built `backend/app/worker/data_engine/incremental_updater.py` with checkpointing, pause/resume, and quota enforcement.
+- **REST API Endpoints:** Mounted 11 endpoints under `/api/v1/data/*` in `backend/app/api/data_engine.py` (instruments, candles, segments, sync controls, quota status, and streaming CSV export).
+- **Verification:** Authored `backend/tests/unit/test_data_engine.py` (7/7 passed); strict `mypy` and `ruff` checks passed cleanly.

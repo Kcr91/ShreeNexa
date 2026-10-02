@@ -21,6 +21,7 @@ from app.api.ai import router as ai_router
 from app.api.auth import router as auth_router
 from app.api.backtests import router as backtests_router
 from app.api.calibration import router as calibration_router
+from app.api.data_engine import router as data_engine_router
 from app.api.deps import require_csrf, require_non_demo_session, require_session
 from app.api.depth import router as depth_router
 from app.api.feature_builder import router as feature_builder_router
@@ -130,6 +131,7 @@ app.include_router(options_analytics_router, dependencies=_AUTH_DEPS)
 app.include_router(margin_router, dependencies=_AUTH_DEPS)
 app.include_router(monitoring_router, dependencies=_AUTH_DEPS)
 app.include_router(historical_router, dependencies=_AUTH_DEPS)
+app.include_router(data_engine_router, dependencies=_AUTH_DEPS)
 
 # 3. Mutating / trading protected routers (require authenticated session + CSRF token)
 app.include_router(orders_router, dependencies=_STATE_MUTATING_DEPS)
