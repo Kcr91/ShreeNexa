@@ -48,6 +48,7 @@ def get_feed_status() -> dict[str, Any]:
     return {
         "status": "LIVE" if connected else "UNAVAILABLE",
         "is_connected": connected,
+        "error": next((record.last_error for record in records if record.last_error), None),
         "total_packets": sum(record.total_packets for record in records),
         "subscriptions_count": sum(record.subscribed_count for record in records),
         "sockets": [record.model_dump() for record in records],

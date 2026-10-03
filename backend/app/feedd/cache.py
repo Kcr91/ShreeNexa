@@ -111,6 +111,7 @@ class CachedFeedHealth(BaseModel):
     reconnect_count: int
     total_packets: int
     last_packet_time: str | None = None
+    last_error: str | None = None
     updated_at: float
     is_stale: bool = False
     staleness_seconds: float = 0.0
@@ -244,6 +245,7 @@ def _apply_freshness_health(
         reconnect_count=health.reconnect_count,
         total_packets=health.total_packets,
         last_packet_time=health.last_packet_time,
+        last_error=health.last_error,
         updated_at=health.updated_at,
         is_stale=is_stale,
         staleness_seconds=round(elapsed, 3),

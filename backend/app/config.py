@@ -81,6 +81,9 @@ class Settings(BaseModel):
     # Runtime root directory for local operational state
     runtime_root: Path = Field(default=Path(".runtime"))
 
+    # Backfill queue draining (historic data auto-download from Dhan API)
+    shreenexa_backfill_enabled: bool = Field(default=True)
+
     @classmethod
     def load(cls, env_file: Path | str | None = ".env") -> Settings:
         """Load settings with precedence: OS environment > .env file > defaults."""

@@ -10,11 +10,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.pool import StaticPool
-
 from app.main import app
 from app.worker.data_engine.bulk_importer import BulkImporter, parse_csv_path
 from app.worker.data_engine.incremental_updater import IncrementalUpdater
@@ -26,10 +21,14 @@ from app.worker.data_engine.segment_seeder import (
     get_segment_constituents,
     seed_nse_segments,
 )
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture
-def sqlite_engine() -> Generator[Engine, None, None]:
+def sqlite_engine() -> Generator[Engine]:
     """In-memory SQLite engine for testing with tables created."""
     engine = create_engine(
         "sqlite://",

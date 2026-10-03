@@ -107,3 +107,13 @@ def test_mask_client_id() -> None:
     assert mask_client_id("123") == "****"
     assert mask_client_id("1100223344") == "1100***344"
     assert mask_client_id("ABCDEFGH") == "ABCD***GH"
+
+
+def test_backfill_enabled_setting() -> None:
+    assert Settings().shreenexa_backfill_enabled is True
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        env_file = Path(temp_dir) / ".env.test"
+        env_file.write_text("SHREENEXA_BACKFILL_ENABLED=false\n", encoding="utf-8")
+        settings = Settings.load(env_file=env_file)
+        assert settings.shreenexa_backfill_enabled is False

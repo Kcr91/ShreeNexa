@@ -40,7 +40,14 @@ ENABLE_ENV_VAR = "SHREENEXA_BACKFILL_ENABLED"
 
 def backfill_enabled() -> bool:
     """Whether this worker should drain the backfill queue."""
-    return os.environ.get(ENABLE_ENV_VAR, "1").strip().lower() not in {"0", "false", "no"}
+    if ENABLE_ENV_VAR in os.environ:
+        return os.environ[ENABLE_ENV_VAR].strip().lower() not in {"0", "false", "no"}
+    try:
+        from app.config import get_settings
+
+        return get_settings().shreenexa_backfill_enabled
+    except Exception:
+        return True
 
 
 class BackfillScheduler:

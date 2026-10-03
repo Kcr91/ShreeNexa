@@ -211,6 +211,15 @@ class TestEnableFlag:
         monkeypatch.setenv(ENABLE_ENV_VAR, value)
         assert backfill_enabled() is False
 
+    def test_disabled_via_settings(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from app.config import Settings
+
+        monkeypatch.delenv(ENABLE_ENV_VAR, raising=False)
+        monkeypatch.setattr(
+            "app.config.get_settings", lambda: Settings(shreenexa_backfill_enabled=False)
+        )
+        assert backfill_enabled() is False
+
 
 class TestMonthWindows:
     """Month windows exist so each window maps to exactly one partition file."""

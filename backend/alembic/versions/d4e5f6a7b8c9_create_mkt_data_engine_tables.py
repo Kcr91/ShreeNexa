@@ -19,7 +19,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Create mkt_ohlcv_equity, mkt_ohlcv_futures, mkt_ohlcv_options, mkt_download_state, and mkt_api_quota."""
+    """Create market tables: equity, futures, options, download state, and quota."""
     # 1. mkt_ohlcv_equity
     op.create_table(
         "mkt_ohlcv_equity",
@@ -32,7 +32,9 @@ def upgrade() -> None:
         sa.Column("low", sa.Numeric(12, 4), nullable=False),
         sa.Column("close", sa.Numeric(12, 4), nullable=False),
         sa.Column("volume", sa.BigInteger(), nullable=False, server_default="0"),
-        sa.PrimaryKeyConstraint("exchange_segment", "security_id", "datetime_ist", name="pk_mkt_ohlcv_equity"),
+        sa.PrimaryKeyConstraint(
+            "exchange_segment", "security_id", "datetime_ist", name="pk_mkt_ohlcv_equity"
+        ),
     )
     op.create_index("ix_mkt_eq_sym_dt", "mkt_ohlcv_equity", ["symbol", "datetime_ist"])
 
@@ -50,7 +52,9 @@ def upgrade() -> None:
         sa.Column("volume", sa.BigInteger(), nullable=False, server_default="0"),
         sa.Column("oi", sa.BigInteger(), nullable=False, server_default="0"),
         sa.Column("underlying_spot", sa.Numeric(12, 4), nullable=True),
-        sa.PrimaryKeyConstraint("exchange_segment", "security_id", "datetime_ist", name="pk_mkt_ohlcv_futures"),
+        sa.PrimaryKeyConstraint(
+            "exchange_segment", "security_id", "datetime_ist", name="pk_mkt_ohlcv_futures"
+        ),
     )
     op.create_index("ix_mkt_fut_sym_dt", "mkt_ohlcv_futures", ["symbol", "datetime_ist"])
 
@@ -69,7 +73,9 @@ def upgrade() -> None:
         sa.Column("oi", sa.BigInteger(), nullable=False, server_default="0"),
         sa.Column("iv", sa.Numeric(8, 4), nullable=True),
         sa.Column("underlying_spot", sa.Numeric(12, 4), nullable=True),
-        sa.PrimaryKeyConstraint("exchange_segment", "security_id", "datetime_ist", name="pk_mkt_ohlcv_options"),
+        sa.PrimaryKeyConstraint(
+            "exchange_segment", "security_id", "datetime_ist", name="pk_mkt_ohlcv_options"
+        ),
     )
     op.create_index("ix_mkt_opt_sym_dt", "mkt_ohlcv_options", ["symbol", "datetime_ist"])
 
@@ -97,7 +103,12 @@ def upgrade() -> None:
         sa.Column("used_historical", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("used_live", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("reserved_live", sa.Integer(), nullable=False, server_default="5000"),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("NOW()")),
+        sa.Column(
+            "updated_at",
+            sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.text("NOW()"),
+        ),
     )
 
     # 6. mkt_segment and mkt_segment_constituent

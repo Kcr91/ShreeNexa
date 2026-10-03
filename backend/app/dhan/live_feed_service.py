@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import time
@@ -17,6 +18,7 @@ from app.config import mask_client_id
 from app.dhan.client import DhanRestClient
 from app.dhan.credentials import resolve_dhan_credentials
 from app.dhan.feed import DhanLiveFeedClient
+from app.dhan.packets import DisconnectPacket
 from app.feedd.cache import (
     CachedFeedHealth,
     CachedQuote,
@@ -33,6 +35,19 @@ MAX_INSTRUMENTS_PER_QUOTE_REQUEST = 1000
 QUOTE_REQUEST_CODE = 17
 UNSUBSCRIBE_REQUEST_CODE = 18
 IST = ZoneInfo("Asia/Kolkata")
+
+# Reconnect pacing. Dhan blocks a client ID/IP that reconnects too aggressively
+# (HTTP 429 "client id is blocked"), and it accepts the handshake before rejecting
+# a bad token, so a successful handshake alone must never reset the backoff.
+INITIAL_BACKOFF_SECONDS = 1.0
+MAX_BACKOFF_SECONDS = 120.0
+STABLE_CONNECTION_SECONDS = 60.0
+RATE_LIMITED_BACKOFF_SECONDS = 300.0
+CREDENTIAL_POLL_SECONDS = 30.0
+CONNECTION_LIMIT_DISCONNECT_CODE = 805
+# 806 data APIs not subscribed, 807 token expired, 808 auth failed,
+# 809 token invalid, 810 client ID invalid: retrying the same token cannot succeed.
+CREDENTIAL_DISCONNECT_CODES = frozenset({806, 807, 808, 809, 810})
 
 SEGMENT_TO_DHAN = {
     "0": "IDX_I",
@@ -132,6 +147,48 @@ def _quote_request_bodies(
     return bodies
 
 
+class DhanFeedRejectedError(Exception):
+    """Dhan ended the feed with a documented disconnect reason code."""
+
+    def __init__(self, code: int) -> None:
+        super().__init__(f"Dhan disconnected the feed with code {code}")
+        self.code = code
+
+
+def _failure_policy(exc: BaseException) -> tuple[str, float, bool]:
+    """Classify a feed failure as (reason, minimum retry delay, credentials rejected).
+
+    The reason never includes the exception text: the feed URL carries the token.
+    """
+    if isinstance(exc, DhanFeedRejectedError):
+        if exc.code in CREDENTIAL_DISCONNECT_CODES:
+            return f"Dhan rejected the access token (disconnect code {exc.code})", 0.0, True
+        if exc.code == CONNECTION_LIMIT_DISCONNECT_CODE:
+            return (
+                "Dhan connection limit exceeded (disconnect code 805)",
+                RATE_LIMITED_BACKOFF_SECONDS,
+                False,
+            )
+        return f"Dhan disconnected the feed (code {exc.code})", 0.0, False
+
+    status_code = getattr(getattr(exc, "response", None), "status_code", None)
+    if status_code == 429:
+        return (
+            "Dhan is rate-limiting this client ID/IP (HTTP 429)",
+            RATE_LIMITED_BACKOFF_SECONDS,
+            False,
+        )
+    if status_code in (401, 403):
+        return f"Dhan rejected the access token (HTTP {status_code})", 0.0, True
+    if status_code is not None:
+        return f"Dhan feed handshake failed (HTTP {status_code})", 0.0, False
+
+    close = getattr(exc, "rcvd", None)
+    if close is not None:
+        return f"Dhan closed the feed (close code {close.code})", 0.0, False
+    return f"Dhan feed disconnected ({type(exc).__name__})", 0.0, False
+
+
 class DhanLiveFeedService:
     """Maintains dynamic Dhan subscriptions and publishes normalized Redis state."""
 
@@ -145,6 +202,23 @@ class DhanLiveFeedService:
         self._reconnect_count = 0
         self._last_packet_time: str | None = None
         self._last_rest_sync = 0.0
+        self._last_error: str | None = None
+        self._rejected_token: str | None = None
+
+    async def _wait(self, seconds: float) -> bool:
+        """Sleep unless stopped; return True when the service should exit."""
+        try:
+            await asyncio.wait_for(self._stop_event.wait(), timeout=seconds)
+        except TimeoutError:
+            return False
+        return True
+
+    def _set_idle_error(self, reason: str) -> None:
+        """Publish why the feed is not connecting, logging each distinct reason once."""
+        if reason != self._last_error:
+            logger.error(reason)
+            self._last_error = reason
+        self._health(connected=False)
 
     def _health(self, *, connected: bool) -> None:
         self.hot_cache.update_feed_health(
@@ -155,6 +229,7 @@ class DhanLiveFeedService:
                 reconnect_count=self._reconnect_count,
                 total_packets=self.total_packets,
                 last_packet_time=self._last_packet_time,
+                last_error=self._last_error,
                 updated_at=time.time(),
             )
         )
@@ -266,19 +341,34 @@ class DhanLiveFeedService:
         self._loop = asyncio.get_running_loop()
         self.is_running = True
         self._stop_event.clear()
-        backoff = 1.0
+        backoff = INITIAL_BACKOFF_SECONDS
         try:
             while not self._stop_event.is_set():
                 creds = resolve_dhan_credentials()
                 if not creds or not creds.access_token or not creds.client_id:
-                    self._health(connected=False)
-                    try:
-                        await asyncio.wait_for(self._stop_event.wait(), timeout=10.0)
-                    except TimeoutError:
-                        continue
-                    break
+                    self._set_idle_error("Dhan credentials are not configured")
+                    if await self._wait(CREDENTIAL_POLL_SECONDS):
+                        break
+                    continue
 
                 token = creds.access_token.get_secret_value()
+                fingerprint = hashlib.sha256(token.encode("utf-8")).hexdigest()
+                if creds.expires_at is not None and creds.expires_at <= datetime.now(tz=UTC):
+                    # Connecting with an expired token is rejected after the handshake;
+                    # repeating that gets the client ID/IP blocked by Dhan.
+                    self._set_idle_error(
+                        f"Dhan access token expired at {creds.expires_at.isoformat()}; "
+                        "store a new token with 'python -m app.dhan.token set'"
+                    )
+                    if await self._wait(CREDENTIAL_POLL_SECONDS):
+                        break
+                    continue
+                if fingerprint == self._rejected_token:
+                    self._health(connected=False)
+                    if await self._wait(CREDENTIAL_POLL_SECONDS):
+                        break
+                    continue
+
                 url = (
                     "wss://api-feed.dhan.co?version=2"
                     f"&token={token}&clientId={creds.client_id}&authType=2"
@@ -286,11 +376,13 @@ class DhanLiveFeedService:
                 logger.info("Connecting Dhan feed for client %s", mask_client_id(creds.client_id))
                 client = DhanLiveFeedClient(client_id=creds.client_id, access_token=token)
                 self._active.clear()
+                connected_at: float | None = None
                 try:
                     async with websockets.connect(
                         url, ping_interval=10, ping_timeout=20, close_timeout=5
                     ) as ws:
-                        backoff = 1.0
+                        connected_at = time.monotonic()
+                        self._last_error = None
                         await self._reconcile_subscriptions(ws)
                         while not self._stop_event.is_set():
                             await self._reconcile_subscriptions(ws)
@@ -301,6 +393,9 @@ class DhanLiveFeedService:
                             if not isinstance(message, bytes):
                                 continue
                             packets = client.process_incoming_frame(message)
+                            for packet in packets:
+                                if isinstance(packet, DisconnectPacket):
+                                    raise DhanFeedRejectedError(packet.disconnect_code)
                             self.hot_cache.batch_update_packets(packets)
                             for packet in packets:
                                 quote = self.hot_cache.get_quote(
@@ -326,14 +421,24 @@ class DhanLiveFeedService:
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:
+                    reason, minimum_delay, credentials_rejected = _failure_policy(exc)
+                    if (
+                        connected_at is not None
+                        and time.monotonic() - connected_at >= STABLE_CONNECTION_SECONDS
+                    ):
+                        backoff = INITIAL_BACKOFF_SECONDS
                     self._reconnect_count += 1
+                    self._last_error = reason
                     self._health(connected=False)
-                    logger.warning("Dhan feed disconnected (%s); retrying", type(exc).__name__)
-                    try:
-                        await asyncio.wait_for(self._stop_event.wait(), timeout=backoff)
-                    except TimeoutError:
-                        pass
-                    backoff = min(backoff * 2.0, 15.0)
+                    if credentials_rejected:
+                        self._rejected_token = fingerprint
+                        logger.error("%s; waiting for a new token before reconnecting", reason)
+                        continue
+                    delay = max(backoff, minimum_delay)
+                    logger.warning("%s; retrying in %.0fs", reason, delay)
+                    if await self._wait(delay):
+                        break
+                    backoff = min(backoff * 2.0, MAX_BACKOFF_SECONDS)
         finally:
             self.is_running = False
             self._health(connected=False)

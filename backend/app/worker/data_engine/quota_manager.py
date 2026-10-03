@@ -48,9 +48,14 @@ class QuotaManager:
                 raw_data: Any = self._redis.hgetall(key)
                 if raw_data and isinstance(raw_data, dict):
                     data: dict[Any, Any] = raw_data
-                    used_hist = int(data.get(b"used_historical", data.get("used_historical", 0)) or 0)
+                    used_hist = int(
+                        data.get(b"used_historical", data.get("used_historical", 0)) or 0
+                    )
                     used_live = int(data.get(b"used_live", data.get("used_live", 0)) or 0)
-                    limit = int(data.get(b"limit", data.get("limit", self._daily_limit)) or self._daily_limit)
+                    limit = int(
+                        data.get(b"limit", data.get("limit", self._daily_limit))
+                        or self._daily_limit
+                    )
                     reserved = int(
                         data.get(b"reserved_live", data.get("reserved_live", self._reserved_live))
                         or self._reserved_live

@@ -13,6 +13,8 @@ dependencies = [
     "psutil>=6.1,<7.0",
     "duckdb>=1.1",
     "pyarrow>=18.0",
+    "pandas>=3.0.6",
+    "numpy>=2.5.3",
 ]
 
 [project.scripts]
@@ -58,7 +60,7 @@ mypy_path = "backend"
 files = ["backend/app"]
 
 [[tool.mypy.overrides]]
-module = ["pyarrow", "pyarrow.*", "duckdb", "duckdb.*"]
+module = ["pyarrow", "pyarrow.*", "duckdb", "duckdb.*", "pandas", "pandas.*", "numpy", "numpy.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
