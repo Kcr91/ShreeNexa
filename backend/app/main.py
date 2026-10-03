@@ -32,6 +32,7 @@ from app.api.indicators import alias_router as indicators_alias_router
 from app.api.indicators import router as indicators_router
 from app.api.instruments import router as instruments_router
 from app.api.investing import router as investing_router
+from app.api.live_engine import router as live_engine_router
 from app.api.margin import router as margin_router
 from app.api.monitoring import router as monitoring_router
 from app.api.options import router as options_router
@@ -141,6 +142,7 @@ app.include_router(data_engine_router, dependencies=_AUTH_DEPS)
 app.include_router(orders_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(paper_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(paper_engine_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(live_engine_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(screeners_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(screener_engine_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(backtests_router, dependencies=_STATE_MUTATING_DEPS)
