@@ -41,6 +41,7 @@ from app.api.paper import router as paper_router
 from app.api.screener_engine import router as screener_engine_router
 from app.api.screeners import router as screeners_router
 from app.api.strategy_builder import router as strategy_builder_router
+from app.api.strategy_engine import router as strategy_engine_router
 from app.api.strategy_ir import router as strategy_ir_router
 from app.api.universe import router as universe_router
 from app.api.watchlists import router as watchlists_router
@@ -143,6 +144,7 @@ app.include_router(backtests_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(watchlists_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(calibration_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(strategy_builder_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(strategy_engine_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(strategy_ir_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(investing_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(ai_router, dependencies=_STATE_MUTATING_DEPS)

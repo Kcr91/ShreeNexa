@@ -25,6 +25,8 @@ def calculate_rsi(
 
     rs = avg_gain / avg_loss.replace(0, np.nan)
     rsi = 100.0 - (100.0 / (1.0 + rs))
+    # When avg_loss is 0 and avg_gain > 0, RSI is 100.0
+    rsi = rsi.where(~((avg_loss == 0) & (avg_gain > 0)), 100.0)
     return rsi.fillna(50.0)
 
 
