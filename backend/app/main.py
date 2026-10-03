@@ -38,6 +38,7 @@ from app.api.options import router as options_router
 from app.api.options_analytics import router as options_analytics_router
 from app.api.orders import router as orders_router
 from app.api.paper import router as paper_router
+from app.api.paper_engine import router as paper_engine_router
 from app.api.screener_engine import router as screener_engine_router
 from app.api.screeners import router as screeners_router
 from app.api.strategy_builder import router as strategy_builder_router
@@ -139,6 +140,7 @@ app.include_router(data_engine_router, dependencies=_AUTH_DEPS)
 # 3. Mutating / trading protected routers (require authenticated session + CSRF token)
 app.include_router(orders_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(paper_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(paper_engine_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(screeners_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(screener_engine_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(backtests_router, dependencies=_STATE_MUTATING_DEPS)
