@@ -92,8 +92,25 @@ a live branch indicator; run `git status --short --branch` for current state.
 | F12.4 | Done | Fast-forwarded into `main` at `42bce68` after review. |
 | F12.5 | Done | Fast-forwarded into `main` at `6851f0b` after review. |
 | F12.6 | Done | Fast-forwarded into `main` at `43a7657` after review. |
+| SB-F1 | Done | Feature 1 (Market Data Storage Pipeline, Quota Manager, Bulk Importer, REST APIs) implemented and tested at `e084cbc`. |
+| SB-F2 | Done | Feature 2 (Dynamic Screener Engine, Multi-TF DuckDB Aggregator, 10 Indicators, Patterns, REST APIs) implemented and tested at `ee2fe36`. |
+| SB-F3 | Done | Feature 3 (4-Part Strategy Builder, Dual-Price Reference Evaluator, MCX Handler, Standalone Python Generator, REST APIs) implemented and tested at `8613066`. |
+| SB-F4 | Done | Feature 4 (Multi-Variant Engine, Black-Scholes Greeks, Indian Cost Simulator, Volatility Heatmap, Live Tradebook) implemented and tested at `1869cab`. |
+| SB-F5 | Done | Feature 5 (Paper Trading Engine, Simulated Latency/Fills, Shadow Variant Tracker, Quick Compare & Readiness Score) implemented and tested at `2c277ba`. |
+| SB-F6 | Done | Feature 6 (Dhan Live Trading Adapter, Sub-500ms Async Queue, 4-Layer Risk Guardrails, Auto-Kill Switch, Reconciler) implemented and tested at `3947844`. |
 
 ## Major-task log
+
+### 2026-10-03 — Complete Strategy Builder & Real-Time Execution Suite (Features 1 to 6)
+
+- Completed full implementation of all 6 planned Strategy Builder modules:
+  1. **Feature 1: Market Data Storage Pipeline & Bulk Importer** (`e084cbc`) — Quota manager, segment-aware seeding, DuckDB Parquet archiver, incremental updater, and `/api/v1/data/*` routes.
+  2. **Feature 2: Dynamic Screener Engine** (`ee2fe36`) — Multi-timeframe DuckDB aggregator (1m, 5m, 15m, 1h, 1d), 10 technical indicators, candlestick pattern recognizer, condition evaluator, and `/api/v1/screener/*` routes.
+  3. **Feature 3: Strategy Builder & Python Code Generator** (`8613066`) — 4-part modular strategy schema (Scope, Entry, Stoploss, Targets & Trailing SL), Dual-Price reference evaluator, MCX commodity specs/sessions, standalone executable Python code generator, and `/api/v1/strategy/*` routes.
+  4. **Feature 4: Multi-Variant Engine & Live Tradebook** (`1869cab`) — Black-Scholes Greeks calculator, IV solver, Indian cost simulator (₹20 Dhan brokerage, STT, turnover charges, GST, stamp duty, slippage), India VIX context provider, performance heatmap, single-pass multi-variant backtest loop, and `/api/v1/variant/*` routes.
+  5. **Feature 5: Paper Trading Engine & Shadow Tracker** (`2c277ba`) — Latency fill delay simulator, position square-off, in-memory shadow variant tracker, quick live vs backtest compare card, 0-100% Go/No-Go readiness score calculator, and `/api/v1/paper/*` routes.
+  6. **Feature 6: Dhan Live Trading, Safety Guardrails & Auto-Kill Switch** (`3947844`) — 4-layer risk guardrails (3% daily loss kill switch, 10% capital exposure cap, 5 concurrent position limit, 0.5% circuit buffer), sub-500ms non-blocking async order queue, 5-minute automated position reconciler, Telegram alert dispatcher, and `/api/v1/live/*` routes.
+- Quality Gates verified: 0 ruff errors, 0 mypy strict errors across 409 files, and 42/42 unit tests passing (100% test pass rate).
 
 ### 2026-08-31 — M0.1 review accepted
 
