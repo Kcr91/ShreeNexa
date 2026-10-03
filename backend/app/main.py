@@ -44,6 +44,7 @@ from app.api.strategy_builder import router as strategy_builder_router
 from app.api.strategy_engine import router as strategy_engine_router
 from app.api.strategy_ir import router as strategy_ir_router
 from app.api.universe import router as universe_router
+from app.api.variant_engine import router as variant_engine_router
 from app.api.watchlists import router as watchlists_router
 from app.api.ws import configure_market_data_hot_cache
 from app.api.ws import router as ws_router
@@ -146,6 +147,7 @@ app.include_router(calibration_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(strategy_builder_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(strategy_engine_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(strategy_ir_router, dependencies=_STATE_MUTATING_DEPS)
+app.include_router(variant_engine_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(investing_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(ai_router, dependencies=_STATE_MUTATING_DEPS)
 app.include_router(feature_builder_router, dependencies=_STATE_MUTATING_DEPS)
