@@ -40,41 +40,13 @@ def upgrade() -> None:
         ),
     )
 
-    # 2. Live Real-Money Tradebook Table
-    op.create_table(
-        "live_tradebook",
-        sa.Column("trade_id", sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column("dhan_order_id", sa.String(length=100), unique=True, nullable=False),
-        sa.Column(
-            "strategy_id",
-            sa.Integer(),
-            sa.ForeignKey("strategy_configs.id", ondelete="CASCADE"),
-            nullable=True,
-        ),
-        sa.Column("symbol", sa.String(length=50), nullable=False),
-        sa.Column("signal_type", sa.String(length=20), nullable=False),
-        sa.Column("fill_time", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("buy_price", sa.Numeric(12, 4), nullable=False),
-        sa.Column("sell_price", sa.Numeric(12, 4), nullable=True),
-        sa.Column("quantity", sa.Integer(), nullable=False),
-        sa.Column("entry_vix", sa.Numeric(6, 2), nullable=True),
-        sa.Column("exit_vix", sa.Numeric(6, 2), nullable=True),
-        sa.Column("entry_iv", sa.Numeric(6, 2), nullable=True),
-        sa.Column("exit_iv", sa.Numeric(6, 2), nullable=True),
-        sa.Column("exit_reason", sa.String(length=100), nullable=True),
-        sa.Column("realized_pnl", sa.Numeric(12, 2), nullable=True),
-        sa.Column("brokerage_charges", sa.Numeric(10, 2), nullable=True),
-        sa.Column("stt_taxes", sa.Numeric(10, 2), nullable=True),
-        sa.Column("slippage_amount", sa.Numeric(10, 2), nullable=True),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.text("CURRENT_TIMESTAMP"),
-        ),
-    )
+    # NOTE: the `live_tradebook` table is created by the earlier
+    # `sb_variant_f4` (create variant and tradebook tables) migration, whose
+    # schema is the one the ORM (`app.engine.variant_models.live_tradebook_table`)
+    # and both the live- and variant-engine APIs use. It is intentionally NOT
+    # re-created here to avoid a DuplicateTable failure on `upgrade head`.
 
-    # 3. Live Safety Audit Events Table
+    # 2. Live Safety Audit Events Table
     op.create_table(
         "live_safety_events",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
@@ -97,5 +69,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("live_safety_events")
-    op.drop_table("live_tradebook")
+    # `live_tradebook` is owned by the `sb_variant_f4` migration; dropped there.
     op.drop_table("live_risk_settings")
