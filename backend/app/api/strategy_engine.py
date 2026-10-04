@@ -34,7 +34,7 @@ def get_db_engine() -> Engine:
 DbEngineDep = Annotated[Engine, Depends(get_db_engine)]
 
 
-@router.post("/validate", summary="Validate Strategy Configuration")
+@router.post("/config/validate", summary="Validate Strategy Configuration")
 def validate_strategy(payload: dict[str, Any]) -> dict[str, Any]:
     """Validate 4-part modular strategy structure before persisting."""
     return parse_and_validate_strategy(payload)

@@ -1,7 +1,7 @@
 """Create paper_sessions, paper_positions, and paper_tradebook tables.
 
-Revision ID: b2c3d4e5f6a7
-Revises: a1b2c3d4e5f6
+Revision ID: sb_paper_f5
+Revises: sb_variant_f4
 Create Date: 2026-10-03 08:10:00.000000
 """
 
@@ -13,8 +13,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "b2c3d4e5f6a7"
-down_revision: str | Sequence[str] | None = "a1b2c3d4e5f6"
+revision: str = "sb_paper_f5"
+down_revision: str | Sequence[str] | None = "sb_variant_f4"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

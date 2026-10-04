@@ -1,7 +1,7 @@
 """create live engine tables
 
-Revision ID: c3d4e5f6a7b8
-Revises: b2c3d4e5f6a7
+Revision ID: sb_live_f6
+Revises: sb_paper_f5
 Create Date: 2026-10-03 08:30:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
-revision: str = "c3d4e5f6a7b8"
-down_revision: str | None = "b2c3d4e5f6a7"
+revision: str = "sb_live_f6"
+down_revision: str | None = "sb_paper_f5"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

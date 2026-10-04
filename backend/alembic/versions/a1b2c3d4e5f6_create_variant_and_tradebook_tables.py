@@ -1,6 +1,6 @@
 """Create variant_library_conditions, variant_runs, variant_trades, and live_tradebook tables.
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: sb_variant_f4
 Revises: f6a7b8c9d0e1
 Create Date: 2026-10-03 08:05:00.000000
 """
@@ -14,7 +14,7 @@ from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
-revision: str = "a1b2c3d4e5f6"
+revision: str = "sb_variant_f4"
 down_revision: str | Sequence[str] | None = "f6a7b8c9d0e1"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

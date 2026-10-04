@@ -364,7 +364,7 @@ def test_strategy_api_crud_and_versions(client: TestClient) -> None:
     strat_payload = sample_stock_strategy()
 
     # 1. Validate endpoint
-    val_resp = client.post("/api/v1/strategy/validate", json=strat_payload)
+    val_resp = client.post("/api/v1/strategy/config/validate", json=strat_payload)
     assert val_resp.status_code == 200
     assert val_resp.json()["valid"] is True
 
