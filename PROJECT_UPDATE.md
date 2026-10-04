@@ -9,13 +9,13 @@ a live branch indicator; run `git status --short --branch` for current state.
 
 | Item | Status |
 |---|---|
-| Snapshot date | 2026-09-01 |
-| Git branch observed at snapshot | `feature/dev-autopilot-recovery` |
-| Current release wave | W1 — Stable backend foundation (in progress) |
+| Snapshot date | 2026-10-04 (review update) |
+| Git branch observed at snapshot | `main` (Features 1–6 + 2026-10-04 review fixes merged) |
+| Current release wave | W1 — Stable backend foundation; Strategy Builder Features 1–6 implemented backend-side |
 | Recovery scope | Repair autopilot controls and F0.5 fixture provenance; no product feature advancement |
 | Acceptance boundary | F0.5 is blocked on genuine recorded-cassette evidence; F0.6 must not start |
-| Product runtime | Not implemented |
-| Live trading | Not implemented and not authorized |
+| Product runtime | Backend substantial (194 REST endpoints); React terminal UI present but mostly rendering sample data (see 2026-10-04 review) |
+| Live trading | Not implemented and not authorized (live order path is a mock; gated off) |
 | Legacy project boundary | `F:\Algotrading` remains outside this repository |
 
 ## Feature status
@@ -100,6 +100,34 @@ a live branch indicator; run `git status --short --branch` for current state.
 | SB-F6 | Done | Feature 6 (Dhan Live Trading Adapter, Sub-500ms Async Queue, 4-Layer Risk Guardrails, Auto-Kill Switch, Reconciler) implemented and tested at `3947844`. |
 
 ## Major-task log
+
+### 2026-10-04 — Senior project review + two confirmed bug fixes (merged to main)
+
+- Performed a deep senior review (trading-critical audit, frontend↔backend
+  contract, two-track reconciliation) and ran the stack + app empirically.
+  Full report: `docs/qa/reviews/PROJECT_REVIEW_2026-10-04.md`.
+- **Verified green:** `ruff`, `mypy --strict` (409 files), frontend `typecheck`
+  + 288 frontend tests, backend `unit` 861 passing after fixes; app walkthrough
+  (Playwright, 13 views) renders with no crashes.
+- **Fix 1 — Critical (alembic):** the Strategy-Builder migrations reused
+  governed revision IDs and formed a cycle, and `live_tradebook` was created by
+  two migrations, so `alembic upgrade head` failed entirely. Renumbered the 3
+  colliding SB migrations (`sb_variant_f4 → sb_paper_f5 → sb_live_f6`) and
+  removed the duplicate `live_tradebook` from the live migration. `upgrade head`
+  → `downgrade base` now round-trips on a scratch DB. Commits `0bc6853`,
+  `c4f0b2a`.
+- **Fix 2 — Med (route collision):** `POST /api/v1/strategy/validate` was
+  defined by both `strategy_engine` (`valid`) and `strategy_ir` (`is_valid`);
+  moved the engine one to `/api/v1/strategy/config/validate`. Restores the
+  failing `test_strategy_ir_validate_api_endpoint`. Commit `0bc6853`.
+- **Untouched:** no Feature 1–6 runtime behavior, ORM, or API contract changed;
+  governed migrations untouched. README refreshed from "not implemented yet" to
+  an accurate status. Merged to local `main` (not pushed to origin).
+- **Key open items (report-only):** live-engine order path bypasses the
+  protected risk/broker stack and its guards are unreachable (gate before any
+  live activation); ~172 of 194 endpoints have no UI (widgets render sample
+  data); integration test suite too slow to finish; several endpoints return
+  placeholder/hardcoded data.
 
 ### 2026-10-03 — Complete Strategy Builder & Real-Time Execution Suite (Features 1 to 6)
 

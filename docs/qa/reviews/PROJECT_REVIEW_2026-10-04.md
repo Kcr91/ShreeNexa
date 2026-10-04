@@ -77,7 +77,7 @@ Commands were run offline (no Dhan credentials, no live/broker calls).
 | Secret scan (tracked source) | ✅ No secret-shaped values in tracked `.py`/`.ts` |
 | FastAPI route enumeration | ✅ 194 OpenAPI paths registered and served |
 | Docker stack (`infra/docker-compose.yml`) | ✅ postgres + valkey healthy |
-| `alembic upgrade head` | ❌ **FAILED** — duplicate revisions + cycle (§5.7) |
+| `alembic upgrade head` → `downgrade base` | ✅ **PASSES** after fixes (round-trips on scratch DB; §5.7) |
 | App walkthrough (Playwright, 13 views) | ✅ All render; ⚠️ sample data only; demo-mode live calls → 403 (§11) |
 
 **Review gotcha worth recording:** this repo pins **FastAPI 0.141.1**, whose
@@ -272,12 +272,17 @@ migrations were given unique revision IDs and re-chained after the governed head
 head with no cycle and no duplicate-revision warnings** (verified). Governed
 migrations were left untouched.
 
-> ⚠️ **One step still unverified:** executing `alembic upgrade head` against a
-> database was **blocked by the sandbox** (DB-write guard), so the migration
-> *bodies* were not run end-to-end this session. The revision *graph* is proven
-> correct; please run `alembic -c backend/alembic.ini upgrade head` once against
-> a scratch DB (and `downgrade base` to confirm the round-trip) to fully close
-> this out.
+**Second bug found during upgrade — also FIXED.** Once the cycle was gone,
+`alembic upgrade head` surfaced a previously-masked bug: `live_tradebook` was
+created by **two** migrations (`sb_variant_f4` *and* `sb_live_f6`) →
+`DuplicateTable: relation "live_tradebook" already exists`. The canonical schema
+is `app.engine.variant_models.live_tradebook_table` (imported by both the live-
+and variant-engine APIs); the variant migration matches it exactly, so the
+obsolete duplicate (VARCHAR/CASCADE) was removed from the live migration.
+
+**Verified end-to-end:** on a fresh scratch DB, `alembic upgrade head` now
+**succeeds to `sb_live_f6`** and `downgrade base` **round-trips cleanly**
+(commit `c4f0b2a`). The Critical finding is fully resolved and verified.
 
 ### 5.6 Determinism
 - Backtests key fills off **bar timestamps**, not wall-clock. `datetime.now`
@@ -290,7 +295,7 @@ migrations were left untouched.
 
 | # | Sev | Finding | Location | Action |
 |---|---|---|---|---|
-| 0 | **Critical** | **Alembic migration chain is broken**: 3 revision IDs are each defined twice and the Strategy-Builder migrations form a cycle → `alembic upgrade head` fails; DB schema cannot be built from migrations | `backend/alembic/versions/` | ✅ **FIXED & merged** (§5.7) — single linear head; run `upgrade head` once to confirm bodies |
+| 0 | **Critical** | **Alembic migration chain is broken**: 3 revision IDs each defined twice + a cycle, AND `live_tradebook` created by two migrations → `alembic upgrade head` fails; DB schema cannot be built from migrations | `backend/alembic/versions/` | ✅ **FIXED, merged & verified** (§5.7) — `upgrade head`→`downgrade base` round-trips on a scratch DB |
 | 1 | High | Live order path (Feature 6) bypasses the protected risk/broker stack; guards unreachable; adapter is a mock | `live/`, `api/live_engine.py` | Report — gate for activation; see §10 |
 | 2 | High | ~172 backend endpoints have no UI; core research/screener/strategy/backtest views are placeholders | `frontend/src/views/*` | Recommend phased UI integration (§10) |
 | 3 | Med | Fabricated/placeholder data returned as real (`4500.0` live PnL; seeded paper position; reconcile stub) | `api/live_engine.py`, `api/paper_engine.py` | Report — label as demo or compute real |
@@ -342,11 +347,13 @@ flag on any response not backed by real computation, so the UI can badge it.
 Committed as `0bc6853` and **fast-forward merged into `main`** (local only — not
 pushed to `origin`):
 
-- **Finding #0 (migration cycle) — FIXED.** Renumbered the 3 colliding SB
-  migrations to `sb_variant_f4 → sb_paper_f5 → sb_live_f6`, chained after the
-  governed head. `alembic heads` = one head; no cycle/duplicate warnings (§5.7).
-  *Governed migrations untouched. `upgrade head` execution still sandbox-blocked
-  — run once to fully confirm.*
+- **Finding #0 (migration chain) — FIXED & VERIFIED.** (1) Renumbered the 3
+  colliding SB migrations to `sb_variant_f4 → sb_paper_f5 → sb_live_f6`, chained
+  after the governed head (fixes the cycle); (2) removed the duplicate
+  `live_tradebook` creation from the live migration (fixes a `DuplicateTable`
+  bug the cycle had masked). `alembic upgrade head` → `downgrade base` now
+  round-trips cleanly on a scratch DB (§5.7). Governed migrations untouched; no
+  ORM/API/feature change. Commits `0bc6853` + `c4f0b2a`.
 - **Finding #10 (route collision) — FIXED.** Moved `strategy_engine`'s validate
   to `POST /api/v1/strategy/config/validate` (strategy_ir keeps `/validate`);
   updated its test. The two strategy test files now pass (9/9), restoring the
