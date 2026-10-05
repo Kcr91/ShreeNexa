@@ -21,7 +21,7 @@ describe("Shell Navigation and Route Switching", () => {
     // Click on Strategy Lab nav item
     const labNavBtn = within(nav).getByRole("tab", { name: /Strategy Lab/i });
     fireEvent.click(labNavBtn);
-    expect(screen.getByRole("heading", { name: "Strategy Research Lab" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Strategy Lab" })).toBeInTheDocument();
 
     // Click on Screener nav item
     const screenerNavBtn = within(nav).getByRole("tab", { name: /PIT Screener/i });
