@@ -9,7 +9,7 @@ from app.worker.data_engine.models import (
     mkt_segment_constituent_table,
     mkt_segment_table,
 )
-from sqlalchemy import select
+from sqlalchemy import insert, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Engine
 
@@ -382,40 +382,72 @@ DEFAULT_SEGMENT_CONSTITUENTS: dict[str, list[str]] = {
 
 
 def seed_nse_segments(engine: Engine) -> int:
-    """Seed the 27 NSE segment definitions and baseline constituents into PostgreSQL."""
+    """Seed the 27 NSE segment definitions and baseline constituents into database."""
     inserted_segments = 0
     inserted_constituents = 0
+    is_sqlite = engine.dialect.name == "sqlite"
 
     with engine.begin() as conn:
         for seg in NSE_SEGMENTS_CATALOG:
-            ins = pg_insert(mkt_segment_table).values(
-                code=seg["code"],
-                name=seg["name"],
-                category=seg["category"],
-                description=seg.get("description"),
-            )
-            upsert = ins.on_conflict_do_update(
-                index_elements=["code"],
-                set_={
-                    "name": ins.excluded.name,
-                    "category": ins.excluded.category,
-                    "description": ins.excluded.description,
-                },
-            )
-            conn.execute(upsert)
+            if is_sqlite:
+                # Check if exists
+                existing = conn.execute(
+                    select(mkt_segment_table).where(mkt_segment_table.c.code == seg["code"])
+                ).first()
+                if not existing:
+                    conn.execute(
+                        insert(mkt_segment_table).values(
+                            code=seg["code"],
+                            name=seg["name"],
+                            category=seg["category"],
+                            description=seg.get("description"),
+                        )
+                    )
+            else:
+                ins = pg_insert(mkt_segment_table).values(
+                    code=seg["code"],
+                    name=seg["name"],
+                    category=seg["category"],
+                    description=seg.get("description"),
+                )
+                upsert = ins.on_conflict_do_update(
+                    index_elements=["code"],
+                    set_={
+                        "name": ins.excluded.name,
+                        "category": ins.excluded.category,
+                        "description": ins.excluded.description,
+                    },
+                )
+                conn.execute(upsert)
             inserted_segments += 1
 
         for seg_code, symbols in DEFAULT_SEGMENT_CONSTITUENTS.items():
             for sym in symbols:
-                c_ins = pg_insert(mkt_segment_constituent_table).values(
-                    segment_code=seg_code,
-                    symbol=sym.upper(),
-                    weight=None,
-                )
-                c_upsert = c_ins.on_conflict_do_nothing(
-                    index_elements=["segment_code", "symbol"],
-                )
-                conn.execute(c_upsert)
+                if is_sqlite:
+                    c_exists = conn.execute(
+                        select(mkt_segment_constituent_table).where(
+                            (mkt_segment_constituent_table.c.segment_code == seg_code)
+                            & (mkt_segment_constituent_table.c.symbol == sym.upper())
+                        )
+                    ).first()
+                    if not c_exists:
+                        conn.execute(
+                            insert(mkt_segment_constituent_table).values(
+                                segment_code=seg_code,
+                                symbol=sym.upper(),
+                                weight=None,
+                            )
+                        )
+                else:
+                    c_ins = pg_insert(mkt_segment_constituent_table).values(
+                        segment_code=seg_code,
+                        symbol=sym.upper(),
+                        weight=None,
+                    )
+                    c_upsert = c_ins.on_conflict_do_nothing(
+                        index_elements=["segment_code", "symbol"],
+                    )
+                    conn.execute(c_upsert)
                 inserted_constituents += 1
 
     logger.info("Seeded %d segments and %d constituents", inserted_segments, inserted_constituents)
