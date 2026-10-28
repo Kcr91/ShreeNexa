@@ -37,6 +37,7 @@ export interface KnownInstrumentMeta {
   lotSize?: number;
   fiftyTwoWeekHigh?: number;
   fiftyTwoWeekLow?: number;
+  volume?: number;
 }
 
 export interface CatalogInstrument {
@@ -55,6 +56,7 @@ export interface CatalogInstrument {
   lotSize?: number;
   fiftyTwoWeekHigh?: number;
   fiftyTwoWeekLow?: number;
+  volume?: number;
 }
 
 export const KNOWN_EQUITY_INSTRUMENTS: Record<string, KnownInstrumentMeta> = {
@@ -142,7 +144,8 @@ export const KNOWN_EQUITY_INSTRUMENTS: Record<string, KnownInstrumentMeta> = {
   AARTIIND: { securityId: "7", tradingSymbol: "AARTIIND-EQ", segment: "NSE_EQ", name: "Aarti Industries Ltd", instrumentType: "EQUITY" },
   IGL: { securityId: "11262", tradingSymbol: "IGL-EQ", segment: "NSE_EQ", name: "Indraprastha Gas Ltd", instrumentType: "EQUITY" },
   // Image 1 Scrips & ETFs
-  SILVERCASF: { securityId: "20001", tradingSymbol: "SILVERCASF", segment: "BSE_EQ", name: "ZERODHA SILVER ETF", instrumentType: "ETF" },
+  SILVERCASF: { securityId: "20001", tradingSymbol: "SILVERCASE-EQ", segment: "NSE_EQ", name: "ZERODHA SILVER ETF", instrumentType: "ETF" },
+  SILVERCASE: { securityId: "20001", tradingSymbol: "SILVERCASE-EQ", segment: "NSE_EQ", name: "ZERODHA SILVER ETF", instrumentType: "ETF" },
   SILCASINAV: { securityId: "20002", tradingSymbol: "SILCASINAV", segment: "NSE_EQ", name: "ZERODHA AMC - SILCASINAV", instrumentType: "ETF" },
   SML100INAV: { securityId: "20003", tradingSymbol: "SML100INAV", segment: "NSE_EQ", name: "ZERODHA AMC - SML100NAV", instrumentType: "ETF" },
   SML100CASE: { securityId: "20004", tradingSymbol: "SML100CASE", segment: "NSE_EQ", name: "ZERODHA NIFTY SMALLCAP 100 ETF", instrumentType: "ETF" },
@@ -220,6 +223,9 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     instrumentType: "INDEX",
     name: "NIFTY 50 INDEX",
     aliases: ["NIFTY", "NIFTY50", "NIFTY 50", "CNX NIFTY"],
+    fiftyTwoWeekHigh: 26373.20,
+    fiftyTwoWeekLow: 22179.90,
+    volume: 310215880,
   },
   {
     symbol: "BANKNIFTY",
@@ -229,6 +235,9 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     instrumentType: "INDEX",
     name: "NIFTY BANK INDEX",
     aliases: ["BANKNIFTY", "BANK NIFTY", "NIFTY BANK"],
+    fiftyTwoWeekHigh: 61764.85,
+    fiftyTwoWeekLow: 49954.85,
+    volume: 262914141,
   },
   {
     symbol: "FINNIFTY",
@@ -238,6 +247,9 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     instrumentType: "INDEX",
     name: "NIFTY FINANCIAL SERVICES INDEX",
     aliases: ["FINNIFTY", "FIN NIFTY", "NIFTY FIN SERVICE"],
+    fiftyTwoWeekHigh: 28562.50,
+    fiftyTwoWeekLow: 23373.95,
+    volume: 129681772,
   },
   {
     symbol: "MIDCPNIFTY",
@@ -247,6 +259,9 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     instrumentType: "INDEX",
     name: "NIFTY MIDCAP SELECT INDEX",
     aliases: ["MIDCPNIFTY", "NIFTY MIDCAP", "MIDCAP NIFTY"],
+    fiftyTwoWeekHigh: 56756.15,
+    fiftyTwoWeekLow: 42006.00,
+    volume: 34830044,
   },
   {
     symbol: "SENSEX",
@@ -256,6 +271,9 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
     instrumentType: "INDEX",
     name: "BSE SENSEX INDEX",
     aliases: ["SENSEX", "BSE SENSEX", "BSESENSEX"],
+    fiftyTwoWeekHigh: 86159.02,
+    fiftyTwoWeekLow: 71292.88,
+    volume: 10867545,
   },
   {
     symbol: "NIFTYIT",
@@ -1178,12 +1196,21 @@ export const CATALOG_INSTRUMENTS: CatalogInstrument[] = [
   },
   {
     symbol: "SILVERCASF",
-    tradingSymbol: "SILVERCASF",
+    tradingSymbol: "SILVERCASE-EQ",
     securityId: "20001",
-    segment: "BSE_EQ",
+    segment: "NSE_EQ",
     instrumentType: "ETF",
     name: "ZERODHA SILVER ETF",
-    aliases: ["SILVERCASF", "ZERODHA SILVER ETF", "ETF"],
+    aliases: ["SILVERCASF", "SILVERCASE", "ZERODHA SILVER ETF", "ETF"],
+  },
+  {
+    symbol: "SILVERCASE",
+    tradingSymbol: "SILVERCASE-EQ",
+    securityId: "20001",
+    segment: "NSE_EQ",
+    instrumentType: "ETF",
+    name: "ZERODHA SILVER ETF",
+    aliases: ["SILVERCASE", "SILVERCASF", "ZERODHA SILVER ETF", "ETF"],
   },
   {
     symbol: "SILCASINAV",
@@ -1646,13 +1673,17 @@ export function loadWatchlists(): Watchlist[] {
           items: (wl.items || []).map((it) => {
             const known = KNOWN_EQUITY_INSTRUMENTS[it.symbol];
             const clean = unavailableReference(it);
+            const isBse = it.segment === "BSE_EQ" || it.segment === "BSE";
             return {
               ...clean,
+              segment: isBse ? "NSE_EQ" : (it.segment || known?.segment || "NSE_EQ"),
               securityId:
                 (!it.securityId || it.securityId.trim() === "") && known
                   ? known.securityId
                   : it.securityId,
-              tradingSymbol: it.tradingSymbol || known?.tradingSymbol,
+              tradingSymbol:
+                (it.tradingSymbol === "SILVERCASF" ? "SILVERCASE-EQ" : it.tradingSymbol) ||
+                known?.tradingSymbol,
             };
           }),
         };

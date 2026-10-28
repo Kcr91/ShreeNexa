@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { WidgetComponentProps, WidgetDefinition } from "../types";
 import {
   IndexCategory,
@@ -102,8 +102,25 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  // Attempt backend fetch if API is reachable
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isCompact, setIsCompact] = useState<boolean>(false);
+
   useEffect(() => {
+    if (!containerRef.current) return;
+    const updateSize = () => {
+      if (containerRef.current) {
+        setIsCompact(
+          containerRef.current.clientWidth > 0 && containerRef.current.clientWidth < 620
+        );
+      }
+    };
+    updateSize();
+    const observer = new ResizeObserver(() => updateSize());
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const fetchIndices = useCallback(() => {
     fetch("/api/v1/heatmap/indices", { credentials: "include" })
       .then((res) => {
         if (!res.ok) throw marketDataApiError(res.status);
@@ -116,10 +133,38 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
             data.forEach((d) => {
               const cat: IndexCategory = (d.category as IndexCategory) || "SECTORAL";
               if (updated[cat]) {
-                const idx = updated[cat].findIndex((i) => i.indexName === d.index_name);
+                const normName = (str: string) => str.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                const dNorm = normName(d.index_name || "");
+                const idx = updated[cat].findIndex((i) =>
+                  (d.security_id && i.securityId && d.security_id === i.securityId) ||
+                  i.indexName === d.index_name ||
+                  normName(i.indexName) === dNorm
+                );
                 if (idx >= 0) {
                   updated[cat][idx] = {
                     ...updated[cat][idx],
+                    ltp: d.ltp ?? updated[cat][idx].ltp,
+                    changePct: d.change_pct ?? updated[cat][idx].changePct,
+                    advances: d.advances ?? updated[cat][idx].advances,
+                    declines: d.declines ?? updated[cat][idx].declines,
+                    unchanged: d.unchanged ?? updated[cat][idx].unchanged,
+                    futuresBasis: d.futures_basis ?? updated[cat][idx].futuresBasis,
+                    oiChangePct: d.oi_change_pct ?? updated[cat][idx].oiChangePct,
+                    securityId: d.security_id ?? updated[cat][idx].securityId,
+                    segment: d.segment ?? updated[cat][idx].segment,
+                    marketState: d.market_state ?? updated[cat][idx].marketState,
+                    source: d.source ?? updated[cat][idx].source,
+                    receivedAt: d.received_at ?? updated[cat][idx].receivedAt,
+                    error: d.error ?? updated[cat][idx].error,
+                  };
+                } else {
+                  updated[cat].push({
+                    indexName: d.index_name,
+                    category: cat,
+                    sector: d.sector || "Equities",
+                    weight: d.weight ?? 5.0,
+                    constituentCount: d.constituent_count ?? 50,
+                    weightingSource: d.weighting_source ?? "OFFICIAL_NSE",
                     ltp: d.ltp,
                     changePct: d.change_pct,
                     advances: d.advances,
@@ -133,7 +178,7 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                     source: d.source,
                     receivedAt: d.received_at,
                     error: d.error,
-                  };
+                  });
                 }
               }
             });
@@ -152,61 +197,100 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
       });
   }, []);
 
-  // Fetch or resolve constituents when selectedIndex changes
-  useEffect(() => {
-    if (!constituentsCache[selectedIndex]) {
-      // First try backend API
-      fetch(`/api/v1/heatmap/${encodeURIComponent(selectedIndex)}/constituents`, {
-        credentials: "include",
+  const fetchConstituents = useCallback((idxName: string) => {
+    fetch(`/api/v1/heatmap/${encodeURIComponent(idxName)}/constituents`, {
+      credentials: "include",
+    })
+      .then((res) => {
+        if (!res.ok) throw marketDataApiError(res.status);
+        return res.json();
       })
-        .then((res) => {
-          if (!res.ok) throw marketDataApiError(res.status);
-          return res.json();
-        })
-        .then((data) => {
-          if (data && Array.isArray(data.constituents) && data.constituents.length > 0) {
-            setConstituentsCache((prev) => ({
+      .then((data) => {
+        if (data && Array.isArray(data.constituents) && data.constituents.length > 0) {
+          setConstituentsCache((prev) => {
+            const existing = prev[idxName] || [];
+            const existingMap = new Map(existing.map((c) => [c.symbol.toUpperCase(), c]));
+            return {
               ...prev,
-              [selectedIndex]: data.constituents.map((c: any) => ({
-                symbol: c.symbol,
-                sector: c.sector,
-                weight: c.weight,
-                isWeightFallback: c.is_weight_fallback,
-                weightingSource: c.weighting_source,
-                changePct: c.change_pct,
-                ltp: c.ltp,
-                volume: c.volume,
-                securityId: c.security_id,
-                segment: c.segment,
-                marketState: c.market_state,
-                source: c.source,
-                receivedAt: c.received_at,
-                error: c.error,
-              })),
-            }));
-          } else {
-            // Identity-only fallback. No market value is synthesized.
-            const generated = getConstituentsForIndex(selectedIndex);
-            setConstituentsCache((prev) => ({
-              ...prev,
-              [selectedIndex]: generated,
-            }));
-          }
-        })
-        .catch((reason: unknown) => {
-          const error = reason instanceof Error ? reason.message : "Authoritative Dhan market data is unavailable";
-          const generated = getConstituentsForIndex(selectedIndex).map((item) => ({
-            ...item,
-            marketState: "ERROR" as const,
-            error,
-          }));
+              [idxName]: data.constituents.map((c: any) => {
+                const old = existingMap.get(c.symbol.toUpperCase());
+                return {
+                  symbol: c.symbol,
+                  name: old?.name || c.symbol,
+                  sector: c.sector || old?.sector || "Equities",
+                  weight: c.weight,
+                  isWeightFallback: c.is_weight_fallback,
+                  weightingSource: c.weighting_source,
+                  changePct: c.change_pct ?? old?.changePct,
+                  ltp: c.ltp ?? old?.ltp,
+                  volume: c.volume ?? old?.volume,
+                  securityId: c.security_id || old?.securityId,
+                  segment: c.segment || old?.segment,
+                  marketState: c.market_state ?? old?.marketState,
+                  source: c.source ?? old?.source,
+                  receivedAt: c.received_at ?? old?.receivedAt,
+                  error: c.error ?? old?.error,
+                };
+              }),
+            };
+          });
+        } else {
+          const generated = getConstituentsForIndex(idxName);
           setConstituentsCache((prev) => ({
             ...prev,
-            [selectedIndex]: generated,
+            [idxName]: generated,
           }));
+        }
+      })
+      .catch((reason: unknown) => {
+        const error = reason instanceof Error ? reason.message : "Authoritative Dhan market data is unavailable";
+        setConstituentsCache((prev) => {
+          const current = prev[idxName] || getConstituentsForIndex(idxName);
+          return {
+            ...prev,
+            [idxName]: current.map((item) => ({
+              ...item,
+              marketState: item.ltp !== undefined ? item.marketState : ("ERROR" as const),
+              error: item.ltp !== undefined ? undefined : error,
+            })),
+          };
         });
+      });
+  }, []);
+
+  // Attempt backend fetch if API is reachable
+  useEffect(() => {
+    fetchIndices();
+  }, [fetchIndices]);
+
+  // Fetch or resolve constituents when selectedIndex changes:
+  // Immediately seeds constituents from the official catalog for 0ms instant display,
+  // then updates asynchronously in the background.
+  useEffect(() => {
+    if (!constituentsCache[selectedIndex]) {
+      const immediate = getConstituentsForIndex(selectedIndex);
+      if (immediate && immediate.length > 0) {
+        setConstituentsCache((prev) => ({
+          ...prev,
+          [selectedIndex]: immediate,
+        }));
+      }
     }
-  }, [selectedIndex, constituentsCache]);
+    fetchConstituents(selectedIndex);
+  }, [selectedIndex, fetchConstituents]);
+
+  // Periodic polling every 4 seconds to guarantee that all constituents and indices
+  // receive fresh authoritative prices without any stalled loading or missed updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (viewMode === "CONSTITUENTS" && selectedIndex) {
+        fetchConstituents(selectedIndex);
+      } else {
+        fetchIndices();
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [viewMode, selectedIndex, fetchConstituents, fetchIndices]);
 
   // Connect to live WebSocket feed and update constituents and indices dynamically
   useEffect(() => {
@@ -234,9 +318,10 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
     // 2. Listen to quote ticks from live feed
     const unsub = defaultWebSocketClient.onChannel("quotes", (data: unknown) => {
       const tick = data as TickData;
-      if (!tick || !tick.symbol) return;
+      if (!tick || (!tick.symbol && !tick.securityId)) return;
 
-      const sym = tick.symbol.toUpperCase();
+      const sym = (tick.symbol || "").toUpperCase();
+      const tickSecId = tick.securityId;
       setLastUpdated(new Date());
 
       // Update constituent items in cache if matched
@@ -248,7 +333,10 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
           const list = updatedCache[indexName];
           if (!list || list.length === 0) continue;
 
-          const itemIdx = list.findIndex((c) => c.symbol.toUpperCase() === sym);
+          const itemIdx = list.findIndex((c) => {
+            if (tickSecId && c.securityId && tickSecId === c.securityId) return true;
+            return c.symbol.toUpperCase() === sym;
+          });
           if (itemIdx >= 0) {
             matched = true;
             const updatedList = [...list];
@@ -279,9 +367,11 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
           if (!list || list.length === 0) continue;
 
           const itemIdx = list.findIndex((item) => {
+            if (tickSecId && item.securityId && tickSecId === item.securityId) return true;
             const name = item.indexName.toUpperCase();
             return (
               name === sym ||
+              name.replace(/[^a-zA-Z0-9]/g, "") === sym.replace(/[^a-zA-Z0-9]/g, "") ||
               (sym === "NIFTY" && (name === "NIFTY 50" || name === "NIFTY50")) ||
               (sym === "BANKNIFTY" && (name === "NIFTY BANK" || name === "BANK NIFTY")) ||
               (sym === "NIFTY 50" && (name === "NIFTY 50" || name === "NIFTY")) ||
@@ -441,7 +531,11 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
   const handleManualRefresh = useCallback(() => {
     setLastUpdated(new Date());
     defaultWebSocketClient.resync();
-  }, []);
+    fetchIndices();
+    if (viewMode === "CONSTITUENTS") {
+      fetchConstituents(selectedIndex);
+    }
+  }, [fetchIndices, fetchConstituents, viewMode, selectedIndex]);
 
   const visibleMarketState = useMemo(() => {
     const items = viewMode === "INDICES" ? currentIndicesList : currentConstituents;
@@ -464,10 +558,11 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
 
   return (
     <div
+      ref={containerRef}
       style={{
         height: "100%",
         display: "flex",
-        flexDirection: "row",
+        flexDirection: isCompact ? "column" : "row",
         backgroundColor: "var(--bg-surface)",
         color: "var(--text-primary)",
         fontSize: "var(--font-size-sm)",
@@ -476,75 +571,47 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
       }}
     >
       {/* =================================================================== */}
-      {/* Left Navigation Panel                                               */}
+      {/* Navigation Panel (Top bar on compact / Sidebar on desktop)          */}
       {/* =================================================================== */}
-      <div
-        style={{
-          width: "205px",
-          minWidth: "190px",
-          maxWidth: "240px",
-          display: "flex",
-          flexDirection: "column",
-          backgroundColor: "var(--bg-elevated)",
-          borderRight: "1px solid var(--border-subtle)",
-          overflowY: "auto",
-        }}
-      >
-        {viewMode === "INDICES" ? (
-          // 1. Category Selector (Images 1, 2, 3)
-          <div style={{ display: "flex", flexDirection: "column", padding: "12px 8px" }}>
-            <div
-              style={{
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "6px",
-                overflow: "hidden",
-                backgroundColor: "var(--bg-surface)",
-              }}
-            >
-              {CATEGORY_TABS.map((tab, idx) => {
-                const isActive = activeCategory === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => handleCategorySelect(tab.key)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "10px 14px",
-                      background: isActive ? "rgba(216, 90, 56, 0.08)" : "transparent",
-                      border: "none",
-                      borderLeft: isActive ? "3px solid #d85a38" : "3px solid transparent",
-                      borderBottom:
-                        idx < CATEGORY_TABS.length - 1 ? "1px solid var(--border-subtle)" : "none",
-                      color: isActive ? "#d85a38" : "var(--text-primary)",
-                      fontWeight: isActive ? 700 : 500,
-                      fontSize: "12.5px",
-                      cursor: "pointer",
-                      transition: "background 0.15s ease",
-                      outline: "none",
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-
-          </div>
-        ) : (
-          // 2. Index List for Drill-In Mode (Image 4)
-          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-            <div
-              style={{
-                padding: "10px 12px",
-                borderBottom: "1px solid var(--border-subtle)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                backgroundColor: "var(--bg-surface)",
-              }}
-            >
+      {isCompact ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "4px 8px",
+            backgroundColor: "var(--bg-elevated)",
+            borderBottom: "1px solid var(--border-subtle)",
+            overflowX: "auto",
+            flexShrink: 0,
+          }}
+        >
+          {viewMode === "INDICES" ? (
+            CATEGORY_TABS.map((tab) => {
+              const isActive = activeCategory === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => handleCategorySelect(tab.key)}
+                  style={{
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    border: "none",
+                    background: isActive ? "rgba(216, 90, 56, 0.15)" : "transparent",
+                    color: isActive ? "#d85a38" : "var(--text-secondary)",
+                    fontWeight: isActive ? 700 : 500,
+                    fontSize: "11px",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}>
               <button
                 type="button"
                 onClick={handleBackToOverview}
@@ -555,65 +622,175 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                   cursor: "pointer",
                   fontWeight: 700,
                   fontSize: "11px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
                   padding: 0,
+                  whiteSpace: "nowrap",
                 }}
               >
-                ← Categories
+                ← Back
               </button>
-              <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 600 }}>
-                {CATEGORY_TABS.find((t) => t.key === activeCategory)?.label}
-              </span>
+              <select
+                aria-label="Select index"
+                value={selectedIndex}
+                onChange={(e) => setSelectedIndex(e.target.value)}
+                style={{
+                  flex: 1,
+                  backgroundColor: "var(--bg-surface)",
+                  color: "var(--text-primary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "4px",
+                  fontSize: "11px",
+                  padding: "2px 4px",
+                  outline: "none",
+                }}
+              >
+                {currentIndicesList.map((idxItem) => (
+                  <option key={idxItem.indexName} value={idxItem.indexName}>
+                    {idxItem.indexName}
+                  </option>
+                ))}
+              </select>
             </div>
-
-            <div style={{ flex: 1, overflowY: "auto", padding: "8px 6px" }}>
+          )}
+        </div>
+      ) : (
+        <div
+          style={{
+            width: "205px",
+            minWidth: "190px",
+            maxWidth: "240px",
+            display: "flex",
+            flexDirection: "column",
+            backgroundColor: "var(--bg-elevated)",
+            borderRight: "1px solid var(--border-subtle)",
+            overflowY: "auto",
+            flexShrink: 0,
+          }}
+        >
+          {viewMode === "INDICES" ? (
+            // 1. Category Selector (Images 1, 2, 3)
+            <div style={{ display: "flex", flexDirection: "column", padding: "12px 8px" }}>
               <div
                 style={{
                   border: "1px solid var(--border-subtle)",
-                  borderRadius: "4px",
+                  borderRadius: "6px",
                   overflow: "hidden",
                   backgroundColor: "var(--bg-surface)",
                 }}
               >
-                {currentIndicesList.map((idxItem, i) => {
-                  const isSelected = selectedIndex === idxItem.indexName;
+                {CATEGORY_TABS.map((tab, idx) => {
+                  const isActive = activeCategory === tab.key;
                   return (
                     <button
-                      key={idxItem.indexName}
+                      key={tab.key}
                       type="button"
-                      onClick={() => setSelectedIndex(idxItem.indexName)}
+                      onClick={() => handleCategorySelect(tab.key)}
                       style={{
                         width: "100%",
                         textAlign: "left",
-                        padding: "8px 10px",
-                        background: isSelected ? "rgba(216, 90, 56, 0.08)" : "transparent",
+                        padding: "10px 14px",
+                        background: isActive ? "rgba(216, 90, 56, 0.08)" : "transparent",
                         border: "none",
-                        borderLeft: isSelected ? "3px solid #d85a38" : "3px solid transparent",
+                        borderLeft: isActive ? "3px solid #d85a38" : "3px solid transparent",
                         borderBottom:
-                          i < currentIndicesList.length - 1 ? "1px solid var(--border-subtle)" : "none",
-                        color: isSelected ? "#d85a38" : "var(--text-primary)",
-                        fontWeight: isSelected ? 700 : 500,
-                        fontSize: "11px",
+                          idx < CATEGORY_TABS.length - 1 ? "1px solid var(--border-subtle)" : "none",
+                        color: isActive ? "#d85a38" : "var(--text-primary)",
+                        fontWeight: isActive ? 700 : 500,
+                        fontSize: "12.5px",
                         cursor: "pointer",
+                        transition: "background 0.15s ease",
                         outline: "none",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "block",
                       }}
-                      title={idxItem.indexName}
                     >
-                      {idxItem.indexName}
+                      {tab.label}
                     </button>
                   );
                 })}
               </div>
+
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            // 2. Index List for Drill-In Mode (Image 4)
+            <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+              <div
+                style={{
+                  padding: "10px 12px",
+                  borderBottom: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: "var(--bg-surface)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleBackToOverview}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#d85a38",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: "11px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: 0,
+                  }}
+                >
+                  ← Categories
+                </button>
+                <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 600 }}>
+                  {CATEGORY_TABS.find((t) => t.key === activeCategory)?.label}
+                </span>
+              </div>
+
+              <div style={{ flex: 1, overflowY: "auto", padding: "8px 6px" }}>
+                <div
+                  style={{
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    backgroundColor: "var(--bg-surface)",
+                  }}
+                >
+                  {currentIndicesList.map((idxItem, i) => {
+                    const isSelected = selectedIndex === idxItem.indexName;
+                    return (
+                      <button
+                        key={idxItem.indexName}
+                        type="button"
+                        onClick={() => setSelectedIndex(idxItem.indexName)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "8px 10px",
+                          background: isSelected ? "rgba(216, 90, 56, 0.08)" : "transparent",
+                          border: "none",
+                          borderLeft: isSelected ? "3px solid #d85a38" : "3px solid transparent",
+                          borderBottom:
+                            i < currentIndicesList.length - 1 ? "1px solid var(--border-subtle)" : "none",
+                          color: isSelected ? "#d85a38" : "var(--text-primary)",
+                          fontWeight: isSelected ? 700 : 500,
+                          fontSize: "11px",
+                          cursor: "pointer",
+                          outline: "none",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "block",
+                        }}
+                        title={idxItem.indexName}
+                      >
+                        {idxItem.indexName}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* =================================================================== */}
       {/* Right Content Area                                                  */}
@@ -624,7 +801,8 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
-          height: "100%",
+          minHeight: 0,
+          height: isCompact ? "auto" : "100%",
           overflow: "hidden",
         }}
       >
@@ -812,19 +990,21 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
             </div>
 
             {/* Official 7-tier NSE Legend Badges */}
-            <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
-              <span style={{ backgroundColor: "#0b7a3e", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>5</span>
-              <span style={{ backgroundColor: "#28a745", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>3</span>
-              <span style={{ backgroundColor: "#58ba6d", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>1</span>
-              <span style={{ backgroundColor: "#8e99a8", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>0%</span>
-              <span style={{ backgroundColor: "#e87070", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>-1</span>
-              <span style={{ backgroundColor: "#c9302c", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>-3</span>
-              <span style={{ backgroundColor: "#8b0000", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>-5</span>
-            </div>
+            {!isCompact && (
+              <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                <span style={{ backgroundColor: "#0b7a3e", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>5</span>
+                <span style={{ backgroundColor: "#28a745", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>3</span>
+                <span style={{ backgroundColor: "#58ba6d", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>1</span>
+                <span style={{ backgroundColor: "#8e99a8", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>0%</span>
+                <span style={{ backgroundColor: "#e87070", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>-1</span>
+                <span style={{ backgroundColor: "#c9302c", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>-3</span>
+                <span style={{ backgroundColor: "#8b0000", color: "#fff", padding: "1px 7px", borderRadius: "3px", fontWeight: 700, fontSize: "10px" }}>-5</span>
+              </div>
+            )}
 
             {/* Timestamp & Refresh */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "var(--text-muted)" }}>
-              <span>As on {formatNseTimestamp(lastUpdated)} IST</span>
+              <span>{isCompact ? formatNseTimestamp(lastUpdated).split(" ")[1] : `As on ${formatNseTimestamp(lastUpdated)} IST`}</span>
               <button
                 type="button"
                 onClick={handleManualRefresh}
@@ -852,11 +1032,12 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
             flexWrap: "wrap",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: "var(--spacing-2)",
-            padding: "4px 14px",
+            gap: isCompact ? "4px" : "var(--spacing-2)",
+            padding: isCompact ? "3px 8px" : "4px 14px",
             backgroundColor: "var(--bg-elevated)",
             borderBottom: "1px solid var(--border-subtle)",
             fontSize: "11px",
+            overflowX: isCompact ? "auto" : "visible",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -944,11 +1125,14 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
         <div
           style={{
             flex: 1,
+            minHeight: "160px",
             overflowY: "auto",
-            padding: "12px",
+            padding: isCompact ? "6px" : "12px",
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
-            gap: "8px",
+            gridTemplateColumns: isCompact
+              ? "repeat(auto-fill, minmax(105px, 1fr))"
+              : "repeat(auto-fill, minmax(130px, 1fr))",
+            gap: isCompact ? "6px" : "8px",
             alignContent: "flex-start",
           }}
         >
@@ -967,13 +1151,13 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                   style={{
                     backgroundColor: bgColor,
                     borderRadius: "6px",
-                    padding: "8px 10px",
+                    padding: isCompact ? "6px 8px" : "8px 10px",
                     color: "#ffffff",
                     cursor: "pointer",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    minHeight: "72px",
+                    minHeight: isCompact ? "58px" : "72px",
                     boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
                     transition: "transform 0.12s ease, box-shadow 0.12s ease",
                   }}
@@ -1067,13 +1251,13 @@ export const MarketHeatmapWidget: React.FC<WidgetComponentProps<HeatmapSettings>
                   style={{
                     backgroundColor: bgColor,
                     borderRadius: "6px",
-                    padding: "8px 10px",
+                    padding: isCompact ? "6px 8px" : "8px 10px",
                     color: "#ffffff",
                     cursor: "pointer",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    minHeight: "68px",
+                    minHeight: isCompact ? "54px" : "68px",
                     boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
                     position: "relative",
                     transition: "transform 0.12s ease, box-shadow 0.12s ease",

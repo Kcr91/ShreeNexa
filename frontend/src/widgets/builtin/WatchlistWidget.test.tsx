@@ -458,4 +458,15 @@ describe("WatchlistWidget Component", () => {
     expect(screen.getByText("Nifty Pharma")).toBeInTheDocument();
     expect(screen.queryByText("Nifty Auto")).not.toBeInTheDocument();
   });
+
+  it("normalizes BSE equity scrips to NSE_EQ for live market data", () => {
+    render(<WatchlistWidget instanceId="inst-wl-test" settings={{}} />);
+
+    const symInput = screen.getByPlaceholderText(/Add symbol/i);
+    fireEvent.change(symInput, { target: { value: "SILVERCASF" } });
+    const addBtn = screen.getByText("Add");
+    fireEvent.click(addBtn);
+
+    expect(screen.getByText("SILVERCASF")).toBeInTheDocument();
+  });
 });

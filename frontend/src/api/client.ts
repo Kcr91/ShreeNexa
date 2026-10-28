@@ -174,6 +174,28 @@ export class ApiClient {
     return this.request<TokenHealthResponse>("/api/v1/dhan/token-health");
   }
 
+  public async updateDhanToken(accessToken: string, clientId?: string): Promise<TokenHealthResponse> {
+    return this.request<TokenHealthResponse>("/api/v1/settings/dhan-token", {
+      method: "POST",
+      body: JSON.stringify({ access_token: accessToken, client_id: clientId || undefined }),
+    });
+  }
+
+  public async changePassword(
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>("/api/v1/settings/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      }),
+    });
+  }
+
   public async demoLogin(): Promise<AuthSuccessResponse> {
     return this.request<AuthSuccessResponse>("/api/v1/auth/demo", {
       method: "POST",

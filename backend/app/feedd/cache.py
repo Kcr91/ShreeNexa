@@ -52,6 +52,8 @@ class CachedQuote(BaseModel):
     low: float | None = None
     close: float | None = None
     previous_close: float | None = None
+    fifty_two_week_high: float | None = None
+    fifty_two_week_low: float | None = None
     received_at: float
     source: Literal["DHAN_WEBSOCKET", "DHAN_REST"] = "DHAN_WEBSOCKET"
     market_state: MarketDataState = "LIVE"
@@ -194,6 +196,8 @@ def _apply_freshness_quote(quote: CachedQuote, now: float, threshold: float) -> 
         low=quote.low,
         close=quote.close,
         previous_close=quote.previous_close,
+        fifty_two_week_high=quote.fifty_two_week_high,
+        fifty_two_week_low=quote.fifty_two_week_low,
         received_at=quote.received_at,
         source=quote.source,
         market_state="STALE" if is_stale and quote.market_state == "LIVE" else quote.market_state,
@@ -289,6 +293,12 @@ class InMemoryHotCache:
                 previous_close=(
                     existing_quote.previous_close if existing_quote is not None else None
                 ),
+                fifty_two_week_high=(
+                    existing_quote.fifty_two_week_high if existing_quote is not None else None
+                ),
+                fifty_two_week_low=(
+                    existing_quote.fifty_two_week_low if existing_quote is not None else None
+                ),
                 received_at=t,
             )
 
@@ -336,6 +346,8 @@ class InMemoryHotCache:
                     low=min(existing.low, packet.ltp) if existing.low is not None else None,
                     close=existing.close,
                     previous_close=existing.previous_close,
+                    fifty_two_week_high=existing.fifty_two_week_high,
+                    fifty_two_week_low=existing.fifty_two_week_low,
                     received_at=t,
                 )
             else:
@@ -365,6 +377,8 @@ class InMemoryHotCache:
                     low=existing.low,
                     close=existing.close,
                     previous_close=packet.prev_close,
+                    fifty_two_week_high=existing.fifty_two_week_high,
+                    fifty_two_week_low=existing.fifty_two_week_low,
                     received_at=t,
                 )
             else:
@@ -466,6 +480,37 @@ class RedisHotCache:
         self.freshness_threshold = freshness_threshold_seconds
         self.ttl = ttl_seconds
 
+    def _get_cached_previous_close(self, segment: str, security_id: str) -> float | None:
+        cached_pc = self._client.get(f"shreenexa:feed:v2:prev_close:{segment}:{security_id}")
+        if not cached_pc:
+            return None
+        try:
+            return float(str(cached_pc))
+        except (ValueError, TypeError):
+            return None
+
+    def _get_cached_metric_float(
+        self, metric: str, segment: str, security_id: str
+    ) -> float | None:
+        cached_val = self._client.get(f"shreenexa:feed:v2:{metric}:{segment}:{security_id}")
+        if not cached_val:
+            return None
+        try:
+            return float(str(cached_val))
+        except (ValueError, TypeError):
+            return None
+
+    def _get_cached_metric_int(
+        self, metric: str, segment: str, security_id: str
+    ) -> int | None:
+        cached_val = self._client.get(f"shreenexa:feed:v2:{metric}:{segment}:{security_id}")
+        if not cached_val:
+            return None
+        try:
+            return int(float(str(cached_val)))
+        except (ValueError, TypeError):
+            return None
+
     def update_from_packet(self, packet: FeedPacket, now: float | None = None) -> None:
         self.batch_update_packets([packet], now=now)
 
@@ -502,7 +547,15 @@ class RedisHotCache:
                     "low": packet.low,
                     "close": packet.close,
                     "previous_close": (
-                        existing_quote.previous_close if existing_quote is not None else None
+                        existing_quote.previous_close
+                        if existing_quote and existing_quote.previous_close is not None
+                        else self._get_cached_previous_close(seg, sec_id)
+                    ),
+                    "fifty_two_week_high": (
+                        existing_quote.fifty_two_week_high if existing_quote is not None else None
+                    ),
+                    "fifty_two_week_low": (
+                        existing_quote.fifty_two_week_low if existing_quote is not None else None
                     ),
                     "received_at": t,
                     "source": "DHAN_WEBSOCKET",
@@ -552,6 +605,14 @@ class RedisHotCache:
             sec_id = str(packet.header.security_id)
             existing = self.get_quote(seg, sec_id, now=t)
             if isinstance(packet, PrevClosePacket):
+                try:
+                    self._client.set(
+                        f"shreenexa:feed:v2:prev_close:{seg}:{sec_id}",
+                        str(packet.prev_close),
+                        ex=86400,
+                    )
+                except Exception:
+                    pass
                 quote = (
                     existing.model_copy(
                         update={
@@ -570,11 +631,35 @@ class RedisHotCache:
                     )
                 )
             else:
+                prev_close_val = (
+                    existing.previous_close
+                    if existing and existing.previous_close is not None
+                    else self._get_cached_previous_close(seg, sec_id)
+                )
+                h52_val = (
+                    existing.fifty_two_week_high
+                    if existing and existing.fifty_two_week_high is not None
+                    else self._get_cached_metric_float("52w_high", seg, sec_id)
+                )
+                l52_val = (
+                    existing.fifty_two_week_low
+                    if existing and existing.fifty_two_week_low is not None
+                    else self._get_cached_metric_float("52w_low", seg, sec_id)
+                )
+                vol_val = (
+                    existing.volume
+                    if existing and existing.volume is not None
+                    else self._get_cached_metric_int("vol", seg, sec_id)
+                )
                 quote = (
                     existing.model_copy(
                         update={
                             "ltp": packet.ltp,
                             "ltt": packet.ltt,
+                            "previous_close": prev_close_val,
+                            "fifty_two_week_high": h52_val,
+                            "fifty_two_week_low": l52_val,
+                            "volume": vol_val,
                             "received_at": t,
                             "source": "DHAN_WEBSOCKET",
                             "market_state": "LIVE",
@@ -588,6 +673,10 @@ class RedisHotCache:
                         security_id=sec_id,
                         ltp=packet.ltp,
                         ltt=packet.ltt,
+                        previous_close=prev_close_val,
+                        fifty_two_week_high=h52_val,
+                        fifty_two_week_low=l52_val,
+                        volume=vol_val,
                         received_at=t,
                     )
                 )

@@ -60,6 +60,7 @@ export class NexaWebSocketClient {
   private readonly channelRefCounts = new Map<FeedChannel, number>();
   private readonly symbolRefCounts = new Map<string, number>();
   private readonly instrumentRefCounts = new Map<string, number>();
+  private readonly cachedPreviousCloses = new Map<string, number>();
 
   constructor(options: WebSocketClientOptions = {}) {
     const defaultUrl = typeof window !== "undefined" && window.location
@@ -121,16 +122,28 @@ export class NexaWebSocketClient {
       const securityId = String(message.security_id ?? data.security_id);
       const subscribed = this.subscribedInstruments.get(`${segment}:${securityId}`);
       const symbol = subscribed?.symbol ?? SECURITY_ID_MAP[`${segment}:${securityId}`] ?? `SEC-${securityId}`;
-      const previousClose = typeof data.previous_close === "number" ? data.previous_close : undefined;
-      const change = previousClose === undefined
-        ? undefined
-        : Number((data.ltp - previousClose).toFixed(2));
-      const changePct = previousClose && change !== undefined
-        ? Number((change / previousClose * 100).toFixed(2))
-        : undefined;
+      const instKey = `${segment}:${securityId}`;
+      let previousClose = typeof data.previous_close === "number" && data.previous_close > 0 ? data.previous_close : undefined;
+      if (previousClose !== undefined) {
+        this.cachedPreviousCloses.set(instKey, previousClose);
+      } else {
+        previousClose = this.cachedPreviousCloses.get(instKey);
+      }
+      const change = typeof data.change === "number"
+        ? Number(data.change.toFixed(2))
+        : previousClose === undefined
+          ? undefined
+          : Number((data.ltp - previousClose).toFixed(2));
+      const changePct = typeof data.change_percent === "number"
+        ? Number(data.change_percent.toFixed(2))
+        : previousClose && change !== undefined
+          ? Number(((change / previousClose) * 100).toFixed(2))
+          : undefined;
       this.lastLivePacketTime = Date.now();
       this.dispatchTick({
         symbol,
+        securityId,
+        segment,
         ltp: data.ltp,
         change,
         changePct,
@@ -139,6 +152,12 @@ export class NexaWebSocketClient {
         sourceTimestamp: typeof data.ltt === "number" || typeof data.ltt === "string"
           ? data.ltt
           : undefined,
+        open: typeof data.open === "number" ? data.open : undefined,
+        high: typeof data.high === "number" ? data.high : undefined,
+        low: typeof data.low === "number" ? data.low : undefined,
+        close: typeof data.close === "number" ? data.close : undefined,
+        fiftyTwoWeekHigh: typeof data.fifty_two_week_high === "number" ? data.fifty_two_week_high : undefined,
+        fiftyTwoWeekLow: typeof data.fifty_two_week_low === "number" ? data.fifty_two_week_low : undefined,
         previousClose,
         marketState: data.market_state,
         source: data.source,

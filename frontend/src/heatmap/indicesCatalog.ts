@@ -1,28 +1,29 @@
 import { IndexCategory, IndexHeatmapItem, ConstituentHeatmapItem } from "./types";
 import { FNO_208_STOCKS } from "../watchlist/standardWatchlists";
 import { OFFICIAL_INDEX_CONSTITUENTS, DERIVED_INDICES } from "./officialConstituents";
+import { NSE_STOCK_BY_SYMBOL } from "../watchlist/nseStockMaster";
 
 // ---------------------------------------------------------------------------
 // 1. Broad Market Indices (21 indices - Image 1)
 // ---------------------------------------------------------------------------
 export const BROAD_MARKET_INDICES: IndexHeatmapItem[] = [
-  { indexName: "NIFTY 50", category: "BROAD_MARKET", sector: "Large Cap Benchmark", weight: 35.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY NEXT 50", category: "BROAD_MARKET", sector: "Large Cap Emerging", weight: 12.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MIDCAP 50", category: "BROAD_MARKET", sector: "Mid Cap Select", weight: 6.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MIDCAP 100", category: "BROAD_MARKET", sector: "Mid Cap Core", weight: 8.0, constituentCount: 100, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MIDCAP 150", category: "BROAD_MARKET", sector: "Mid Cap Broad", weight: 10.0, constituentCount: 150, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY SMLCAP 50", category: "BROAD_MARKET", sector: "Small Cap High Growth", weight: 4.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY SMLCAP 100", category: "BROAD_MARKET", sector: "Small Cap Core", weight: 5.0, constituentCount: 100, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY SMLCAP 250", category: "BROAD_MARKET", sector: "Small Cap Broad", weight: 6.0, constituentCount: 250, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MIDSML 400", category: "BROAD_MARKET", sector: "Mid & Small Aggregate", weight: 7.0, constituentCount: 400, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY 100", category: "BROAD_MARKET", sector: "Top 100 Large Cap", weight: 20.0, constituentCount: 100, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY 200", category: "BROAD_MARKET", sector: "Large & Mid Cap 200", weight: 15.0, constituentCount: 200, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY500 MULTICAP 50:25:25", category: "BROAD_MARKET", sector: "Balanced Multicap", weight: 8.0, constituentCount: 500, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY LARGEMIDCAP 250", category: "BROAD_MARKET", sector: "Large & Mid Blend", weight: 9.0, constituentCount: 250, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MID SELECT", category: "BROAD_MARKET", sector: "Liquid Midcaps", weight: 5.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY TOTAL MARKET", category: "BROAD_MARKET", sector: "Entire NSE Listed Market", weight: 10.0, constituentCount: 750, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MICROCAP 250", category: "BROAD_MARKET", sector: "Emerging Microcaps", weight: 3.0, constituentCount: 250, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY 500", category: "BROAD_MARKET", sector: "Broad 500 Equities", weight: 14.0, constituentCount: 500, weightingSource: "OFFICIAL_NSE" },
+  { indexName: "NIFTY 50", category: "BROAD_MARKET", sector: "Large Cap Benchmark", weight: 35.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "13" },
+  { indexName: "NIFTY NEXT 50", category: "BROAD_MARKET", sector: "Large Cap Emerging", weight: 12.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "38" },
+  { indexName: "NIFTY MIDCAP 50", category: "BROAD_MARKET", sector: "Mid Cap Select", weight: 6.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "20" },
+  { indexName: "NIFTY MIDCAP 100", category: "BROAD_MARKET", sector: "Mid Cap Core", weight: 8.0, constituentCount: 100, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "37" },
+  { indexName: "NIFTY MIDCAP 150", category: "BROAD_MARKET", sector: "Mid Cap Broad", weight: 10.0, constituentCount: 150, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "1" },
+  { indexName: "NIFTY SMLCAP 50", category: "BROAD_MARKET", sector: "Small Cap High Growth", weight: 4.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "22" },
+  { indexName: "NIFTY SMLCAP 100", category: "BROAD_MARKET", sector: "Small Cap Core", weight: 5.0, constituentCount: 100, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "5" },
+  { indexName: "NIFTY SMLCAP 250", category: "BROAD_MARKET", sector: "Small Cap Broad", weight: 6.0, constituentCount: 250, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "3" },
+  { indexName: "NIFTY MIDSML 400", category: "BROAD_MARKET", sector: "Mid & Small Aggregate", weight: 7.0, constituentCount: 400, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "7" },
+  { indexName: "NIFTY 100", category: "BROAD_MARKET", sector: "Top 100 Large Cap", weight: 20.0, constituentCount: 100, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "17" },
+  { indexName: "NIFTY 200", category: "BROAD_MARKET", sector: "Large & Mid Cap 200", weight: 15.0, constituentCount: 200, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "18" },
+  { indexName: "NIFTY500 MULTICAP 50:25:25", category: "BROAD_MARKET", sector: "Balanced Multicap", weight: 8.0, constituentCount: 500, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "467" },
+  { indexName: "NIFTY LARGEMIDCAP 250", category: "BROAD_MARKET", sector: "Large & Mid Blend", weight: 9.0, constituentCount: 250, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "6" },
+  { indexName: "NIFTY MID SELECT", category: "BROAD_MARKET", sector: "Liquid Midcaps", weight: 5.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "442" },
+  { indexName: "NIFTY TOTAL MARKET", category: "BROAD_MARKET", sector: "Entire NSE Listed Market", weight: 10.0, constituentCount: 750, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "443" },
+  { indexName: "NIFTY MICROCAP 250", category: "BROAD_MARKET", sector: "Emerging Microcaps", weight: 3.0, constituentCount: 250, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "444" },
+  { indexName: "NIFTY 500", category: "BROAD_MARKET", sector: "Broad 500 Equities", weight: 14.0, constituentCount: 500, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "19" },
   { indexName: "NIFTY INDIA FPI 150", category: "BROAD_MARKET", sector: "FPI Eligible Equities", weight: 5.0, constituentCount: 150, weightingSource: "OFFICIAL_NSE" },
   { indexName: "NIFTY500 LARGEMIDSMALL EQUAL-CAP WEIGHTED", category: "BROAD_MARKET", sector: "Equal Cap Weighted", weight: 6.0, constituentCount: 500, weightingSource: "OFFICIAL_NSE" },
   { indexName: "NIFTY MIDSMALLCAP400 50:50", category: "BROAD_MARKET", sector: "Mid & Small 50:50", weight: 6.0, constituentCount: 400, weightingSource: "OFFICIAL_NSE" },
@@ -33,27 +34,27 @@ export const BROAD_MARKET_INDICES: IndexHeatmapItem[] = [
 // 2. Sectoral Indices (23 indices - Image 2)
 // ---------------------------------------------------------------------------
 export const SECTORAL_INDICES: IndexHeatmapItem[] = [
-  { indexName: "NIFTY AUTO", category: "SECTORAL", sector: "Automotive", weight: 8.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY BANK", category: "SECTORAL", sector: "Banking", weight: 28.0, constituentCount: 12, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY FIN SERVICE", category: "SECTORAL", sector: "Financial Services", weight: 22.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY FINSRV25/50", category: "SECTORAL", sector: "Financial Services Cap", weight: 8.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY FMCG", category: "SECTORAL", sector: "Fast Moving Consumer Goods", weight: 9.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY IT", category: "SECTORAL", sector: "Information Technology", weight: 14.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MEDIA", category: "SECTORAL", sector: "Media & Entertainment", weight: 3.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY METAL", category: "SECTORAL", sector: "Metals & Mining", weight: 6.0, constituentCount: 11, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY PHARMA", category: "SECTORAL", sector: "Pharmaceuticals", weight: 8.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY PSU BANK", category: "SECTORAL", sector: "Public Sector Banks", weight: 5.0, constituentCount: 12, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY REALTY", category: "SECTORAL", sector: "Real Estate", weight: 4.0, constituentCount: 7, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY PVT BANK", category: "SECTORAL", sector: "Private Sector Banks", weight: 12.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY HEALTHCARE", category: "SECTORAL", sector: "Healthcare & Diagnostics", weight: 6.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY CONSR DURBL", category: "SECTORAL", sector: "Consumer Durables", weight: 5.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY OIL AND GAS", category: "SECTORAL", sector: "Oil Gas & Petroleum", weight: 7.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MIDSML HLTH", category: "SECTORAL", sector: "Mid & Small Healthcare", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE" },
+  { indexName: "NIFTY AUTO", category: "SECTORAL", sector: "Automotive", weight: 8.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "14" },
+  { indexName: "NIFTY BANK", category: "SECTORAL", sector: "Banking", weight: 28.0, constituentCount: 12, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "25" },
+  { indexName: "NIFTY FIN SERVICE", category: "SECTORAL", sector: "Financial Services", weight: 22.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "27" },
+  { indexName: "NIFTY FINSRV25/50", category: "SECTORAL", sector: "Financial Services Cap", weight: 8.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "469" },
+  { indexName: "NIFTY FMCG", category: "SECTORAL", sector: "Fast Moving Consumer Goods", weight: 9.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "28" },
+  { indexName: "NIFTY IT", category: "SECTORAL", sector: "Information Technology", weight: 14.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "29" },
+  { indexName: "NIFTY MEDIA", category: "SECTORAL", sector: "Media & Entertainment", weight: 3.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "30" },
+  { indexName: "NIFTY METAL", category: "SECTORAL", sector: "Metals & Mining", weight: 6.0, constituentCount: 11, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "31" },
+  { indexName: "NIFTY PHARMA", category: "SECTORAL", sector: "Pharmaceuticals", weight: 8.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "32" },
+  { indexName: "NIFTY PSU BANK", category: "SECTORAL", sector: "Public Sector Banks", weight: 5.0, constituentCount: 12, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "33" },
+  { indexName: "NIFTY REALTY", category: "SECTORAL", sector: "Real Estate", weight: 4.0, constituentCount: 7, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "34" },
+  { indexName: "NIFTY PVT BANK", category: "SECTORAL", sector: "Private Sector Banks", weight: 12.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "15" },
+  { indexName: "NIFTY HEALTHCARE", category: "SECTORAL", sector: "Healthcare & Diagnostics", weight: 6.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "447" },
+  { indexName: "NIFTY CONSR DURBL", category: "SECTORAL", sector: "Consumer Durables", weight: 5.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "466" },
+  { indexName: "NIFTY OIL AND GAS", category: "SECTORAL", sector: "Oil Gas & Petroleum", weight: 7.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "470" },
+  { indexName: "NIFTY MIDSML HLTH", category: "SECTORAL", sector: "Mid & Small Healthcare", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "471" },
   { indexName: "NIFTY CHEMICALS", category: "SECTORAL", sector: "Chemicals & Agri Inputs", weight: 5.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
   { indexName: "NIFTY500 HEALTHCARE", category: "SECTORAL", sector: "Broad Healthcare 500", weight: 4.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY FINSERVIEXBK", category: "SECTORAL", sector: "Fin Services Ex Banks", weight: 5.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MS FIN SERV", category: "SECTORAL", sector: "Mid & Small Fin Services", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MS IT TELCOM", category: "SECTORAL", sector: "Mid & Small IT & Telecom", weight: 4.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
+  { indexName: "NIFTY FINSERVIEXBK", category: "SECTORAL", sector: "Fin Services Ex Banks", weight: 5.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "495" },
+  { indexName: "NIFTY MS FIN SERV", category: "SECTORAL", sector: "Mid & Small Fin Services", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "819" },
+  { indexName: "NIFTY MS IT TELCOM", category: "SECTORAL", sector: "Mid & Small IT & Telecom", weight: 4.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "821" },
   { indexName: "NIFTY CEMENT", category: "SECTORAL", sector: "Cement & Building Materials", weight: 4.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE" },
   { indexName: "NIFTY REITS REALTY", category: "SECTORAL", sector: "REITs & Real Estate Inv", weight: 3.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE" },
 ];
@@ -62,43 +63,43 @@ export const SECTORAL_INDICES: IndexHeatmapItem[] = [
 // 3. Thematic Indices (39 indices - Image 3)
 // ---------------------------------------------------------------------------
 export const THEMATIC_INDICES: IndexHeatmapItem[] = [
-  { indexName: "NIFTY COMMODITIES", category: "THEMATIC", sector: "Commodities Producers", weight: 5.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY CONSUMPTION", category: "THEMATIC", sector: "Domestic Consumption", weight: 6.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY CPSE", category: "THEMATIC", sector: "Central Public Sector", weight: 4.0, constituentCount: 12, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY ENERGY", category: "THEMATIC", sector: "Power, Oil & Gas", weight: 7.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY INFRA", category: "THEMATIC", sector: "Infrastructure", weight: 6.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MNC", category: "THEMATIC", sector: "Multinational Corporations", weight: 5.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY PSE", category: "THEMATIC", sector: "Public Sector Enterprises", weight: 4.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY SERV SECTOR", category: "THEMATIC", sector: "Services Ecosystem", weight: 6.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY100 LIQ 15", category: "THEMATIC", sector: "Top 15 Liquid Stocks", weight: 5.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MID LIQ 15", category: "THEMATIC", sector: "Liquid Midcap 15", weight: 4.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY IND DIGITAL", category: "THEMATIC", sector: "India Digital Transformation", weight: 5.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY100 ESG", category: "THEMATIC", sector: "ESG Compliant Leaders", weight: 5.0, constituentCount: 64, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY INDIA MFG", category: "THEMATIC", sector: "Make in India Manufacturing", weight: 5.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY TATA 25 CAP", category: "THEMATIC", sector: "Tata Conglomerate Group", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MULTI MFG", category: "THEMATIC", sector: "Multi-Cap Manufacturing", weight: 4.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MULTI INFRA", category: "THEMATIC", sector: "Multi-Cap Infrastructure", weight: 4.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
+  { indexName: "NIFTY COMMODITIES", category: "THEMATIC", sector: "Commodities Producers", weight: 5.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "39" },
+  { indexName: "NIFTY CONSUMPTION", category: "THEMATIC", sector: "Domestic Consumption", weight: 6.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "40" },
+  { indexName: "NIFTY CPSE", category: "THEMATIC", sector: "Central Public Sector", weight: 4.0, constituentCount: 12, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "45" },
+  { indexName: "NIFTY ENERGY", category: "THEMATIC", sector: "Power, Oil & Gas", weight: 7.0, constituentCount: 10, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "42" },
+  { indexName: "NIFTY INFRA", category: "THEMATIC", sector: "Infrastructure", weight: 6.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "43" },
+  { indexName: "NIFTY MNC", category: "THEMATIC", sector: "Multinational Corporations", weight: 5.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "44" },
+  { indexName: "NIFTY PSE", category: "THEMATIC", sector: "Public Sector Enterprises", weight: 4.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "41" },
+  { indexName: "NIFTY SERV SECTOR", category: "THEMATIC", sector: "Services Ecosystem", weight: 6.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "46" },
+  { indexName: "NIFTY100 LIQ 15", category: "THEMATIC", sector: "Top 15 Liquid Stocks", weight: 5.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "35" },
+  { indexName: "NIFTY MID LIQ 15", category: "THEMATIC", sector: "Liquid Midcap 15", weight: 4.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "16" },
+  { indexName: "NIFTY IND DIGITAL", category: "THEMATIC", sector: "India Digital Transformation", weight: 5.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "473" },
+  { indexName: "NIFTY100 ESG", category: "THEMATIC", sector: "ESG Compliant Leaders", weight: 5.0, constituentCount: 64, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "478" },
+  { indexName: "NIFTY INDIA MFG", category: "THEMATIC", sector: "Make in India Manufacturing", weight: 5.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "474" },
+  { indexName: "NIFTY TATA 25 CAP", category: "THEMATIC", sector: "Tata Conglomerate Group", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "475" },
+  { indexName: "NIFTY MULTI MFG", category: "THEMATIC", sector: "Multi-Cap Manufacturing", weight: 4.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "476" },
+  { indexName: "NIFTY MULTI INFRA", category: "THEMATIC", sector: "Multi-Cap Infrastructure", weight: 4.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "477" },
   { indexName: "NIFTY INTERNET", category: "THEMATIC", sector: "Internet & Platform Tech", weight: 3.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
   { indexName: "NIFTY WAVES", category: "THEMATIC", sector: "Next-Gen Trends & Themes", weight: 3.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE" },
   { indexName: "NIFTY INFRALOG", category: "THEMATIC", sector: "Logistics Infrastructure", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY IND DEFENCE", category: "THEMATIC", sector: "Defence & Aerospace", weight: 4.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY IND TOURISM", category: "THEMATIC", sector: "Tourism & Hospitality", weight: 3.0, constituentCount: 17, weightingSource: "OFFICIAL_NSE" },
+  { indexName: "NIFTY IND DEFENCE", category: "THEMATIC", sector: "Defence & Aerospace", weight: 4.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "493" },
+  { indexName: "NIFTY IND TOURISM", category: "THEMATIC", sector: "Tourism & Hospitality", weight: 3.0, constituentCount: 17, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "815" },
   { indexName: "NIFTY CAPITAL GOODS", category: "THEMATIC", sector: "Heavy Capital Equipment", weight: 5.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY EV", category: "THEMATIC", sector: "Electric Vehicles & Tech", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY NEW CONSUMPTION", category: "THEMATIC", sector: "Modern Lifestyle & Retail", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE" },
+  { indexName: "NIFTY EV", category: "THEMATIC", sector: "Electric Vehicles & Tech", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "491" },
+  { indexName: "NIFTY NEW CONSUMPTION", category: "THEMATIC", sector: "Modern Lifestyle & Retail", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "822" },
   { indexName: "NIFTY CORP MARKET", category: "THEMATIC", sector: "Corporate Governance Top", weight: 5.0, constituentCount: 40, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MOBILITY", category: "THEMATIC", sector: "Future Transportation", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY100 ENH ESG", category: "THEMATIC", sector: "Enhanced ESG Leaders", weight: 4.0, constituentCount: 54, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY COREHOUSING", category: "THEMATIC", sector: "Housing & Real Estate Core", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY HOUSING", category: "THEMATIC", sector: "Broad Housing Ecosystem", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY IPO", category: "THEMATIC", sector: "Recently Listed Enterprises", weight: 3.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY MS IND CONS", category: "THEMATIC", sector: "Mid & Small Indian Cons", weight: 4.0, constituentCount: 40, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY NONCYC CONS", category: "THEMATIC", sector: "Non-Cyclical Consumer", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY RURAL", category: "THEMATIC", sector: "Rural India Transformation", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY SHARIAH 25", category: "THEMATIC", sector: "Shariah Compliant Liquid", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY TRANS LOGISTICS", category: "THEMATIC", sector: "Transport & Supply Chain", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY50 SHARIAH", category: "THEMATIC", sector: "Nifty 50 Shariah Compliant", weight: 5.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY500 SHARIAH", category: "THEMATIC", sector: "Nifty 500 Shariah Compliant", weight: 5.0, constituentCount: 200, weightingSource: "OFFICIAL_NSE" },
+  { indexName: "NIFTY MOBILITY", category: "THEMATIC", sector: "Future Transportation", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "818" },
+  { indexName: "NIFTY100 ENH ESG", category: "THEMATIC", sector: "Enhanced ESG Leaders", weight: 4.0, constituentCount: 54, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "832" },
+  { indexName: "NIFTY COREHOUSING", category: "THEMATIC", sector: "Housing & Real Estate Core", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "804" },
+  { indexName: "NIFTY HOUSING", category: "THEMATIC", sector: "Broad Housing Ecosystem", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "814" },
+  { indexName: "NIFTY IPO", category: "THEMATIC", sector: "Recently Listed Enterprises", weight: 3.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "816" },
+  { indexName: "NIFTY MS IND CONS", category: "THEMATIC", sector: "Mid & Small Indian Cons", weight: 4.0, constituentCount: 40, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "820" },
+  { indexName: "NIFTY NONCYC CONS", category: "THEMATIC", sector: "Non-Cyclical Consumer", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "823" },
+  { indexName: "NIFTY RURAL", category: "THEMATIC", sector: "Rural India Transformation", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "825" },
+  { indexName: "NIFTY SHARIAH 25", category: "THEMATIC", sector: "Shariah Compliant Liquid", weight: 4.0, constituentCount: 25, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "826" },
+  { indexName: "NIFTY TRANS LOGISTICS", category: "THEMATIC", sector: "Transport & Supply Chain", weight: 4.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "830" },
+  { indexName: "NIFTY50 SHARIAH", category: "THEMATIC", sector: "Nifty 50 Shariah Compliant", weight: 5.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "833" },
+  { indexName: "NIFTY500 SHARIAH", category: "THEMATIC", sector: "Nifty 500 Shariah Compliant", weight: 5.0, constituentCount: 200, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "839" },
   { indexName: "NIFTY RAILWAYS", category: "THEMATIC", sector: "Rail Infra & Wagons", weight: 4.0, constituentCount: 12, weightingSource: "OFFICIAL_NSE" },
   { indexName: "NIFTYCONGLOMERATES", category: "THEMATIC", sector: "Diversified Conglomerates", weight: 5.0, constituentCount: 20, weightingSource: "OFFICIAL_NSE" },
 ];
@@ -107,12 +108,12 @@ export const THEMATIC_INDICES: IndexHeatmapItem[] = [
 // 4. Strategy Indices (6 key indices)
 // ---------------------------------------------------------------------------
 export const STRATEGY_INDICES: IndexHeatmapItem[] = [
-  { indexName: "NIFTY DIVIDEND OPP 50", category: "STRATEGY", sector: "High Dividend Yield", weight: 5.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY GROWTH SECTORS 15", category: "STRATEGY", sector: "Growth Momentum", weight: 6.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY HIGH BETA 50", category: "STRATEGY", sector: "High Market Beta", weight: 5.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY LOW VOLATILITY 50", category: "STRATEGY", sector: "Low Price Variance", weight: 6.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY QUALITY 30", category: "STRATEGY", sector: "High ROE & Low Debt", weight: 6.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE" },
-  { indexName: "NIFTY ALPHA 50", category: "STRATEGY", sector: "Pure Alpha Outperformance", weight: 5.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE" },
+  { indexName: "NIFTY DIVIDEND OPP 50", category: "STRATEGY", sector: "High Dividend Yield", weight: 5.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "284" },
+  { indexName: "NIFTY GROWTH SECTORS 15", category: "STRATEGY", sector: "Growth Momentum", weight: 6.0, constituentCount: 15, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "285" },
+  { indexName: "NIFTY HIGH BETA 50", category: "STRATEGY", sector: "High Market Beta", weight: 5.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "813" },
+  { indexName: "NIFTY LOW VOLATILITY 50", category: "STRATEGY", sector: "Low Price Variance", weight: 6.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "836" },
+  { indexName: "NIFTY QUALITY 30", category: "STRATEGY", sector: "High ROE & Low Debt", weight: 6.0, constituentCount: 30, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "490" },
+  { indexName: "NIFTY ALPHA 50", category: "STRATEGY", sector: "Pure Alpha Outperformance", weight: 5.0, constituentCount: 50, weightingSource: "OFFICIAL_NSE", segment: "0", securityId: "12" },
 ];
 
 export const ALL_INDICES_BY_CATEGORY: Record<IndexCategory, IndexHeatmapItem[]> = {
@@ -218,6 +219,18 @@ function getIndexSector(indexName: string): string {
   });
 });
 
+// Synchronize securityId and segment on NIFTY_50_AUTHENTIC_CONSTITUENTS
+NIFTY_50_AUTHENTIC_CONSTITUENTS.forEach((item) => {
+  const stock = NSE_STOCK_BY_SYMBOL.get(item.symbol.toUpperCase());
+  if (stock) {
+    item.securityId = item.securityId || stock.securityId;
+    item.segment = item.segment || "1";
+    if (!item.name || item.name === item.symbol) {
+      item.name = stock.name;
+    }
+  }
+});
+
 // Resolve constituent identity from the official catalog. When the catalog has no
 // published weights, assign visibly-labelled equal layout weights.
 export function getConstituentsForIndex(indexName: string): ConstituentHeatmapItem[] {
@@ -233,12 +246,16 @@ export function getConstituentsForIndex(indexName: string): ConstituentHeatmapIt
   weights[0] = Number((weights[0] + 100 - weights.reduce((sum, weight) => sum + weight, 0)).toFixed(2));
 
   return officialList.map((stock, index) => {
-    const reference = FNO_BY_SYMBOL.get(stock.symbol.toUpperCase());
+    const sym = stock.symbol.toUpperCase();
+    const master = NSE_STOCK_BY_SYMBOL.get(sym);
+    const reference = FNO_BY_SYMBOL.get(sym);
     return {
-      symbol: stock.symbol.toUpperCase(),
-      name: stock.name || reference?.name || stock.symbol,
-      sector: reference?.sector || defaultSector,
+      symbol: sym,
+      name: stock.name || master?.name || reference?.name || sym,
+      sector: master?.sector || reference?.sector || defaultSector,
       weight: weights[index],
+      securityId: master?.securityId || reference?.securityId,
+      segment: "1",
       isWeightFallback: true,
       weightingSource: "FALLBACK_EQUAL_WEIGHT",
       marketState: "UNAVAILABLE",

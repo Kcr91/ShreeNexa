@@ -15,6 +15,10 @@ export interface TickData {
   low?: number;
   close?: number;
   previousClose?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
+  securityId?: string;
+  segment?: string;
   marketState?: "LIVE" | "MARKET_CLOSED" | "STALE" | "UNAVAILABLE" | "ERROR";
   source?: "DHAN_WEBSOCKET" | "DHAN_REST";
   isStale?: boolean;

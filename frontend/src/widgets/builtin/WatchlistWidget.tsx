@@ -45,11 +45,36 @@ export const NON_SORTABLE_COLUMNS: readonly WatchlistColumn[] = [
 ];
 
 export const getFiftyTwoWeekHigh = (item: WatchlistItem): number => {
-  return item.fiftyTwoWeekHigh ?? Number.NaN;
+  if (typeof item.fiftyTwoWeekHigh === "number" && item.fiftyTwoWeekHigh > 0) {
+    return item.fiftyTwoWeekHigh;
+  }
+  const cat = resolveCatalogInstrument(item.symbol) || resolveCatalogInstrument(item.tradingSymbol);
+  if (cat?.fiftyTwoWeekHigh && cat.fiftyTwoWeekHigh > 0) {
+    return cat.fiftyTwoWeekHigh;
+  }
+  return Number.NaN;
 };
 
 export const getFiftyTwoWeekLow = (item: WatchlistItem): number => {
-  return item.fiftyTwoWeekLow ?? Number.NaN;
+  if (typeof item.fiftyTwoWeekLow === "number" && item.fiftyTwoWeekLow > 0) {
+    return item.fiftyTwoWeekLow;
+  }
+  const cat = resolveCatalogInstrument(item.symbol) || resolveCatalogInstrument(item.tradingSymbol);
+  if (cat?.fiftyTwoWeekLow && cat.fiftyTwoWeekLow > 0) {
+    return cat.fiftyTwoWeekLow;
+  }
+  return Number.NaN;
+};
+
+export const getItemVolume = (item: WatchlistItem): number | undefined => {
+  if (typeof item.volume === "number" && item.volume > 0) {
+    return item.volume;
+  }
+  const cat = resolveCatalogInstrument(item.symbol) || resolveCatalogInstrument(item.tradingSymbol);
+  if (cat?.volume && cat.volume > 0) {
+    return cat.volume;
+  }
+  return typeof item.volume === "number" ? item.volume : undefined;
 };
 
 const FEED_SEGMENTS: Record<string, string> = {
@@ -57,7 +82,7 @@ const FEED_SEGMENTS: Record<string, string> = {
   NSE_EQ: "1",
   NSE_FNO: "2",
   NSE_CURRENCY: "3",
-  BSE_EQ: "4",
+  BSE_EQ: "1", // Force NSE equity for live feed so data streams strictly from NSE
   MCX_COMM: "5",
   BSE_CURRENCY: "7",
   BSE_FNO: "8",
@@ -147,12 +172,15 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
     if (activeWatchlist && activeWatchlist.items.length > 0) {
       const symbols = activeWatchlist.items.map((i) => i.symbol);
       const instruments = activeWatchlist.items
-        .filter((item) => item.securityId && FEED_SEGMENTS[item.segment])
-        .map((item) => ({
-          segment: FEED_SEGMENTS[item.segment],
-          securityId: item.securityId,
-          symbol: item.symbol,
-        }));
+        .filter((item) => item.securityId && (FEED_SEGMENTS[item.segment] || item.segment === "BSE" || item.segment === "BSE_EQ"))
+        .map((item) => {
+          const segKey = (item.segment === "BSE_EQ" || item.segment === "BSE") ? "NSE_EQ" : item.segment;
+          return {
+            segment: FEED_SEGMENTS[segKey] || "1",
+            securityId: item.securityId,
+            symbol: item.symbol,
+          };
+        });
       defaultWebSocketClient.connect();
       defaultWebSocketClient.subscribeChannels(["quotes"], symbols, instruments);
     }
@@ -202,6 +230,13 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
             changeAbs: tick.change ?? oldItem.changeAbs,
             changePct: tick.changePct ?? oldItem.changePct,
             volume: tick.volume ?? oldItem.volume,
+            open: tick.open ?? oldItem.open,
+            high: tick.high ?? oldItem.high,
+            low: tick.low ?? oldItem.low,
+            close: tick.close ?? oldItem.close,
+            prevClose: tick.previousClose ?? oldItem.prevClose,
+            fiftyTwoWeekHigh: tick.fiftyTwoWeekHigh ?? oldItem.fiftyTwoWeekHigh,
+            fiftyTwoWeekLow: tick.fiftyTwoWeekLow ?? oldItem.fiftyTwoWeekLow,
             ltt: tick.sourceTimestamp !== undefined
               ? String(tick.sourceTimestamp)
               : oldItem.ltt,
@@ -238,12 +273,15 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
       if (activeWatchlist) {
         const symbols = activeWatchlist.items.map((item) => item.symbol);
         const instruments = activeWatchlist.items
-          .filter((item) => item.securityId && FEED_SEGMENTS[item.segment])
-          .map((item) => ({
-            segment: FEED_SEGMENTS[item.segment],
-            securityId: item.securityId,
-            symbol: item.symbol,
-          }));
+          .filter((item) => item.securityId && (FEED_SEGMENTS[item.segment] || item.segment === "BSE" || item.segment === "BSE_EQ"))
+          .map((item) => {
+            const segKey = (item.segment === "BSE_EQ" || item.segment === "BSE") ? "NSE_EQ" : item.segment;
+            return {
+              segment: FEED_SEGMENTS[segKey] || "1",
+              securityId: item.securityId,
+              symbol: item.symbol,
+            };
+          });
         defaultWebSocketClient.unsubscribeChannels(["quotes"], symbols, instruments);
       }
     };
@@ -367,11 +405,12 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
     if (!activeWatchlist) return;
     setAddSymbolError(null);
 
+    const isBseEquity = item.segment === "BSE_EQ" || item.segment === "BSE";
     addSymbolToWatchlist(activeWatchlist.id, {
       symbol: item.symbol,
-      segment: item.segment,
+      segment: isBseEquity ? "NSE_EQ" : item.segment,
       securityId: item.securityId,
-      tradingSymbol: item.tradingSymbol,
+      tradingSymbol: item.tradingSymbol === "SILVERCASF" ? "SILVERCASE-EQ" : item.tradingSymbol,
       name: item.name,
       instrumentType: item.instrumentType,
       fiftyTwoWeekHigh: item.fiftyTwoWeekHigh,
@@ -433,14 +472,21 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
             const match =
               data.find(
                 (d: any) =>
+                  (d.symbol?.toUpperCase() === sym ||
+                  d.trading_symbol?.toUpperCase() === sym) &&
+                  (d.exchange_segment === "NSE_EQ" || d.exchange_segment === "IDX_I")
+              ) ||
+              data.find(
+                (d: any) =>
                   d.symbol?.toUpperCase() === sym ||
                   d.trading_symbol?.toUpperCase() === sym
               ) || data[0];
+            const isBseEquity = match.exchange_segment === "BSE_EQ" || match.exchange_segment === "BSE";
             resolved = {
               symbol: match.symbol || sym,
               securityId: String(match.security_id || match.securityId),
-              tradingSymbol: match.trading_symbol || `${sym}-EQ`,
-              segment: match.exchange_segment || "NSE_EQ",
+              tradingSymbol: (match.trading_symbol === "SILVERCASF" ? "SILVERCASE-EQ" : match.trading_symbol) || `${sym}-EQ`,
+              segment: isBseEquity ? "NSE_EQ" : (match.exchange_segment || "NSE_EQ"),
               instrumentType: match.instrument_type || "EQUITY",
               name: match.name || match.trading_symbol || sym,
               expiry: match.expiry_date,
@@ -837,7 +883,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
       )}
 
       {/* 5. Watchlist Data Table */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div style={{ flex: 1, overflow: "auto" }}>
         {activeWatchlist.items.length === 0 ? (
           <div
             style={{
@@ -1222,6 +1268,7 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                       }
 
                       if (col.id === "volume") {
+                        const vol = getItemVolume(item);
                         return (
                           <td
                             key={col.id}
@@ -1232,7 +1279,11 @@ export const WatchlistWidget: React.FC<WidgetComponentProps<WatchlistSettings>> 
                               color: "var(--text-muted)",
                             }}
                           >
-                            {typeof item.volume === "number" ? item.volume.toLocaleString("en-IN") : "N/A"}
+                            {typeof vol === "number" && vol > 0
+                              ? vol.toLocaleString("en-IN")
+                              : typeof item.volume === "number"
+                                ? item.volume.toLocaleString("en-IN")
+                                : "N/A"}
                           </td>
                         );
                       }

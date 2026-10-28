@@ -225,6 +225,7 @@ class MarketDataFanoutManager:
         messages_to_dispatch: list[dict[str, Any]] = []
 
         if isinstance(packet, (QuotePacket, FullPacket, TickerPacket, IndexPacket)):
+            quote = self.hot_cache.get_quote(seg, sec_id, now=t)
             q_data: dict[str, Any] = {
                 "segment": seg,
                 "security_id": sec_id,
@@ -232,6 +233,23 @@ class MarketDataFanoutManager:
                 "ltt": packet.ltt,
                 "received_at": t,
             }
+            if quote:
+                if quote.previous_close is not None:
+                    q_data["previous_close"] = quote.previous_close
+                    if packet.ltp is not None:
+                        chg = round(packet.ltp - quote.previous_close, 4)
+                        q_data["change"] = chg
+                        q_data["change_percent"] = (
+                            round((chg / quote.previous_close) * 100.0, 4)
+                            if quote.previous_close != 0
+                            else 0.0
+                        )
+                if quote.fifty_two_week_high is not None:
+                    q_data["fifty_two_week_high"] = quote.fifty_two_week_high
+                if quote.fifty_two_week_low is not None:
+                    q_data["fifty_two_week_low"] = quote.fifty_two_week_low
+                if quote.volume is not None:
+                    q_data["volume"] = quote.volume
             if isinstance(packet, (QuotePacket, FullPacket)):
                 q_data.update(
                     {

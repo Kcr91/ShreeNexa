@@ -7,7 +7,8 @@ import hashlib
 import json
 import logging
 import time
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from datetime import time as clock_time
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -58,8 +59,44 @@ SEGMENT_TO_DHAN = {
     "5": "MCX_COMM",
     "7": "BSE_CURRENCY",
     "8": "BSE_FNO",
+    "IDX_I": "IDX_I",
+    "NSE_EQ": "NSE_EQ",
+    "NSE_FNO": "NSE_FNO",
+    "NSE_CURRENCY": "NSE_CURRENCY",
+    "BSE_EQ": "BSE_EQ",
+    "MCX_COMM": "MCX_COMM",
+    "BSE_CURRENCY": "BSE_CURRENCY",
+    "BSE_FNO": "BSE_FNO",
 }
-DHAN_TO_SEGMENT = {value: key for key, value in SEGMENT_TO_DHAN.items()}
+DHAN_TO_SEGMENT = {
+    "IDX_I": "0",
+    "NSE_EQ": "1",
+    "NSE_FNO": "2",
+    "NSE_CURRENCY": "3",
+    "BSE_EQ": "4",
+    "MCX_COMM": "5",
+    "BSE_CURRENCY": "7",
+    "BSE_FNO": "8",
+}
+
+_SEGMENT_INSTRUMENT_TYPE: dict[str, tuple[str, str]] = {
+    "0": ("IDX_I", "INDEX"),
+    "1": ("NSE_EQ", "EQUITY"),
+    "2": ("NSE_FNO", "FUTIDX"),
+    "3": ("NSE_CURRENCY", "FUTCUR"),
+    "4": ("BSE_EQ", "EQUITY"),
+    "5": ("MCX_COMM", "COMMODITY"),
+    "7": ("BSE_CURRENCY", "FUTCUR"),
+    "8": ("BSE_FNO", "FUTIDX"),
+    "IDX_I": ("IDX_I", "INDEX"),
+    "NSE_EQ": ("NSE_EQ", "EQUITY"),
+    "NSE_FNO": ("NSE_FNO", "FUTIDX"),
+    "NSE_CURRENCY": ("NSE_CURRENCY", "FUTCUR"),
+    "BSE_EQ": ("BSE_EQ", "EQUITY"),
+    "MCX_COMM": ("MCX_COMM", "COMMODITY"),
+    "BSE_CURRENCY": ("BSE_CURRENCY", "FUTCUR"),
+    "BSE_FNO": ("BSE_FNO", "FUTIDX"),
+}
 
 
 def market_is_open(now: datetime | None = None, segment: str = "0") -> bool:
@@ -109,6 +146,8 @@ def _wire_instruments(instruments: set[tuple[str, str]]) -> list[dict[str, str]]
     wire: list[dict[str, str]] = []
     for segment, security_id in sorted(instruments):
         dhan_segment = SEGMENT_TO_DHAN.get(segment)
+        if dhan_segment == "BSE_EQ" or segment in ("4", "BSE_EQ", "BSE"):
+            dhan_segment = "NSE_EQ"
         if dhan_segment:
             wire.append({"ExchangeSegment": dhan_segment, "SecurityId": security_id})
     return wire
@@ -128,6 +167,8 @@ def _quote_request_bodies(
     normalized: list[tuple[str, int]] = []
     for segment, security_id in sorted(instruments):
         dhan_segment = SEGMENT_TO_DHAN.get(segment)
+        if dhan_segment == "BSE_EQ" or segment in ("4", "BSE_EQ", "BSE"):
+            dhan_segment = "NSE_EQ"
         if dhan_segment is None:
             continue
         try:
@@ -187,6 +228,14 @@ def _failure_policy(exc: BaseException) -> tuple[str, float, bool]:
     if close is not None:
         return f"Dhan closed the feed (close code {close.code})", 0.0, False
     return f"Dhan feed disconnected ({type(exc).__name__})", 0.0, False
+
+
+@dataclass(frozen=True)
+class HistoricalMetrics:
+    previous_close: float
+    fifty_two_week_high: float | None = None
+    fifty_two_week_low: float | None = None
+    volume: int | None = None
 
 
 class DhanLiveFeedService:
@@ -256,6 +305,56 @@ class DhanLiveFeedService:
                 )
             )
 
+    async def _resolve_historical_metrics(
+        self, client: DhanRestClient, segment: str, security_id: str
+    ) -> HistoricalMetrics | None:
+        """Fetch exact previous daily close, 52w high/low, and volume from Dhan daily bars."""
+        norm_seg = "1" if str(segment) in ("4", "BSE_EQ", "BSE") else str(segment)
+        exch_seg, inst_type = _SEGMENT_INSTRUMENT_TYPE.get(norm_seg, ("NSE_EQ", "EQUITY"))
+        today = datetime.now(IST).date()
+        from_date = (today - timedelta(days=365)).strftime("%Y-%m-%d")
+        to_date = today.strftime("%Y-%m-%d")
+        try:
+            data = await asyncio.to_thread(
+                client.get_historical_daily,
+                str(security_id),
+                exch_seg,
+                inst_type,
+                from_date,
+                to_date,
+            )
+            bars = data.to_bars()
+            if not bars:
+                return None
+            last_bar = bars[-1]
+            last_bar_date = datetime.fromtimestamp(last_bar.timestamp, IST).date()
+            if last_bar_date == today and len(bars) > 1:
+                prev_close = bars[-2].close
+            else:
+                prev_close = last_bar.close
+
+            valid_highs = [b.high for b in bars if b.high > 0]
+            valid_lows = [b.low for b in bars if b.low > 0]
+            high_52 = round(max(valid_highs), 2) if valid_highs else None
+            low_52 = round(min(valid_lows), 2) if valid_lows else None
+            vol = (
+                last_bar.volume
+                if last_bar.volume > 0
+                else (bars[-2].volume if len(bars) > 1 and bars[-2].volume > 0 else None)
+            )
+
+            return HistoricalMetrics(
+                previous_close=prev_close,
+                fifty_two_week_high=high_52,
+                fifty_two_week_low=low_52,
+                volume=vol,
+            )
+        except Exception as exc:
+            logger.debug(
+                "Failed to fetch historical daily bars for %s:%s: %s", segment, security_id, exc
+            )
+            return None
+
     async def sync_quotes(self, instruments: set[tuple[str, str]]) -> None:
         """Bootstrap requested instruments from Dhan's direct quote endpoint."""
         if not instruments:
@@ -271,7 +370,9 @@ class DhanLiveFeedService:
         payload: dict[str, Any] = {}
         try:
             client = DhanRestClient(credentials=creds)
-            for body in request_bodies:
+            for index, body in enumerate(request_bodies):
+                if index > 0:
+                    await asyncio.sleep(0.25)
                 response_data = await asyncio.to_thread(client.get_quotes, body)
                 for segment, quotes in response_data.items():
                     if isinstance(quotes, dict):
@@ -281,6 +382,12 @@ class DhanLiveFeedService:
             return
 
         received_at = time.time()
+        redis_client = getattr(self.hot_cache, "_client", None)
+
+        # 1. Parse payload and compute previous_close directly from net_change if non-zero
+        parsed_items: list[tuple[str, str, dict[str, Any], float | None]] = []
+        needed_metrics: list[tuple[str, str]] = []
+
         for dhan_segment, segment_quotes in payload.items():
             segment_code = DHAN_TO_SEGMENT.get(str(dhan_segment))
             if segment_code is None or not isinstance(segment_quotes, dict):
@@ -290,33 +397,184 @@ class DhanLiveFeedService:
                     continue
                 ltp = _number(raw.get("last_price"))
                 net_change = _number(raw.get("net_change"))
-                raw_ohlc = raw.get("ohlc")
-                ohlc: dict[str, Any] = raw_ohlc if isinstance(raw_ohlc, dict) else {}
-                previous_close = (
-                    ltp - net_change if ltp is not None and net_change is not None else None
-                )
-                trade_time = _trade_time(raw.get("last_trade_time"))
-                self.hot_cache.set_quote(
-                    CachedQuote(
-                        segment=segment_code,
-                        security_id=str(security_id),
-                        ltp=ltp,
-                        ltq=_integer(raw.get("last_quantity")),
-                        ltt=trade_time,
-                        avg_price=_number(raw.get("average_price")),
-                        volume=_integer(raw.get("volume")),
-                        total_buy_qty=_number(raw.get("buy_quantity")),
-                        total_sell_qty=_number(raw.get("sell_quantity")),
-                        open=_number(ohlc.get("open")),
-                        high=_number(ohlc.get("high")),
-                        low=_number(ohlc.get("low")),
-                        close=_number(ohlc.get("close")),
-                        previous_close=previous_close,
-                        received_at=received_at,
-                        source="DHAN_REST",
-                        market_state=_market_state_for_trade_time(trade_time, segment=segment_code),
+                high_52_raw = _number(raw.get("52_week_high"))
+                vol_raw = _integer(raw.get("volume"))
+                prev_close: float | None = None
+                if net_change is not None and net_change != 0.0 and ltp is not None:
+                    prev_close = round(ltp - net_change, 2)
+                    if redis_client:
+                        try:
+                            redis_client.set(
+                                f"shreenexa:feed:v2:prev_close:{segment_code}:{security_id}",
+                                str(prev_close),
+                                ex=86400,
+                            )
+                        except Exception:
+                            pass
+                parsed_items.append((segment_code, str(security_id), raw, prev_close))
+                if (
+                    prev_close is None
+                    or high_52_raw is None
+                    or high_52_raw <= 0
+                    or vol_raw is None
+                    or vol_raw <= 0
+                ):
+                    needed_metrics.append((segment_code, str(security_id)))
+
+        # 2. Check Redis cache for instruments where metrics were 0 or missing
+        resolved_metrics: dict[tuple[str, str], HistoricalMetrics] = {}
+        if needed_metrics and redis_client:
+            try:
+                pc_keys = [f"shreenexa:feed:v2:prev_close:{s}:{i}" for s, i in needed_metrics]
+                h52_keys = [f"shreenexa:feed:v2:52w_high:{s}:{i}" for s, i in needed_metrics]
+                l52_keys = [f"shreenexa:feed:v2:52w_low:{s}:{i}" for s, i in needed_metrics]
+                vol_keys = [f"shreenexa:feed:v2:vol:{s}:{i}" for s, i in needed_metrics]
+
+                pc_vals = redis_client.mget(pc_keys)
+                h52_vals = redis_client.mget(h52_keys)
+                l52_vals = redis_client.mget(l52_keys)
+                vol_vals = redis_client.mget(vol_keys)
+
+                for idx, (s, i) in enumerate(needed_metrics):
+                    pc = pc_vals[idx]
+                    h52_v = h52_vals[idx]
+                    l52_v = l52_vals[idx]
+                    vol_v = vol_vals[idx]
+                    if (
+                        pc is not None
+                        and h52_v is not None
+                        and l52_v is not None
+                        and vol_v is not None
+                    ):
+                        try:
+                            pc_f = float(pc.decode("utf-8") if isinstance(pc, bytes) else pc)
+                            h52_f = float(h52_v)
+                            l52_f = float(l52_v)
+                            vol_i = int(vol_v)
+                            resolved_metrics[(s, i)] = HistoricalMetrics(
+                                previous_close=pc_f,
+                                fifty_two_week_high=h52_f,
+                                fifty_two_week_low=l52_f,
+                                volume=vol_i,
+                            )
+                        except (ValueError, TypeError):
+                            pass
+            except Exception as exc:
+                logger.debug("Redis mget for historical metrics failed: %s", exc)
+
+        # 3. For any still missing, check hot cache or fetch historical bars from API
+        still_missing = [(s, i) for s, i in needed_metrics if (s, i) not in resolved_metrics]
+        if still_missing:
+            fetch_from_api: list[tuple[str, str]] = []
+            for s, i in still_missing:
+                existing = self.hot_cache.get_quote(s, i)
+                if (
+                    existing
+                    and existing.previous_close is not None
+                    and existing.previous_close > 0
+                    and (existing.open is None or existing.previous_close != existing.open)
+                    and existing.fifty_two_week_high is not None
+                    and existing.fifty_two_week_high > 0
+                    and existing.volume is not None
+                    and existing.volume > 0
+                ):
+                    resolved_metrics[(s, i)] = HistoricalMetrics(
+                        previous_close=existing.previous_close,
+                        fifty_two_week_high=existing.fifty_two_week_high,
+                        fifty_two_week_low=existing.fifty_two_week_low,
+                        volume=existing.volume,
                     )
+                else:
+                    fetch_from_api.append((s, i))
+
+            if fetch_from_api:
+                for s, i in fetch_from_api:
+                    metrics = await self._resolve_historical_metrics(client, s, i)
+                    if metrics is not None:
+                        resolved_metrics[(s, i)] = metrics
+                        if redis_client:
+                            try:
+                                redis_client.set(
+                                    f"shreenexa:feed:v2:prev_close:{s}:{i}",
+                                    str(metrics.previous_close),
+                                    ex=86400,
+                                )
+                                if metrics.fifty_two_week_high is not None:
+                                    redis_client.set(
+                                        f"shreenexa:feed:v2:52w_high:{s}:{i}",
+                                        str(metrics.fifty_two_week_high),
+                                        ex=86400,
+                                    )
+                                if metrics.fifty_two_week_low is not None:
+                                    redis_client.set(
+                                        f"shreenexa:feed:v2:52w_low:{s}:{i}",
+                                        str(metrics.fifty_two_week_low),
+                                        ex=86400,
+                                    )
+                                if metrics.volume is not None:
+                                    redis_client.set(
+                                        f"shreenexa:feed:v2:vol:{s}:{i}",
+                                        str(metrics.volume),
+                                        ex=86400,
+                                    )
+                            except Exception:
+                                pass
+                    await asyncio.sleep(0.15)
+
+        # 4. Construct and save CachedQuotes
+        for segment_code, security_id, raw, prev_close in parsed_items:
+            ltp = _number(raw.get("last_price"))
+            raw_ohlc = raw.get("ohlc")
+            ohlc: dict[str, Any] = raw_ohlc if isinstance(raw_ohlc, dict) else {}
+            open_price = _number(ohlc.get("open"))
+            inst_key = (segment_code, security_id)
+            metrics = resolved_metrics.get(inst_key)
+
+            final_prev_close = (
+                prev_close
+                if (prev_close is not None and prev_close > 0)
+                else (metrics.previous_close if metrics else None)
+            )
+            if final_prev_close is None:
+                final_prev_close = open_price if open_price is not None and open_price > 0 else ltp
+
+            fifty_two_week_high = _number(raw.get("52_week_high"))
+            if (fifty_two_week_high is None or fifty_two_week_high <= 0) and metrics:
+                fifty_two_week_high = metrics.fifty_two_week_high
+
+            fifty_two_week_low = _number(raw.get("52_week_low"))
+            if (fifty_two_week_low is None or fifty_two_week_low <= 0) and metrics:
+                fifty_two_week_low = metrics.fifty_two_week_low
+
+            vol_val = _integer(raw.get("volume"))
+            if (vol_val is None or vol_val <= 0) and metrics and metrics.volume:
+                vol_val = metrics.volume
+
+            trade_time = _trade_time(raw.get("last_trade_time"))
+
+            self.hot_cache.set_quote(
+                CachedQuote(
+                    segment=segment_code,
+                    security_id=security_id,
+                    ltp=ltp,
+                    ltq=_integer(raw.get("last_quantity")),
+                    ltt=trade_time,
+                    avg_price=_number(raw.get("average_price")),
+                    volume=vol_val,
+                    total_buy_qty=_number(raw.get("buy_quantity")),
+                    total_sell_qty=_number(raw.get("sell_quantity")),
+                    open=open_price,
+                    high=_number(ohlc.get("high")),
+                    low=_number(ohlc.get("low")),
+                    close=_number(ohlc.get("close")),
+                    previous_close=final_prev_close,
+                    fifty_two_week_high=fifty_two_week_high,
+                    fifty_two_week_low=fifty_two_week_low,
+                    received_at=received_at,
+                    source="DHAN_REST",
+                    market_state=_market_state_for_trade_time(trade_time, segment=segment_code),
                 )
+            )
         self._last_rest_sync = received_at
 
     async def _reconcile_subscriptions(self, ws: Any) -> None:

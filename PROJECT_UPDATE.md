@@ -4107,3 +4107,21 @@ Implemented the complete backend architecture for **Feature 1: Data Engine & Sto
 - **Incremental Updater:** Built `backend/app/worker/data_engine/incremental_updater.py` with checkpointing, pause/resume, and quota enforcement.
 - **REST API Endpoints:** Mounted 11 endpoints under `/api/v1/data/*` in `backend/app/api/data_engine.py` (instruments, candles, segments, sync controls, quota status, and streaming CSV export).
 - **Verification:** Authored `backend/tests/unit/test_data_engine.py` (7/7 passed); strict `mypy` and `ruff` checks passed cleanly.
+
+### 2026-10-28 — Terminal Live Data Routing, Settings Credential Manager & Heatmap Fixes
+
+- **Terminal Live Market Data strictly from NSE:**
+  - Audited all 900+ equity instruments and ETF listings across frontend and backend.
+  - Converted the single BSE-registered equity ETF (`SILVERCASF` / Zerodha Silver ETF) from `BSE_EQ` to `NSE_EQ` (`SILVERCASE-EQ`, security ID `20001`) with multi-alias lookup.
+  - Enforced `FEED_SEGMENTS` in `WatchlistWidget.tsx` and wire protocol in `live_feed_service.py` to route all equity subscriptions and quote requests strictly to `NSE_EQ` (segment `"1"`).
+  - Sanitized `loadWatchlists()` in `storage.ts` to automatically upgrade any legacy `BSE_EQ` items in `localStorage` to `NSE_EQ`.
+- **Settings Manager (Token Update & Password Change):**
+  - Added `/api/v1/settings/dhan-token` (GET/POST) and `/api/v1/settings/change-password` (POST) in `backend/app/api/settings.py`.
+  - Added dedicated Settings interface in `frontend/src/views/SettingsView.tsx` with instant token validation and live health feedback.
+- **Market Heatmap Full Constituent Loading & Zero-Latency Performance:**
+  - Ingested official Nifty constituents catalog (`config/nifty_official_constituents.json`) covering all 50+ stocks for NIFTY 50, NIFTY BANK, NIFTY IT, NIFTY AUTO, etc.
+  - Added in-memory caching and background quote warming in `backend/app/api/heatmap.py` to eliminate 5-second UI delays.
+- **Verification:**
+  - Vitest: 38/38 tests passing (including new `WatchlistWidget.test.tsx` NSE normalization test).
+  - Pytest: 109/109 tests passing (including `test_dhan_live_feed_service.py` and `test_settings_api.py`).
+  - Strict MyPy and Ruff passed across all files.

@@ -137,7 +137,10 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
               symbol: d.symbol || d.trading_symbol || cleanQ.toUpperCase(),
               tradingSymbol: d.trading_symbol || d.symbol,
               securityId: String(d.security_id || d.securityId),
-              segment: d.exchange_segment || "NSE_EQ",
+              segment:
+                d.exchange_segment === "BSE_EQ" || d.exchange_segment === "BSE"
+                  ? "NSE_EQ"
+                  : d.exchange_segment || "NSE_EQ",
               instrumentType:
                 d.instrument_type === "INDEX"
                   ? "INDEX"
@@ -252,7 +255,15 @@ export const SymbolSearchDropdown: React.FC<SymbolSearchDropdownProps> = ({
 
   // Direct 1-click addition to active watchlist (recommended hover action)
   const handleSelectAddDirectly = (item: CatalogInstrument) => {
-    onSelectInstrument(item);
+    const isBseEquity = item.segment === "BSE_EQ" || item.segment === "BSE";
+    const normalizedItem: CatalogInstrument = isBseEquity
+      ? {
+          ...item,
+          segment: "NSE_EQ",
+          tradingSymbol: item.tradingSymbol === "SILVERCASF" ? "SILVERCASE-EQ" : item.tradingSymbol,
+        }
+      : item;
+    onSelectInstrument(normalizedItem);
     setQueryValue("");
     setIsOpen(false);
   };

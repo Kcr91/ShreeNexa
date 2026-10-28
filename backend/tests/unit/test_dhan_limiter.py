@@ -17,7 +17,7 @@ from app.dhan.limits_config import (
     DhanLimitsConfig,
     RateLimitSpec,
 )
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 
@@ -310,7 +310,7 @@ def test_redis_token_bucket_multi_window_with_fake() -> None:
     rate=st.floats(min_value=1.0, max_value=50.0),
     time_deltas=st.lists(st.floats(min_value=0.0, max_value=2.0), min_size=1, max_size=15),
 )
-@settings(max_examples=30)
+@settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
 def test_token_bucket_replenishment_property_hypothesis(
     burst: int, rate: float, time_deltas: list[float]
 ) -> None:

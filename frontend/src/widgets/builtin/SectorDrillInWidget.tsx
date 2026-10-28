@@ -2,7 +2,14 @@ import React, { useState, useEffect } from "react";
 import { WidgetComponentProps, WidgetDefinition } from "../types";
 import { IndexDrillInResponse } from "../../sector/types";
 import { fetchSectorCatalog, fetchIndexDrillIn } from "../../sector/api";
-import { createWatchlist, addSymbolToWatchlist } from "../../watchlist/storage";
+import {
+  createWatchlist,
+  addSymbolToWatchlist,
+  resolveCatalogInstrument,
+  KNOWN_EQUITY_INSTRUMENTS,
+} from "../../watchlist/storage";
+import { defaultWebSocketClient } from "../../websocket/client";
+import { TickData } from "../../websocket/types";
 
 export interface SectorDrillInSettings {
   defaultIndexName?: string;
@@ -30,6 +37,65 @@ export const SectorDrillInWidget: React.FC<WidgetComponentProps<SectorDrillInSet
       setDrillInData(data);
     });
   }, [selectedIndex, isHistorical, historicalDate]);
+
+  // Connect to live WebSocket feed for constituents when in live mode
+  useEffect(() => {
+    if (isHistorical || !drillInData || drillInData.constituents.length === 0) return;
+
+    const symbols = drillInData.constituents.map((c) => c.symbol);
+    const instruments = drillInData.constituents
+      .map((item) => {
+        const cat = resolveCatalogInstrument(item.symbol);
+        const meta = KNOWN_EQUITY_INSTRUMENTS[item.symbol.toUpperCase()];
+        const secId = cat?.securityId || meta?.securityId;
+        const seg = cat?.segment || meta?.segment || "1";
+        return {
+          segment: seg === "NSE_EQ" ? "1" : seg === "IDX_I" ? "0" : seg,
+          securityId: secId || "",
+          symbol: item.symbol,
+        };
+      })
+      .filter((inst) => inst.securityId);
+
+    defaultWebSocketClient.connect();
+    defaultWebSocketClient.subscribeChannels(["quotes"], symbols, instruments);
+
+    const unsub = defaultWebSocketClient.onChannel("quotes", (data: unknown) => {
+      const tick = data as TickData;
+      if (!tick || (!tick.symbol && !tick.securityId)) return;
+      const tickSym = (tick.symbol || "").toUpperCase();
+      const tickSecId = tick.securityId;
+
+      setDrillInData((prev) => {
+        if (!prev) return prev;
+        let matched = false;
+        const updated = prev.constituents.map((item) => {
+          const itemSym = item.symbol.toUpperCase();
+          const cat = resolveCatalogInstrument(item.symbol);
+          const meta = KNOWN_EQUITY_INSTRUMENTS[itemSym];
+          const itemSecId = cat?.securityId || meta?.securityId;
+
+          if (itemSym === tickSym || (tickSecId && itemSecId === tickSecId)) {
+            matched = true;
+            return {
+              ...item,
+              ltp: tick.ltp ?? item.ltp,
+              changePct: tick.changePct ?? item.changePct,
+              volume: tick.volume ?? item.volume,
+            };
+          }
+          return item;
+        });
+
+        return matched ? { ...prev, constituents: updated } : prev;
+      });
+    });
+
+    return () => {
+      unsub();
+      defaultWebSocketClient.unsubscribeChannels(["quotes"], symbols, instruments);
+    };
+  }, [drillInData?.index_name, isHistorical, drillInData?.constituents.length]);
 
   const handleExportToWatchlist = () => {
     if (!drillInData || drillInData.constituents.length === 0) return;

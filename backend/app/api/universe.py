@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
+from app.api.heatmap import load_official_records_for_index
 from app.contracts import heartbeat as hb
 from app.marketdata.universe import (
     IndexConstituentRecord,
@@ -21,6 +22,34 @@ from app.marketdata.universe import (
 )
 
 router = APIRouter(prefix="/api/v1/indices", tags=["indices"])
+
+
+def _resolve_constituents(
+    engine: Engine, index_name: str, as_of: str | None = None
+) -> list[IndexConstituentRecord]:
+    db_records = get_constituents_at_date(engine, index_name=index_name, as_of=as_of)
+    if as_of is None or not str(as_of).strip():
+        official = load_official_records_for_index(index_name)
+        if official and len(official) >= len(db_records):
+            db_weights = {r.symbol.upper(): r.weight for r in db_records if r.weight is not None}
+            return [
+                IndexConstituentRecord(
+                    index_name=rec.index_name,
+                    symbol=rec.symbol,
+                    weight=(
+                        rec.weight
+                        if rec.weight is not None
+                        else db_weights.get(rec.symbol.upper())
+                    ),
+                    sector=rec.sector,
+                    valid_from=rec.valid_from,
+                    valid_to=rec.valid_to,
+                    source_date=rec.source_date,
+                    source=rec.source,
+                )
+                for rec in official
+            ]
+    return db_records
 
 
 class IndexDrillInSummary(BaseModel):
@@ -118,7 +147,7 @@ def get_index_constituents(
     ] = None,
 ) -> list[IndexConstituentRecord]:
     """Retrieve effective constituents for an index as of a specific date with provenance."""
-    return get_constituents_at_date(engine, index_name=index_name, as_of=as_of)
+    return _resolve_constituents(engine, index_name=index_name, as_of=as_of)
 
 
 @router.get("/{index_name}/drill-in", response_model=IndexDrillInSummary)
@@ -130,7 +159,7 @@ def get_index_drill_in(
     ] = None,
 ) -> IndexDrillInSummary:
     """Retrieve constituent drill-in summary with transparent provenance and sector distribution."""
-    records = get_constituents_at_date(engine, index_name=index_name, as_of=as_of)
+    records = _resolve_constituents(engine, index_name=index_name, as_of=as_of)
     sources = sorted(list({r.source for r in records}))
     has_fallback = any("FALLBACK" in r.source.upper() for r in records)
 

@@ -239,3 +239,19 @@ def test_rest_bootstrap_caches_only_values_returned_by_dhan(
     assert quote.source == "DHAN_REST"
     assert quote.market_state == "MARKET_CLOSED"
     assert quote.error is None
+
+
+def test_bse_equity_normalised_to_nse() -> None:
+    # Verify _wire_instruments normalizes BSE_EQ and segment "4" to NSE_EQ
+    wire = _wire_instruments({("4", "20001"), ("BSE_EQ", "500325"), ("NSE_EQ", "2885")})
+    for item in wire:
+        assert item["ExchangeSegment"] == "NSE_EQ"
+
+    # Verify _quote_request_bodies normalizes BSE_EQ and segment "4" to NSE_EQ
+    bodies = _quote_request_bodies({("4", "20001"), ("BSE_EQ", "500325"), ("1", "2885")})
+    assert len(bodies) == 1
+    assert "BSE_EQ" not in bodies[0]
+    assert "NSE_EQ" in bodies[0]
+    assert 20001 in bodies[0]["NSE_EQ"]
+    assert 500325 in bodies[0]["NSE_EQ"]
+    assert 2885 in bodies[0]["NSE_EQ"]
