@@ -17,6 +17,9 @@ import { StrategyMetaPanel } from "../../strategybuilder/panels/StrategyMetaPane
 import { IndicatorPanel } from "../../strategybuilder/panels/IndicatorPanel";
 import { ConditionBuilder } from "../../strategybuilder/panels/ConditionBuilder";
 import { RiskSizingPanel } from "../../strategybuilder/panels/RiskSizingPanel";
+import { TimeFilterPanel } from "../../strategybuilder/panels/TimeFilterPanel";
+import { CandleConditionPanel } from "../../strategybuilder/panels/CandleConditionPanel";
+import { BreakoutPanel } from "../../strategybuilder/panels/BreakoutPanel";
 
 type TabKey = "setup" | "indicators" | "conditions" | "risk" | "preview";
 
@@ -70,6 +73,7 @@ export const StrategyBuilderWidget: React.FC<
     universe: settings?.defaultUniverse || SEED_STATE.universe,
   }));
   const [activeTab, setActiveTab] = useState<TabKey>("setup");
+  const [conditionsSubTab, setConditionsSubTab] = useState<"rules" | "candles" | "time" | "breakout">("rules");
   const [backtestResult, setBacktestResult] = useState<VectorBacktestResult | null>(null);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
@@ -220,7 +224,56 @@ export const StrategyBuilderWidget: React.FC<
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {activeTab === "setup" && <StrategyMetaPanel state={state} onChange={setState} />}
         {activeTab === "indicators" && <IndicatorPanel state={state} onChange={setState} />}
-        {activeTab === "conditions" && <ConditionBuilder state={state} onChange={setState} />}
+        {activeTab === "conditions" && (
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+            <div
+              role="tablist"
+              aria-label="Condition sub-tabs"
+              style={{
+                display: "flex",
+                gap: "2px",
+                padding: "4px var(--spacing-2) 0",
+                borderBottom: "1px solid var(--border-subtle)",
+              }}
+            >
+              {([
+                { key: "rules", label: "Rules" },
+                { key: "candles", label: "Candles" },
+                { key: "time", label: "Time" },
+                { key: "breakout", label: "Breakout" },
+              ] as const).map((s) => {
+                const active = conditionsSubTab === s.key;
+                return (
+                  <button
+                    key={s.key}
+                    role="tab"
+                    aria-selected={active}
+                    data-testid={`subtab-${s.key}`}
+                    onClick={() => setConditionsSubTab(s.key)}
+                    style={{
+                      padding: "4px 10px",
+                      fontSize: "0.6875rem",
+                      fontWeight: active ? 700 : 500,
+                      color: active ? "var(--color-primary)" : "var(--text-muted)",
+                      background: "transparent",
+                      border: "none",
+                      borderBottom: active ? "2px solid var(--color-primary)" : "2px solid transparent",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ flex: 1, overflow: "hidden" }}>
+              {conditionsSubTab === "rules" && <ConditionBuilder state={state} onChange={setState} />}
+              {conditionsSubTab === "candles" && <CandleConditionPanel state={state} onChange={setState} />}
+              {conditionsSubTab === "time" && <TimeFilterPanel state={state} onChange={setState} />}
+              {conditionsSubTab === "breakout" && <BreakoutPanel state={state} onChange={setState} />}
+            </div>
+          </div>
+        )}
         {activeTab === "risk" && <RiskSizingPanel state={state} onChange={setState} />}
         {activeTab === "preview" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-2)", padding: "var(--spacing-2)", height: "100%", overflow: "hidden" }}>

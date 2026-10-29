@@ -101,6 +101,37 @@ a live branch indicator; run `git status --short --branch` for current state.
 
 ## Major-task log
 
+### 2026-10-29 — Strategy Builder Phase 3: time / candle / breakout panels
+
+- Branch `feature/strategy-builder-phase-3-advanced-conditions`; ff-merged
+  into local `main` after review.
+- Added three new condition panels under
+  `frontend/src/strategybuilder/panels/`:
+  - `TimeFilterPanel`: clock / from-open / to-close / DTE modes with four
+    presets (skip-first-15m, exit-before-close, regular-hours, first-hour).
+  - `CandleConditionPanel`: colour, 14 named patterns, body-size and
+    wick-ratio comparisons, bar offset (0/-1/-2/-3), current- vs previous-
+    day reference, plus previous-day colour shortcuts.
+  - `BreakoutPanel`: 9 level types including prev-day H/L/C, opening-range
+    H/L with 5/15/30/60 minute presets, pivot / support / resistance /
+    custom level with price input, optional volume confirmation and
+    retest-wait flag.
+- Wired a sub-tab bar into the main Conditions tab: Rules (Phase 2
+  builder) / Candles / Time / Breakout. Phase 1's compiler already
+  compiles these three collections into `TimeWindow`, `PriceLevelBreak`,
+  and `CustomPython`-ref candle gating nodes applied to entry rules;
+  non-authoritative UI-only state round-trips through `_ui`.
+- Added `advanced-conditions.test.tsx` covering panel interactions,
+  presets, and the gating-and-round-trip pipeline (TimeWindow +
+  PriceLevelBreak + CustomPython children on the entry's `And` wrapper,
+  then faithful decompile). 37 strategy-builder-area tests pass;
+  typecheck + build green.
+- Explicit scope: backend candle-pattern and price-level indicators are
+  intentionally deferred (would require engine wiring that risks the
+  Dhan/engine protected-path neighbourhood); the compiler keeps those
+  gates present as `CustomPython` refs so a future backend evaluator can
+  dispatch them without IR changes.
+
 ### 2026-10-29 — Strategy Builder Phase 2: tabbed widget + 4 panels
 
 - Branch `feature/strategy-builder-phase-2-ui-panels`; ff-merged into local
