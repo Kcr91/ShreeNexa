@@ -101,6 +101,35 @@ a live branch indicator; run `git status --short --branch` for current state.
 
 ## Major-task log
 
+### 2026-10-29 — Strategy Builder Phase 2: tabbed widget + 4 panels
+
+- Branch `feature/strategy-builder-phase-2-ui-panels`; ff-merged into local
+  `main` after review.
+- Replaced the flat 3-column `StrategyBuilderWidget` with a 5-tab layout
+  (Setup, Indicators, Conditions, Risk & Size, Preview). Header keeps the
+  AI Assistant + Run Vector Backtest buttons and the validation badge
+  visible across tabs.
+- Added `frontend/src/strategybuilder/defaults.ts` with
+  `createDefaultStrategyState`, the 28-indicator catalog (categorised,
+  with per-indicator param schemas), `TIMEFRAME_OPTIONS`, and
+  `INDEX_OPTIONS`.
+- Added four panels under `frontend/src/strategybuilder/panels/`:
+  `StrategyMetaPanel` (name/kind/horizon/type + 4-mode universe selector
+  + full timeframe + session), `IndicatorPanel` (search +
+  categorised catalog, parameter forms, quick-add buttons kept for
+  back-compat), `ConditionBuilder` (per-rule combinator, 11 operators,
+  per-condition dropdowns, lookback for pct-change, BETWEEN upper
+  bound), `RiskSizingPanel` (six sizing models with conditional fields,
+  five exit types including trailing-stop and time, max-position / max-
+  daily-loss / no-trade-window risk limits, slippage toggle).
+- `StrategyBuilderWidget` seed state preserves the EMA-golden-cross
+  demo; tests updated to activate tabs before asserting; widget
+  registry metadata unchanged. 30 / 30 strategy-builder tests pass;
+  302 / 302 frontend tests pass; typecheck + build green.
+- Explicit scope: no backend changes; candle/time/breakout panels and
+  option-leg builder deferred to Phase 3/4; backtest still uses the
+  Phase 1 fake vector result pending Phase 5.
+
 ### 2026-10-29 — Strategy Builder Phase 1: expanded frontend type system
 
 - Branch `feature/strategy-builder-phase-1-types` (not merged in this task).
