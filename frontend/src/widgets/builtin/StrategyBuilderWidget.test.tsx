@@ -70,6 +70,21 @@ describe("StrategyBuilderWidget Component", () => {
     expect(screen.getByTestId("badge-draft-status")).toHaveTextContent("Status: DRAFT ONLY");
   });
 
+  it("shows Options tab only when strategy kind is 'option'", () => {
+    render(<StrategyBuilderWidget instanceId="builder-1" settings={defaultSettings} />);
+    // Default kind is "stock" so Options tab is hidden
+    expect(screen.queryByTestId("tab-options")).toBeNull();
+
+    // Switch to option kind via the Setup panel
+    fireEvent.click(screen.getByTestId("tab-setup"));
+    const kindSelect = screen.getByLabelText("Strategy Kind") as HTMLSelectElement;
+    fireEvent.change(kindSelect, { target: { value: "option" } });
+
+    expect(screen.getByTestId("tab-options")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("tab-options"));
+    expect(screen.getByTestId("option-config-panel")).toBeInTheDocument();
+  });
+
   it("is registered in widget registry under analytics category", () => {
     expect(widgetRegistry.get("strategy-builder")).toBeDefined();
     expect(widgetRegistry.get("strategy-builder")?.title).toBe("Visual Strategy Builder");

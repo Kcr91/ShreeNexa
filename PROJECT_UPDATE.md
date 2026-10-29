@@ -101,6 +101,34 @@ a live branch indicator; run `git status --short --branch` for current state.
 
 ## Major-task log
 
+### 2026-10-29 — Strategy Builder Phase 4: options integration
+
+- Branch `feature/strategy-builder-phase-4-options`; ff-merged into local
+  `main` after review.
+- Added `OptionConfigPanel` (underlying + segment auto-fill, weekly /
+  monthly / exact-date expiry with offset and three quick-presets, four
+  strike selectors — ATM±offset, delta, premium ₹, absolute — with
+  in-line explainer text, lots input, remove, and a text-only payoff
+  summary) under `frontend/src/strategybuilder/panels/`.
+- Added eight common-strategy template buttons: Long Call, Long Put,
+  Short Straddle, Short Strangle, Bull Call Spread, Bear Put Spread,
+  Iron Condor, Iron Butterfly.
+- `StrategyBuilderWidget` now shows an "Options" tab only when
+  `state.kind === "option"` (tabs computed via `tabsForKind`); an effect
+  falls back to Setup if the user switches away from option while on the
+  Options tab.
+- `AIDraftModal` prompt placeholder updated with option-strategy examples
+  (short straddle, iron condor, delta-based call) so users have discovery
+  hints; existing AI call path is unchanged.
+- Phase 1 compiler already maps `optionConfig` → `OptionLegsUniverse` and
+  back; added `OptionConfigPanel.test.tsx` (6 tests) covering panel
+  render, Short Straddle / Iron Condor templates, delta strike switch,
+  Iron Condor compile + round-trip, delta-strike round-trip. Widget test
+  gains conditional-tab coverage.
+- 44 / 44 strategy-builder-area tests pass; typecheck + build green.
+- Explicit scope: no backend changes; no live broker call; the standalone
+  `OptionStrategyBuilderWidget` remains untouched.
+
 ### 2026-10-29 — Strategy Builder Phase 3: time / candle / breakout panels
 
 - Branch `feature/strategy-builder-phase-3-advanced-conditions`; ff-merged

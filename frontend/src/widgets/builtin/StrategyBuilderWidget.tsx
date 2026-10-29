@@ -20,16 +20,23 @@ import { RiskSizingPanel } from "../../strategybuilder/panels/RiskSizingPanel";
 import { TimeFilterPanel } from "../../strategybuilder/panels/TimeFilterPanel";
 import { CandleConditionPanel } from "../../strategybuilder/panels/CandleConditionPanel";
 import { BreakoutPanel } from "../../strategybuilder/panels/BreakoutPanel";
+import { OptionConfigPanel } from "../../strategybuilder/panels/OptionConfigPanel";
 
-type TabKey = "setup" | "indicators" | "conditions" | "risk" | "preview";
+type TabKey = "setup" | "indicators" | "options" | "conditions" | "risk" | "preview";
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "setup", label: "Setup" },
-  { key: "indicators", label: "Indicators" },
-  { key: "conditions", label: "Conditions" },
-  { key: "risk", label: "Risk & Size" },
-  { key: "preview", label: "Preview" },
-];
+function tabsForKind(kind: string): { key: TabKey; label: string }[] {
+  const base: { key: TabKey; label: string }[] = [
+    { key: "setup", label: "Setup" },
+    { key: "indicators", label: "Indicators" },
+  ];
+  if (kind === "option") base.push({ key: "options", label: "Options" });
+  base.push(
+    { key: "conditions", label: "Conditions" },
+    { key: "risk", label: "Risk & Size" },
+    { key: "preview", label: "Preview" }
+  );
+  return base;
+}
 
 const SEED_STATE: StrategyBuilderState = {
   ...createDefaultStrategyState(),
@@ -73,6 +80,14 @@ export const StrategyBuilderWidget: React.FC<
     universe: settings?.defaultUniverse || SEED_STATE.universe,
   }));
   const [activeTab, setActiveTab] = useState<TabKey>("setup");
+
+  // If the user switches away from option kind while on the Options tab,
+  // fall back to Setup so the user is not stranded on a hidden tab.
+  React.useEffect(() => {
+    if (activeTab === "options" && state.kind !== "option") {
+      setActiveTab("setup");
+    }
+  }, [activeTab, state.kind]);
   const [conditionsSubTab, setConditionsSubTab] = useState<"rules" | "candles" | "time" | "breakout">("rules");
   const [backtestResult, setBacktestResult] = useState<VectorBacktestResult | null>(null);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
@@ -194,7 +209,7 @@ export const StrategyBuilderWidget: React.FC<
           flexWrap: "wrap",
         }}
       >
-        {TABS.map((tab) => {
+        {tabsForKind(state.kind).map((tab) => {
           const active = activeTab === tab.key;
           return (
             <button
@@ -224,6 +239,9 @@ export const StrategyBuilderWidget: React.FC<
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {activeTab === "setup" && <StrategyMetaPanel state={state} onChange={setState} />}
         {activeTab === "indicators" && <IndicatorPanel state={state} onChange={setState} />}
+        {activeTab === "options" && state.kind === "option" && (
+          <OptionConfigPanel state={state} onChange={setState} />
+        )}
         {activeTab === "conditions" && (
           <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
             <div

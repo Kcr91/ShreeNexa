@@ -289,7 +289,7 @@ export const AIDraftModal: React.FC<AIDraftModalProps> = ({
               rows={3}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="e.g. Buy when 9 EMA crosses above 21 EMA and RSI > 50 on NIFTY 50 15m. Stop loss 1.5%, take profit 3.5%."
+              placeholder="e.g. 'Buy when 9 EMA crosses above 21 EMA and RSI > 50 on NIFTY 50 15m. SL 1.5%, TP 3.5%.' or 'Short straddle on NIFTY current weekly expiry' or 'Iron condor on BANKNIFTY, 200 points wide'."
               style={{
                 width: "100%",
                 boxSizing: "border-box",
