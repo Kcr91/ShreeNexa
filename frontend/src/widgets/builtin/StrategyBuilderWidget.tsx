@@ -22,6 +22,8 @@ import { CandleConditionPanel } from "../../strategybuilder/panels/CandleConditi
 import { BreakoutPanel } from "../../strategybuilder/panels/BreakoutPanel";
 import { OptionConfigPanel } from "../../strategybuilder/panels/OptionConfigPanel";
 import { PDFExtractorPanel } from "../../strategybuilder/panels/PDFExtractorPanel";
+import { PaperDashboard } from "../../strategybuilder/panels/PaperDashboard";
+import { createPaperDeployment } from "../../strategybuilder/paperDeployService";
 import { runBacktest, BacktestResult } from "../../strategybuilder/backtestService";
 import { ApiError } from "../../api/client";
 
@@ -127,6 +129,12 @@ export const StrategyBuilderWidget: React.FC<
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [pdfImportBanner, setPdfImportBanner] = useState<boolean>(false);
+  const [isDeployConfirmOpen, setIsDeployConfirmOpen] = useState(false);
+  const [deployCapital, setDeployCapital] = useState<number>(100_000);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deployError, setDeployError] = useState<string | null>(null);
+  const [activeDeploymentId, setActiveDeploymentId] = useState<string | null>(null);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
 
   // Backtest configuration (date range + initial capital)
   const today = new Date();
@@ -487,6 +495,43 @@ export const StrategyBuilderWidget: React.FC<
                   <div>Final Equity: <strong>₹{realBacktest.metrics.final_equity.toLocaleString("en-IN")}</strong></div>
                 </div>
                 <EquitySparkline points={realBacktest.equity_curve} />
+                <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    data-testid="btn-deploy-paper"
+                    onClick={() => { setDeployError(null); setIsDeployConfirmOpen(true); }}
+                    style={{
+                      padding: "4px 10px",
+                      fontSize: "0.6875rem",
+                      cursor: "pointer",
+                      backgroundColor: "var(--color-primary)",
+                      color: "var(--text-inverse)",
+                      border: "none",
+                      borderRadius: "var(--radius-sm)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    🧪 Deploy to Paper Trading
+                  </button>
+                  {activeDeploymentId && (
+                    <button
+                      type="button"
+                      data-testid="btn-open-dashboard"
+                      onClick={() => setIsDashboardOpen(true)}
+                      style={{
+                        padding: "4px 10px",
+                        fontSize: "0.6875rem",
+                        cursor: "pointer",
+                        backgroundColor: "var(--bg-active)",
+                        color: "var(--text-primary)",
+                        border: "1px solid var(--border-default)",
+                        borderRadius: "var(--radius-sm)",
+                      }}
+                    >
+                      Open Paper Dashboard
+                    </button>
+                  )}
+                </div>
                 {realBacktest.trades.length > 0 && (
                   <details style={{ fontSize: "0.6875rem" }}>
                     <summary style={{ cursor: "pointer" }}>Trades ({realBacktest.trades.length})</summary>
@@ -583,6 +628,106 @@ export const StrategyBuilderWidget: React.FC<
           </div>
         )}
       </div>
+
+      {isDeployConfirmOpen && (
+        <div
+          data-testid="deploy-confirm-modal"
+          role="dialog"
+          aria-label="Confirm paper deployment"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              width: "min(420px, 100%)",
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-default)",
+              borderRadius: "var(--radius-md, 6px)",
+              padding: "var(--spacing-3)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--spacing-2)",
+              fontSize: "0.75rem",
+            }}
+          >
+            <strong>Deploy to Paper Trading</strong>
+            <div>Deploy <strong>{state.strategyName}</strong> to paper trading?</div>
+            <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "0.625rem", color: "var(--text-muted)" }}>Initial capital (₹)</span>
+              <input
+                type="number"
+                min={1000}
+                step={1000}
+                value={deployCapital}
+                onChange={(e) => setDeployCapital(Number(e.target.value))}
+                style={{ padding: "4px 6px", border: "1px solid var(--border-default)", borderRadius: "var(--radius-sm)", backgroundColor: "var(--bg-active)", color: "var(--text-primary)" }}
+                aria-label="Initial capital"
+              />
+            </label>
+            <div style={{ fontSize: "0.625rem", color: "var(--text-muted)" }}>
+              This will simulate trades using real market data. No real money is involved. Live trading activation is blocked until Epic 12.
+            </div>
+            {deployError && (
+              <div data-testid="deploy-error" style={{ color: "var(--color-down)", fontSize: "0.6875rem" }}>{deployError}</div>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+              <button
+                type="button"
+                onClick={() => setIsDeployConfirmOpen(false)}
+                disabled={isDeploying}
+                style={{ padding: "4px 10px", fontSize: "0.6875rem", border: "1px solid var(--border-default)", backgroundColor: "var(--bg-active)", color: "var(--text-primary)", borderRadius: "var(--radius-sm)", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="btn-deploy-confirm"
+                disabled={isDeploying}
+                onClick={async () => {
+                  setIsDeploying(true);
+                  setDeployError(null);
+                  try {
+                    const slug = state.strategyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 48);
+                    const strategyId = `strat-${slug}-${Date.now()}`;
+                    const dep = await createPaperDeployment({
+                      strategyId,
+                      strategyName: state.strategyName,
+                      accountId: "default",
+                      allocatedCapital: deployCapital,
+                    });
+                    setActiveDeploymentId(dep.deployment_id);
+                    setIsDeployConfirmOpen(false);
+                    setIsDashboardOpen(true);
+                  } catch (err) {
+                    setDeployError(err instanceof Error ? err.message : "Deployment failed");
+                  } finally {
+                    setIsDeploying(false);
+                  }
+                }}
+                style={{ padding: "4px 10px", fontSize: "0.6875rem", backgroundColor: "var(--color-primary)", color: "var(--text-inverse)", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer", fontWeight: 700 }}
+              >
+                {isDeploying ? "Deploying…" : "Start"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <PaperDashboard
+        isOpen={isDashboardOpen}
+        deploymentId={activeDeploymentId}
+        accountId="default"
+        onClose={() => setIsDashboardOpen(false)}
+      />
 
       <PDFExtractorPanel
         isOpen={isPdfModalOpen}

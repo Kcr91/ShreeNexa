@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { StrategyBuilderWidget, strategyBuilderDefinition } from "./StrategyBuilderWidget";
 import { widgetRegistry } from "../registry";
 import * as backtestService from "../../strategybuilder/backtestService";
+import * as paperDeployService from "../../strategybuilder/paperDeployService";
 import "./index";
 
 const defaultSettings = {
@@ -117,6 +118,57 @@ describe("StrategyBuilderWidget Component", () => {
     expect(screen.getByTestId("tab-options")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("tab-options"));
     expect(screen.getByTestId("option-config-panel")).toBeInTheDocument();
+  });
+
+  it("shows Deploy to Paper button after successful backtest and opens confirm modal", async () => {
+    const sampleResult: backtestService.BacktestResult = {
+      backtest_id: "bt-x", strategy_name: "T",
+      metrics: {
+        initial_capital: 100000, final_equity: 112000, total_return_pct: 12, cagr_pct: 12,
+        total_pnl: 12000, total_costs: 0, realized_pnl: 12000, unrealized_pnl: 0,
+        max_drawdown_pct: 3, max_drawdown_value: 3000, sharpe_ratio: 1.5, sortino_ratio: 2, calmar_ratio: 4,
+        total_trades: 10, winning_trades: 6, losing_trades: 4, win_rate_pct: 60, profit_factor: 1.8,
+      },
+      equity_curve: [
+        { timestamp: "2024-01-01T00:00:00Z", equity: 100000, cash: 100000, unrealized_pnl: 0, realized_pnl: 0 },
+        { timestamp: "2024-06-01T00:00:00Z", equity: 112000, cash: 100000, unrealized_pnl: 0, realized_pnl: 12000 },
+      ],
+      trades: [], executed_at: "2026-01-01T00:00:00Z", engine_commit: "test",
+    };
+    const btSpy = vi.spyOn(backtestService, "runBacktest").mockResolvedValue(sampleResult);
+    const deploySpy = vi.spyOn(paperDeployService, "createPaperDeployment").mockResolvedValue({
+      deployment_id: "dep-xyz", strategy_id: "s-1", strategy_name: "T", account_id: "default",
+      allocated_capital: 100000, state: "RUNNING",
+      created_at: "2026-01-01T09:00:00Z", updated_at: "2026-01-01T09:00:00Z",
+      active_orders_count: 0, open_positions_count: 0, parameters: {}, metadata: {},
+    });
+    // Also stub the dashboard polling calls so the dashboard that pops up doesn't crash
+    vi.spyOn(paperDeployService, "getPaperDeployment").mockResolvedValue({
+      deployment_id: "dep-xyz", strategy_id: "s-1", strategy_name: "T", account_id: "default",
+      allocated_capital: 100000, state: "RUNNING",
+      created_at: "2026-01-01T09:00:00Z", updated_at: "2026-01-01T09:00:00Z",
+      active_orders_count: 0, open_positions_count: 0, parameters: {}, metadata: {},
+    });
+    vi.spyOn(paperDeployService, "getPaperPositions").mockResolvedValue([]);
+    vi.spyOn(paperDeployService, "getPaperFills").mockResolvedValue([]);
+    vi.spyOn(paperDeployService, "getPortfolioSummary").mockResolvedValue({
+      account_id: "default", cash: 100000, equity: 100000, realized_pnl: 0, unrealized_pnl: 0, total_pnl: 0,
+    });
+
+    render(<StrategyBuilderWidget instanceId="builder-1" settings={defaultSettings} />);
+    fireEvent.click(screen.getByRole("button", { name: /Run Vector Backtest/i }));
+    await waitFor(() => expect(btSpy).toHaveBeenCalled());
+    const deployBtn = await screen.findByTestId("btn-deploy-paper");
+    fireEvent.click(deployBtn);
+    expect(screen.getByTestId("deploy-confirm-modal")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("btn-deploy-confirm"));
+    await waitFor(() => expect(deploySpy).toHaveBeenCalled());
+    const call = deploySpy.mock.calls[0][0];
+    expect(call.strategyName).toBe("EMA Golden Cross Momentum");
+    expect(call.accountId).toBe("default");
+    expect(call.allocatedCapital).toBe(100_000);
+    btSpy.mockRestore();
+    deploySpy.mockRestore();
   });
 
   it("opens the PDF import modal from the header button", () => {

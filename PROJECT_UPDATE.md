@@ -101,6 +101,45 @@ a live branch indicator; run `git status --short --branch` for current state.
 
 ## Major-task log
 
+### 2026-10-29 — Strategy Builder Phase 7: paper-trading deployment + dashboard
+
+- Branch `feature/strategy-builder-phase-7-paper-trading`; ff-merged into
+  local `main` after review.
+- Discovery: a complete paper-only deployment API already exists at
+  `backend/app/api/paper.py` (`/api/v1/paper/deployments` with create /
+  list / get / pause / resume / stop / audit, plus
+  `/positions` / `/fills` / `/portfolio/summary` for live dashboard
+  reads). Phase 7 is therefore a **frontend-only** integration — no
+  backend changes, no protected-path edits, no new live-engine surface.
+- Added `frontend/src/strategybuilder/paperDeployService.ts` wrapping
+  the existing endpoints. The service is paper-only by construction
+  (every URL starts with `/api/v1/paper/`) and the file carries a
+  comment forbidding future extension to any live-engine endpoint.
+- Added `frontend/src/strategybuilder/panels/PaperDashboard.tsx`: a
+  modal dashboard with status badge, pause / resume / stop controls,
+  summary cards (equity, total / realized / unrealized P&L, trades,
+  open positions), open-positions table, today's-trades table, 7-second
+  auto-refresh via `setInterval`, and a **disabled** "Promote to Live
+  (requires Epic 12)" button with the explicit `title` attribute
+  required by AGENTS.md.
+- Widget: new "🧪 Deploy to Paper Trading" button appears inside the
+  real backtest results card. Clicking it opens a confirmation modal
+  with editable initial-capital and the explicit "No real money" /
+  "Live trading activation is blocked until Epic 12" disclosure. On
+  confirm, the frontend auto-generates a `strategy_id` from the name
+  slug + timestamp (no separate save endpoint exists), calls
+  `createPaperDeployment`, surfaces errors inline, and auto-opens the
+  Paper Dashboard. An "Open Paper Dashboard" button is also added so
+  the user can revisit after dismissing.
+- Tests: 4 PaperDashboard tests (initial-load render, Epic-12
+  disabled-button attribute, pause-click wiring, service POST
+  contract), plus 1 widget-level test that drives the full flow
+  backtest → deploy-button → confirm modal → service call. 60 / 60
+  strategy-builder-area tests pass; typecheck + build green.
+- Explicit scope: no backend changes; no protected-path edits
+  (`risk.py`, `broker.py`, `orders.py`, `tests/parity/`); no DhanHQ
+  broker call; no "Go Live" button that is enabled; no credentials.
+
 ### 2026-10-29 — Strategy Builder Phase 6: PDF / text strategy extraction
 
 - Branch `feature/strategy-builder-phase-6-pdf-extraction`; ff-merged into
