@@ -5,6 +5,9 @@ import {
   StrategyBuilderWidgetSettings,
   IndicatorNode,
   VectorBacktestResult,
+  DEFAULT_SIZING,
+  DEFAULT_RISK,
+  DEFAULT_STRATEGY_META,
 } from "../../strategybuilder/types";
 import {
   compileVisualStateToStrategyIR,
@@ -49,6 +52,13 @@ const DEFAULT_STATE: StrategyBuilderState = {
   ],
   stopLossPct: 1.5,
   takeProfitPct: 3.5,
+  ...DEFAULT_STRATEGY_META,
+  candleConditions: [],
+  timeFilters: [],
+  breakoutConditions: [],
+  exits: [],
+  sizing: { ...DEFAULT_SIZING },
+  risk: { ...DEFAULT_RISK },
 };
 
 export const StrategyBuilderWidget: React.FC<

@@ -85,6 +85,8 @@ export const AIDraftModal: React.FC<AIDraftModalProps> = ({
         strategy_type: "trend_following",
         universe: { type: "index", index_name: "NIFTY 50" },
         timeframe: "15m",
+        sizing: { type: "fixed_value", value: 50000 },
+        risk: { max_positions: 5, max_daily_loss_pct: 3.0, no_trade_windows: [] },
         indicators: {
           fast_ema: { fn: "EMA", params: { period: 9 } },
           slow_ema: { fn: "EMA", params: { period: 21 } },

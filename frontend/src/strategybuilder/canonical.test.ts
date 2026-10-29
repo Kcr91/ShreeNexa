@@ -3,7 +3,24 @@ import {
   compileVisualToCanonicalIR,
   decompileCanonicalIRToVisual,
 } from "./canonical";
-import { StrategyBuilderState } from "./types";
+import {
+  StrategyBuilderState,
+  DEFAULT_SIZING,
+  DEFAULT_RISK,
+  DEFAULT_STRATEGY_META,
+} from "./types";
+
+function metaDefaults() {
+  return {
+    ...DEFAULT_STRATEGY_META,
+    candleConditions: [],
+    timeFilters: [],
+    breakoutConditions: [],
+    exits: [],
+    sizing: { ...DEFAULT_SIZING },
+    risk: { ...DEFAULT_RISK },
+  };
+}
 
 describe("Canonical StrategyIR Lossless Round-Trip Compiler & Decompiler", () => {
   const initialVisualState: StrategyBuilderState = {
@@ -46,6 +63,7 @@ describe("Canonical StrategyIR Lossless Round-Trip Compiler & Decompiler", () =>
     ],
     stopLossPct: 1.5,
     takeProfitPct: 3.0,
+    ...metaDefaults(),
   };
 
   it("compiles visual state into valid canonical StrategyIR schema", () => {
@@ -55,7 +73,10 @@ describe("Canonical StrategyIR Lossless Round-Trip Compiler & Decompiler", () =>
     expect(ir.name).toBe("Dual EMA Momentum");
     expect(ir.kind).toBe("stock");
     expect(ir.timeframe).toBe("15m");
-    expect(ir.universe.index_name).toBe("NIFTY 50");
+    expect(ir.universe.type).toBe("index");
+    if (ir.universe.type === "index") {
+      expect(ir.universe.index_name).toBe("NIFTY 50");
+    }
     expect(ir.indicators["ema_9"].fn).toBe("EMA");
     expect(ir.indicators["ema_9"].params?.length).toBe(9);
     expect(ir.entries.length).toBe(1);
@@ -115,6 +136,7 @@ describe("Canonical StrategyIR Lossless Round-Trip Compiler & Decompiler", () =>
       ],
       stopLossPct: 2.0,
       takeProfitPct: 5.0,
+      ...metaDefaults(),
     };
 
     const ir = compileVisualToCanonicalIR(compositeState);

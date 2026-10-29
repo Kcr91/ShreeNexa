@@ -1,7 +1,12 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AIDraftModal } from "./AIDraftModal";
-import { StrategyBuilderState } from "./types";
+import {
+  StrategyBuilderState,
+  DEFAULT_SIZING,
+  DEFAULT_RISK,
+  DEFAULT_STRATEGY_META,
+} from "./types";
 
 const mockCurrentState: StrategyBuilderState = {
   strategyName: "Current Workspace Strategy",
@@ -23,6 +28,13 @@ const mockCurrentState: StrategyBuilderState = {
   ],
   stopLossPct: 1.0,
   takeProfitPct: 2.0,
+  ...DEFAULT_STRATEGY_META,
+  candleConditions: [],
+  timeFilters: [],
+  breakoutConditions: [],
+  exits: [],
+  sizing: { ...DEFAULT_SIZING },
+  risk: { ...DEFAULT_RISK },
 };
 
 describe("AIDraftModal Component (F5.3)", () => {

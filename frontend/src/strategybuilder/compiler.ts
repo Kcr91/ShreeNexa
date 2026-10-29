@@ -4,6 +4,8 @@ import {
   VectorBacktestResult,
 } from "./types";
 
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 export function validateStrategyBuilderState(state: StrategyBuilderState): {
   isValid: boolean;
   errors: string[];
@@ -63,6 +65,101 @@ export function validateStrategyBuilderState(state: StrategyBuilderState): {
         errors.push(
           `Rule '${rule.name}' right operand '${cond.rightOperand}' is not a valid indicator or number.`
         );
+      }
+    }
+  }
+
+  // --- Expanded validation (candle, time, breakout, option, exits, risk) ---
+
+  for (const cc of state.candleConditions || []) {
+    if (cc.type === "color" && !cc.color) {
+      errors.push(`Candle condition '${cc.id}' is color-type but has no color set.`);
+    }
+    if (cc.type === "pattern" && !cc.pattern) {
+      errors.push(`Candle condition '${cc.id}' is pattern-type but has no pattern set.`);
+    }
+    if ((cc.type === "body_size" || cc.type === "wick_ratio") && (cc.value === undefined || !cc.operator)) {
+      errors.push(`Candle condition '${cc.id}' requires an operator and value.`);
+    }
+  }
+
+  for (const tf of state.timeFilters || []) {
+    if (tf.mode === "clock") {
+      if (tf.fromTime && !TIME_RE.test(tf.fromTime)) {
+        errors.push(`Time filter '${tf.id}' fromTime must be HH:MM.`);
+      }
+      if (tf.toTime && !TIME_RE.test(tf.toTime)) {
+        errors.push(`Time filter '${tf.id}' toTime must be HH:MM.`);
+      }
+    } else if (tf.mode === "dte") {
+      if (tf.dte === undefined || tf.dte < 0) {
+        errors.push(`Time filter '${tf.id}' DTE must be a non-negative integer.`);
+      }
+    }
+  }
+
+  for (const bc of state.breakoutConditions || []) {
+    if (bc.levelType === "opening_range_high" || bc.levelType === "opening_range_low") {
+      if (!bc.orbMinutes || bc.orbMinutes <= 0) {
+        errors.push(`Breakout '${bc.id}' opening-range requires orbMinutes > 0.`);
+      }
+    }
+    if (bc.levelType === "custom_level" && bc.customValue === undefined) {
+      errors.push(`Breakout '${bc.id}' custom_level requires a customValue.`);
+    }
+    if (bc.volumeConfirmation && (bc.volumeMultiplier === undefined || bc.volumeMultiplier <= 0)) {
+      errors.push(`Breakout '${bc.id}' volume confirmation requires a positive volumeMultiplier.`);
+    }
+  }
+
+  if (state.kind === "option") {
+    if (!state.optionConfig) {
+      errors.push("Option strategies require an optionConfig.");
+    } else {
+      if (!state.optionConfig.underlyingSymbol) {
+        errors.push("optionConfig.underlyingSymbol is required.");
+      }
+      if (!state.optionConfig.legs || state.optionConfig.legs.length === 0) {
+        errors.push("optionConfig must have at least one leg.");
+      }
+      for (const leg of state.optionConfig?.legs || []) {
+        if (leg.lots <= 0) errors.push(`Option leg '${leg.id}' lots must be > 0.`);
+      }
+    }
+  }
+
+  for (const e of state.exits || []) {
+    if ((e.type === "target" || e.type === "stop") && (e.pct === undefined || e.pct <= 0)) {
+      errors.push(`Exit '${e.id}' type '${e.type}' requires a positive pct.`);
+    }
+    if (e.type === "trailing_stop" && (e.trailingPct === undefined || e.trailingPct <= 0)) {
+      errors.push(`Exit '${e.id}' trailing_stop requires a positive trailingPct.`);
+    }
+    if (e.type === "time" && (!e.timeExit || !TIME_RE.test(e.timeExit))) {
+      errors.push(`Exit '${e.id}' time exit requires a valid HH:MM timeExit.`);
+    }
+  }
+
+  if (state.risk) {
+    if (state.risk.maxPositions < 1) {
+      errors.push("risk.maxPositions must be >= 1.");
+    }
+    if (
+      state.risk.maxDailyLossPct !== undefined &&
+      (state.risk.maxDailyLossPct <= 0 || state.risk.maxDailyLossPct > 100)
+    ) {
+      errors.push("risk.maxDailyLossPct must be between 0 and 100 (exclusive of 0).");
+    }
+    if (
+      state.risk.maxPositionValuePct !== undefined &&
+      (state.risk.maxPositionValuePct <= 0 || state.risk.maxPositionValuePct > 100)
+    ) {
+      errors.push("risk.maxPositionValuePct must be between 0 and 100 (exclusive of 0).");
+    }
+    for (const w of state.risk.noTradeWindows || []) {
+      const parts = w.split("-");
+      if (parts.length !== 2 || !TIME_RE.test(parts[0]) || !TIME_RE.test(parts[1])) {
+        errors.push(`risk.noTradeWindows entry '${w}' must be 'HH:MM-HH:MM'.`);
       }
     }
   }

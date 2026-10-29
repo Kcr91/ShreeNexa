@@ -101,6 +101,34 @@ a live branch indicator; run `git status --short --branch` for current state.
 
 ## Major-task log
 
+### 2026-10-29 — Strategy Builder Phase 1: expanded frontend type system
+
+- Branch `feature/strategy-builder-phase-1-types` (not merged in this task).
+- Rewrote `frontend/src/strategybuilder/types.ts` to mirror the backend
+  `StrategyIR` (`backend/app/strategy/ir.py`): added `StrategyKind`,
+  `StrategyHorizon`, `StrategyType`; expanded `IndicatorFunction` from 5 to
+  28 primitives; expanded `RuleOperator` with GTE/LTE/NEQ/BETWEEN/PCT_CHANGE_*;
+  added `CandleCondition`, `TimeFilter`, `BreakoutCondition`, `OptionConfig`
+  (with `StrikeSelector` / `ExpiryRule` / `OptionLegDef`), `SizingConfig`
+  (6 models including Kelly), `RiskConfig` (daily loss, no-trade windows),
+  and `ExitRuleConfig` (target/stop/trailing_stop/time/signal). Legacy
+  `StrategyIRSchema`, `VectorBacktestResult`, and
+  `StrategyBuilderWidgetSettings` are kept for backward compatibility.
+- Rewrote `frontend/src/strategybuilder/canonical.ts` to compile/decompile
+  the full `CanonicalStrategyIR` (universe union with `option_legs`, time
+  windows, breakouts, candle gating via `CustomPython`, trailing stops,
+  sizing, risk). UI-only state round-trips through a non-authoritative
+  `_ui` block.
+- Expanded `validateStrategyBuilderState` to cover candle / time /
+  breakout / option / exit / risk invariants.
+- Added round-trip tests (option multi-leg, trailing stop + time exit,
+  time filters + ORB with volume confirmation) and expanded-validation
+  tests. 22 strategybuilder tests pass; full frontend typecheck + build
+  pass. No UI changes; `StrategyBuilderWidget` default state updated only
+  with new field defaults so it keeps rendering.
+- Explicit scope: no changes to backend, `AIDraftModal` behavior, panels,
+  or backtest wiring (those are later phases).
+
 ### 2026-10-04 — Senior project review + two confirmed bug fixes (merged to main)
 
 - Performed a deep senior review (trading-critical audit, frontend↔backend
