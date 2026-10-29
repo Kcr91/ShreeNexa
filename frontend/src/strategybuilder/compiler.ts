@@ -223,6 +223,12 @@ export function compileVisualStateToStrategyIR(
   };
 }
 
+/**
+ * @deprecated Use `backtestService.runBacktest()` instead. This function returns
+ * a hardcoded fake equity curve and metrics; it is kept only so legacy test
+ * fixtures and the AI-draft "preview backtest" path keep rendering while the
+ * real backend-driven flow is adopted.
+ */
 export function runClientSideVectorBacktest(
   ir: StrategyIRSchema
 ): VectorBacktestResult {

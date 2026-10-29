@@ -21,6 +21,8 @@ import { TimeFilterPanel } from "../../strategybuilder/panels/TimeFilterPanel";
 import { CandleConditionPanel } from "../../strategybuilder/panels/CandleConditionPanel";
 import { BreakoutPanel } from "../../strategybuilder/panels/BreakoutPanel";
 import { OptionConfigPanel } from "../../strategybuilder/panels/OptionConfigPanel";
+import { runBacktest, BacktestResult } from "../../strategybuilder/backtestService";
+import { ApiError } from "../../api/client";
 
 type TabKey = "setup" | "indicators" | "options" | "conditions" | "risk" | "preview";
 
@@ -72,6 +74,34 @@ const SEED_STATE: StrategyBuilderState = {
   takeProfitPct: 3.5,
 };
 
+const EquitySparkline: React.FC<{ points: { timestamp: string; equity: number }[] }> = ({ points }) => {
+  if (!points || points.length < 2) {
+    return <div style={{ fontSize: "0.625rem", color: "var(--text-muted)" }}>Not enough equity points for a curve.</div>;
+  }
+  const w = 420;
+  const h = 60;
+  const equities = points.map((p) => p.equity);
+  const min = Math.min(...equities);
+  const max = Math.max(...equities);
+  const range = max - min || 1;
+  const stepX = w / (points.length - 1);
+  const path = equities
+    .map((eq, i) => {
+      const x = i * stepX;
+      const y = h - ((eq - min) / range) * h;
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const last = equities[equities.length - 1];
+  const first = equities[0];
+  const up = last >= first;
+  return (
+    <svg data-testid="equity-sparkline" viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: `${h}px` }} preserveAspectRatio="none">
+      <path d={path} fill="none" stroke={up ? "var(--color-up)" : "var(--color-down)"} strokeWidth={1.5} />
+    </svg>
+  );
+};
+
 export const StrategyBuilderWidget: React.FC<
   WidgetComponentProps<StrategyBuilderWidgetSettings>
 > = ({ settings }) => {
@@ -90,23 +120,57 @@ export const StrategyBuilderWidget: React.FC<
   }, [activeTab, state.kind]);
   const [conditionsSubTab, setConditionsSubTab] = useState<"rules" | "candles" | "time" | "breakout">("rules");
   const [backtestResult, setBacktestResult] = useState<VectorBacktestResult | null>(null);
+  const [realBacktest, setRealBacktest] = useState<BacktestResult | null>(null);
+  const [isBacktestLoading, setIsBacktestLoading] = useState(false);
+  const [backtestError, setBacktestError] = useState<string | null>(null);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
-  const validation = useMemo(() => validateStrategyBuilderState(state), [state]);
+  // Backtest configuration (date range + initial capital)
+  const today = new Date();
+  const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+  const [backtestStart, setBacktestStart] = useState<string>(oneYearAgo.toISOString().slice(0, 10));
+  const [backtestEnd, setBacktestEnd] = useState<string>(today.toISOString().slice(0, 10));
+  const [initialCapital, setInitialCapital] = useState<number>(100_000);
 
-  const compiledIR = useMemo(() => {
-    if (!validation.isValid) return null;
-    return compileVisualStateToStrategyIR(state);
-  }, [state, validation.isValid]);
+  const validation = useMemo(() => validateStrategyBuilderState(state), [state]);
 
   const canonicalIR = useMemo(
     () => (validation.isValid ? compileVisualToCanonicalIR(state) : null),
     [state, validation.isValid]
   );
 
-  const handleRunBacktest = () => {
-    if (!compiledIR) return;
-    setBacktestResult(runClientSideVectorBacktest(compiledIR));
+  const handleRunBacktest = async () => {
+    if (!canonicalIR) return;
+    setActiveTab("preview");
+    setBacktestError(null);
+    setIsBacktestLoading(true);
+    try {
+      const result = await runBacktest({
+        strategyIR: canonicalIR,
+        startDate: backtestStart,
+        endDate: backtestEnd,
+        initialCapital,
+        slippagePct: state.slippagePct,
+      });
+      setRealBacktest(result);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        setBacktestError("Backend not available. Please ensure the server is running.");
+      } else if (err instanceof ApiError) {
+        setBacktestError(err.message);
+      } else {
+        setBacktestError("Backtest failed. See console for details.");
+      }
+    } finally {
+      setIsBacktestLoading(false);
+    }
+  };
+
+  const applyRangePreset = (months: number) => {
+    const end = new Date();
+    const start = new Date(end.getFullYear(), end.getMonth() - months, end.getDate());
+    setBacktestStart(start.toISOString().slice(0, 10));
+    setBacktestEnd(end.toISOString().slice(0, 10));
   };
 
   const handleCopyIR = () => {
@@ -295,7 +359,129 @@ export const StrategyBuilderWidget: React.FC<
         {activeTab === "risk" && <RiskSizingPanel state={state} onChange={setState} />}
         {activeTab === "preview" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-2)", padding: "var(--spacing-2)", height: "100%", overflow: "hidden" }}>
-            {backtestResult && (
+            {/* Backtest configuration */}
+            <div
+              data-testid="backtest-config"
+              style={{
+                backgroundColor: "var(--bg-surface)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-sm)",
+                padding: "var(--spacing-2)",
+                fontSize: "0.6875rem",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
+                alignItems: "center",
+              }}
+            >
+              <label style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                Start
+                <input type="date" value={backtestStart} onChange={(e) => setBacktestStart(e.target.value)} style={{ fontSize: "0.6875rem", padding: "2px 4px" }} aria-label="Backtest start date" />
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                End
+                <input type="date" value={backtestEnd} onChange={(e) => setBacktestEnd(e.target.value)} style={{ fontSize: "0.6875rem", padding: "2px 4px" }} aria-label="Backtest end date" />
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                Capital ₹
+                <input type="number" min={1000} step={1000} value={initialCapital} onChange={(e) => setInitialCapital(Number(e.target.value))} style={{ fontSize: "0.6875rem", padding: "2px 4px", width: "100px" }} aria-label="Initial capital" />
+              </label>
+              <div style={{ display: "flex", gap: "4px", marginLeft: "auto" }}>
+                {[
+                  { label: "1M", m: 1 },
+                  { label: "3M", m: 3 },
+                  { label: "6M", m: 6 },
+                  { label: "1Y", m: 12 },
+                  { label: "2Y", m: 24 },
+                ].map((p) => (
+                  <button key={p.label} type="button" onClick={() => applyRangePreset(p.m)} style={{ padding: "2px 6px", fontSize: "0.625rem", cursor: "pointer", backgroundColor: "var(--bg-active)", border: "1px solid var(--border-default)", borderRadius: "var(--radius-sm)" }}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {isBacktestLoading && (
+              <div data-testid="backtest-loading" style={{ padding: "var(--spacing-2)", color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
+                Running backtest…
+              </div>
+            )}
+
+            {backtestError && (
+              <div
+                data-testid="backtest-error"
+                style={{
+                  padding: "var(--spacing-2)",
+                  color: "var(--color-down)",
+                  backgroundColor: "var(--color-down-bg)",
+                  border: "1px solid var(--color-down)",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "0.6875rem",
+                }}
+              >
+                {backtestError}
+              </div>
+            )}
+
+            {realBacktest && !isBacktestLoading && (
+              <div
+                data-testid="backtest-result-card"
+                style={{
+                  backgroundColor: "var(--bg-surface)",
+                  border: `1px solid ${realBacktest.metrics.total_return_pct >= 0 ? "var(--color-up)" : "var(--color-down)"}`,
+                  borderRadius: "var(--radius-sm)",
+                  padding: "var(--spacing-2)",
+                  fontSize: "var(--font-size-xs)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                }}
+              >
+                <strong style={{ color: realBacktest.metrics.total_return_pct >= 0 ? "var(--color-up)" : "var(--color-down)" }}>
+                  {realBacktest.metrics.total_return_pct >= 0 ? "✓" : "✗"} Backtest Complete ({realBacktest.metrics.total_return_pct.toFixed(2)}%)
+                </strong>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "4px", fontSize: "0.6875rem" }}>
+                  <div>Win Rate: <strong>{realBacktest.metrics.win_rate_pct.toFixed(1)}%</strong></div>
+                  <div>Trades: <strong>{realBacktest.metrics.total_trades}</strong></div>
+                  <div>Sharpe: <strong>{realBacktest.metrics.sharpe_ratio.toFixed(2)}</strong></div>
+                  <div>Max DD: <strong>-{realBacktest.metrics.max_drawdown_pct.toFixed(2)}%</strong></div>
+                  <div>Profit Factor: <strong>{realBacktest.metrics.profit_factor.toFixed(2)}</strong></div>
+                  <div>Final Equity: <strong>₹{realBacktest.metrics.final_equity.toLocaleString("en-IN")}</strong></div>
+                </div>
+                <EquitySparkline points={realBacktest.equity_curve} />
+                {realBacktest.trades.length > 0 && (
+                  <details style={{ fontSize: "0.6875rem" }}>
+                    <summary style={{ cursor: "pointer" }}>Trades ({realBacktest.trades.length})</summary>
+                    <div style={{ maxHeight: "160px", overflowY: "auto", marginTop: "4px" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.625rem" }}>
+                        <thead>
+                          <tr style={{ color: "var(--text-muted)" }}>
+                            <th style={{ textAlign: "left" }}>Time</th>
+                            <th style={{ textAlign: "left" }}>Sym</th>
+                            <th style={{ textAlign: "left" }}>Side</th>
+                            <th style={{ textAlign: "right" }}>Qty</th>
+                            <th style={{ textAlign: "right" }}>Price</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {realBacktest.trades.slice(0, 100).map((t) => (
+                            <tr key={t.fill_id}>
+                              <td>{t.timestamp.slice(0, 16).replace("T", " ")}</td>
+                              <td>{t.security_id}</td>
+                              <td style={{ color: t.side === "BUY" ? "var(--color-up)" : "var(--color-down)" }}>{t.side}</td>
+                              <td style={{ textAlign: "right" }}>{t.quantity}</td>
+                              <td style={{ textAlign: "right" }}>{t.price.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
+
+            {backtestResult && !realBacktest && !isBacktestLoading && (
               <div
                 data-testid="backtest-result-card"
                 style={{

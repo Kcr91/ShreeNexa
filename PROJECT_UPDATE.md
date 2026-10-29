@@ -101,6 +101,35 @@ a live branch indicator; run `git status --short --branch` for current state.
 
 ## Major-task log
 
+### 2026-10-29 — Strategy Builder Phase 5: real backend-driven backtest
+
+- Branch `feature/strategy-builder-phase-5-backtest`; ff-merged into local
+  `main` after review.
+- Added `frontend/src/strategybuilder/backtestService.ts` wrapping the
+  existing backend router at `/api/v1/backtests/*`
+  (`backend/app/api/backtests.py`). Payload maps the Phase-1 canonical
+  IR directly to `BacktestConfig.strategy`; the IR's UI-only `_ui` block
+  is dropped server-side by `StrategyIR`'s `extra="ignore"` config.
+  Slippage % → `slippage_model: "percent"` + `slippage_param = pct/100`;
+  omitted slippage → `slippage_model: "none"`.
+- `runClientSideVectorBacktest` kept and marked `@deprecated`; the
+  widget's Run Vector Backtest handler now calls `runBacktest()` real
+  service, switches to the Preview tab, and surfaces loading / error /
+  success states.
+- Preview tab adds a backtest-config strip (start / end date pickers,
+  initial capital, 1M/3M/6M/1Y/2Y range presets). Results render the
+  real metrics (return %, win rate, trades, Sharpe, max DD, profit
+  factor, final equity), an inline SVG equity sparkline, and the first
+  100 fills in a collapsible table. Network failures show the
+  "Backend not available" message exactly as spec'd.
+- Added `backtestService.test.ts` (4 tests covering payload shape,
+  default slippage, network-error → `ApiError(status 0)`, GET by id)
+  and updated the widget test to stub `backtestService.runBacktest`.
+  49 / 49 strategy-builder-area tests pass; typecheck + build green.
+- Explicit scope: no backend changes; no protected-path edits; no live
+  broker call; the deprecated fake backtest is retained for backward
+  compatibility.
+
 ### 2026-10-29 — Strategy Builder Phase 4: options integration
 
 - Branch `feature/strategy-builder-phase-4-options`; ff-merged into local
