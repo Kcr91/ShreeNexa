@@ -21,6 +21,7 @@ import { TimeFilterPanel } from "../../strategybuilder/panels/TimeFilterPanel";
 import { CandleConditionPanel } from "../../strategybuilder/panels/CandleConditionPanel";
 import { BreakoutPanel } from "../../strategybuilder/panels/BreakoutPanel";
 import { OptionConfigPanel } from "../../strategybuilder/panels/OptionConfigPanel";
+import { PDFExtractorPanel } from "../../strategybuilder/panels/PDFExtractorPanel";
 import { runBacktest, BacktestResult } from "../../strategybuilder/backtestService";
 import { ApiError } from "../../api/client";
 
@@ -124,6 +125,8 @@ export const StrategyBuilderWidget: React.FC<
   const [isBacktestLoading, setIsBacktestLoading] = useState(false);
   const [backtestError, setBacktestError] = useState<string | null>(null);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfImportBanner, setPdfImportBanner] = useState<boolean>(false);
 
   // Backtest configuration (date range + initial capital)
   const today = new Date();
@@ -226,6 +229,23 @@ export const StrategyBuilderWidget: React.FC<
         <div style={{ display: "flex", gap: "var(--spacing-2)" }}>
           <button
             type="button"
+            data-testid="btn-pdf-import"
+            onClick={() => setIsPdfModalOpen(true)}
+            style={{
+              padding: "var(--spacing-1) var(--spacing-3)",
+              backgroundColor: "var(--bg-active)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-default)",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "var(--font-size-xs)",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            📄 Import PDF
+          </button>
+          <button
+            type="button"
             data-testid="btn-ai-assistant"
             onClick={() => setIsAIModalOpen(true)}
             style={{
@@ -298,6 +318,24 @@ export const StrategyBuilderWidget: React.FC<
           );
         })}
       </div>
+
+      {pdfImportBanner && (
+        <div
+          data-testid="pdf-import-banner"
+          style={{
+            backgroundColor: "var(--color-up-bg)",
+            color: "var(--color-up)",
+            padding: "4px 10px",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "0.6875rem",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>Strategy loaded from PDF. Review all conditions before backtesting.</span>
+          <button type="button" onClick={() => setPdfImportBanner(false)} style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer" }} aria-label="Dismiss banner">✕</button>
+        </div>
+      )}
 
       {/* Active panel */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -545,6 +583,16 @@ export const StrategyBuilderWidget: React.FC<
           </div>
         )}
       </div>
+
+      <PDFExtractorPanel
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        onLoad={(loaded) => {
+          setState(loaded);
+          setActiveTab("conditions");
+          setPdfImportBanner(true);
+        }}
+      />
 
       <AIDraftModal
         isOpen={isAIModalOpen}

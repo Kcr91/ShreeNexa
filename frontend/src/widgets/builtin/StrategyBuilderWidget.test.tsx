@@ -119,6 +119,12 @@ describe("StrategyBuilderWidget Component", () => {
     expect(screen.getByTestId("option-config-panel")).toBeInTheDocument();
   });
 
+  it("opens the PDF import modal from the header button", () => {
+    render(<StrategyBuilderWidget instanceId="builder-1" settings={defaultSettings} />);
+    fireEvent.click(screen.getByTestId("btn-pdf-import"));
+    expect(screen.getByTestId("pdf-extractor-modal")).toBeInTheDocument();
+  });
+
   it("is registered in widget registry under analytics category", () => {
     expect(widgetRegistry.get("strategy-builder")).toBeDefined();
     expect(widgetRegistry.get("strategy-builder")?.title).toBe("Visual Strategy Builder");

@@ -101,6 +101,50 @@ a live branch indicator; run `git status --short --branch` for current state.
 
 ## Major-task log
 
+### 2026-10-29 — Strategy Builder Phase 6: PDF / text strategy extraction
+
+- Branch `feature/strategy-builder-phase-6-pdf-extraction`; ff-merged into
+  local `main` after review.
+- Backend: new `app/strategy/extraction.py` with a rule-based,
+  deterministic, offline parser that recognises EMA/SMA/RSI/MACD/VWAP/
+  Bollinger/ATR/SuperTrend/ADX/Stochastic, timeframe (`15m`, `1h`,
+  `daily`, …), stop-loss/target/trailing-stop percentages, and simple
+  cross-above / cross-below / `>` / `<` entry conditions. Returns a
+  draft `StrategyIR` plus an `ExtractionReport` with per-component
+  confidence levels and source-text snippets. No LLM call.
+- Backend: new `app/api/pdf_extract.py` exposing
+  `POST /api/v1/strategy/extract-from-text` (JSON, always available) and
+  `POST /api/v1/strategy/extract-from-pdf` (multipart, 10 MB cap). The
+  PDF endpoint lazy-imports `pypdf`; if missing it returns 503 with an
+  explicit install hint rather than silently degrading. Routers wired
+  through `_STATE_MUTATING_DEPS` in `app/main.py`.
+- `pypdf` is intentionally *not* added to `pyproject.toml` to avoid an
+  un-reviewed dependency bump; text-mode works today, and the user
+  installs `pypdf` only if/when they want PDF support.
+- Frontend: `strategybuilder/pdfExtractService.ts` for both endpoints,
+  reusing the api-client CSRF/base-url for the multipart call. Panel
+  `strategybuilder/panels/PDFExtractorPanel.tsx` is a modal with
+  drag-and-drop (`.pdf` only, 10 MB cap), name field, raw-text
+  textarea fallback, processing/error states, and a two-column review
+  screen (extracted text left, confidence-badged component cards
+  right) culminating in a "Load into Builder" button that
+  decompiles the IR via `decompileCanonicalIRToVisual` and injects
+  into widget state.
+- Widget: new `📄 Import PDF` button in the header opens the modal;
+  after a successful load the widget auto-switches to Conditions and
+  shows a dismissable "Strategy loaded from PDF. Review all conditions
+  before backtesting." banner.
+- Tests: 6 backend unit tests (`test_strategy_extraction.py`) covering
+  indicator detection, SL/TP, report shape, empty-input graceful path,
+  mean-reversion inference, and the pypdf-missing error message. 5
+  frontend tests for `PDFExtractorPanel` (render, text extract + review,
+  load-into-builder, error surface, non-pdf rejection). 1 widget test
+  for the import-button → modal flow. 55 / 55 frontend strategy-builder
+  tests + 6 / 6 backend extraction tests pass; typecheck + build green.
+- Explicit scope: no protected-path edits; no live-broker call; no new
+  dependency added; no external API call. The parser is a safe,
+  deterministic first-pass draft that the user reviews before use.
+
 ### 2026-10-29 — Strategy Builder Phase 5: real backend-driven backtest
 
 - Branch `feature/strategy-builder-phase-5-backtest`; ff-merged into local
